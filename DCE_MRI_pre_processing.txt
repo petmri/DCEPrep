@@ -153,7 +153,7 @@ rm 60th_rep_pveseg.nii.gz
 rm 60th_rep_seg.nii.gz
 
 
-%Concatenation 
+%Concatenation1
 
 3dTcat -prefix dyn_bias.nii 1st_rep_bias.nii.gz 5th_rep_bias.nii.gz 10th_rep_bias.nii.gz 20th_rep_bias.nii.gz 30th_rep_bias.nii.gz 40th_rep_bias.nii.gz 50th_rep_bias.nii.gz 60th_rep_bias.nii.gz 
 
