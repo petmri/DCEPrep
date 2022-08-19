@@ -3,8 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-cpu_file = '/media/network_mriphysics/GRASP/data/500180/DCE_GPU/DCEBBB_flip_500180_patlak_fit_Ktrans_CPU.nii'
-gpu_file = '/media/network_mriphysics/GRASP/data/500180/DCE_GPU/DCEBBB_flip_500180_patlak_fit_Ktrans.nii'
+# cpu_file = '/media/network_mriphysics/GRASP/data/500180/DCE_GPU/DCEBBB_flip_500180_patlak_fit_Ktrans_CPU.nii'
+# gpu_file = '/media/network_mriphysics/GRASP/data/500180/DCE_GPU/DCEBBB_flip_500180_patlak_fit_Ktrans.nii'
+cpu_file = '/home/mrispec/Desktop/raw_data/patlak plots/cpu/dce_patlak_fit_Ktrans.nii'
+gpu_file = '/home/mrispec/Desktop/raw_data/patlak plots/gpu/dce_patlak_fit_Ktrans.nii'
 
 print('Processing file: '+cpu_file)
 cpu_img = nib.load(cpu_file)
