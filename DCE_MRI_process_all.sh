@@ -1,10 +1,8 @@
 #!/bin/bash
 # FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, and Python are required
+# PLACE THIS SCRIPT IN MAIN DATA DIRECTORY
 # Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
 ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
-
-# Z-axis normalization - all VFA images in all timepoints
-python3 python_norm.py
 
 # Process data in every subject timepoint directory
 for dir in */*_timepoint/; do
@@ -15,56 +13,65 @@ for dir in */*_timepoint/; do
 	# FSL brain mask extraction from VFA 2 image
 	bet 2.nii brain.nii -R -m -f 0.45 -g 0
 
-	cd $dir
 	# Bias field correction with FAST
 	# don't forget to remove all unnecessary images 
-	fast -t 3 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 2_Z.nii
-	rm 2_Z_mixeltype.nii.gz
-	rm 2_Z_pve_0.nii.gz
-	rm 2_Z_pve_1.nii.gz
-	rm 2_Z_pve_2.nii.gz
-	rm 2_Z_pveseg.nii.gz
-	rm 2_Z_seg.nii.gz
-	3dcalc -a 2_Z.nii -b 2_Z_bias.nii.gz -expr a/b -prefix 2_Z_bfcorr.nii
+	fast -t 3 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 2.nii
+	rm 2_mixeltype.nii.gz
+	rm 2_pve_0.nii.gz
+	rm 2_pve_1.nii.gz
+	rm 2_pve_2.nii.gz
+	rm 2_pveseg.nii.gz
+	rm 2_seg.nii.gz
+	3dcalc -a 2.nii -b 2_bias.nii.gz -expr a/b -prefix 2_b1corr.nii
+	fslmaths 2_b1corr.nii -mas brain_mask.nii.gz 2_new.nii 
+	
+	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5.nii
+	rm 5_mixeltype.nii.gz
+	rm 5_pve_0.nii.gz
+	rm 5_pve_1.nii.gz
+	rm 5_pve_2.nii.gz
+	rm 5_pveseg.nii.gz
+	rm 5_seg.nii.gz
+	3dcalc -a 5.nii -b 5_bias.nii.gz -expr a/b -prefix 5_b1corr.nii
+	fslmaths 5_b1corr.nii -mas brain_mask.nii.gz 5_new.nii 
 
-	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5_Z.nii
-	rm 5_Z_mixeltype.nii.gz
-	rm 5_Z_pve_0.nii.gz
-	rm 5_Z_pve_1.nii.gz
-	rm 5_Z_pve_2.nii.gz
-	rm 5_Z_pveseg.nii.gz
-	rm 5_Z_seg.nii.gz
-	3dcalc -a 5_Z.nii -b 5_Z_bias.nii.gz -expr a/b -prefix 5_Z_bfcorr.nii
+	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10.nii
+	rm 10_mixeltype.nii.gz
+	rm 10_pve_0.nii.gz
+	rm 10_pve_1.nii.gz
+	rm 10_pve_2.nii.gz
+	rm 10_pveseg.nii.gz
+	rm 10_seg.nii.gz
+	3dcalc -a 10.nii -b 10_bias.nii.gz -expr a/b -prefix 10_b1corr.nii
+	fslmaths 10_b1corr.nii -mas brain_mask.nii.gz 10_new.nii 
 
-	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10_Z.nii
-	rm 10_Z_mixeltype.nii.gz
-	rm 10_Z_pve_0.nii.gz
-	rm 10_Z_pve_1.nii.gz
-	rm 10_Z_pve_2.nii.gz
-	rm 10_Z_pveseg.nii.gz
-	rm 10_Z_seg.nii.gz
-	3dcalc -a 10_Z.nii -b 10_Z_bias.nii.gz -expr a/b -prefix 10_Z_bfcorr.nii
+	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 12.nii
+	rm 12_mixeltype.nii.gz
+	rm 12_pve_0.nii.gz
+	rm 12_pve_1.nii.gz
+	rm 12_pve_2.nii.gz
+	rm 12_pveseg.nii.gz
+	rm 12_seg.nii.gz
+	3dcalc -a 12.nii -b 12_bias.nii.gz -expr a/b -prefix 12_b1corr.nii
+	fslmaths 12_b1corr.nii -mas brain_mask.nii.gz 12_new.nii 
 
-	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 12_Z.nii
-	rm 12_Z_mixeltype.nii.gz
-	rm 12_Z_pve_0.nii.gz
-	rm 12_Z_pve_1.nii.gz
-	rm 12_Z_pve_2.nii.gz
-	rm 12_Z_pveseg.nii.gz
-	rm 12_Z_seg.nii.gz
-	3dcalc -a 12_Z.nii -b 12_Z_bias.nii.gz -expr a/b -prefix 12_Z_bfcorr.nii
-
-	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15_Z.nii
-	rm 15_Z_mixeltype.nii.gz
-	rm 15_Z_pve_0.nii.gz
-	rm 15_Z_pve_1.nii.gz
-	rm 15_Z_pve_2.nii.gz
-	rm 15_Z_pveseg.nii.gz
-	rm 15_Z_seg.nii.gz
-	3dcalc -a 15_Z.nii -b 15_Z_bias.nii.gz -expr a/b -prefix 15_Z_bfcorr.nii
-
+	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15.nii
+	rm 15_mixeltype.nii.gz
+	rm 15_pve_0.nii.gz
+	rm 15_pve_1.nii.gz
+	rm 15_pve_2.nii.gz
+	rm 15_pveseg.nii.gz
+	rm 15_seg.nii.gz
+	3dcalc -a 15.nii -b 15_bias.nii.gz -expr a/b -prefix 15_b1corr.nii
+	fslmaths 15_b1corr.nii -mas brain_mask.nii.gz 15_new.nii 
+	
+	# Z-axis normalization - all VFA images
+	cd ../..
+	python3 python_norm1.py
+	cd $dir
+	
 	# concatenates 5 images in one VFA.nii image  
-	3dTcat -prefix VFA.nii 2_Z_bfcorr.nii 5_Z_bfcorr.nii 10_Z_bfcorr.nii 12_Z_bfcorr.nii 15_Z_bfcorr.nii
+	3dTcat -prefix VFA.nii 2_corr_finalZ.nii 5_corr_finalZ.nii 10_corr_finalZ.nii 12_corr_finalZ.nii 15_corr_finalZ.nii
 
 	# motion correction throughout Z axis  
 	3dvolreg -Fourier -verbose -base 'VFA.nii[0]' -dfile VFA_motion.txt -prefix VFA.motioncorrected.nii VFA.nii
@@ -159,7 +166,6 @@ for dir in */*_timepoint/; do
 	3dcalc -a DCE.motioncorrected.nii -b mean_dyn_bias_map.nii -expr a/b -prefix dce_mc_b1_corr.nii
 
 	# don't forget to remove all unnecessary images 
-
 	rm 1st_rep.nii
 	rm 1st_rep_bias.nii.gz
 	rm 5th_rep.nii
