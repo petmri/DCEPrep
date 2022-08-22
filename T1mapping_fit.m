@@ -1,12 +1,11 @@
+function T1mapping_fit(path)
 % INPUTS
 %------------------------------------
-% file_list = {'20151005_0807431005A.nii';'20151005_0807431005AA.nii';'20151005_0807431005AB.nii';'20151005_0807431005AC.nii';'20151005_0807431005AD.nii';'20151005_0807431005AE.nii'};
-% file_list = {'echo1.nii';'echo2.nii';'echo3.nii';'echo4.nii';'echo5.nii';'echo6.nii'};
-file_list = {'VFA.motioncorrected.nii'};
+file_list = {strcat(path,'VFA.motioncorrected.nii')};
 					% must point to valid nifti files
 parameter_list = [2 5 10 12 15]';
 					% units of ms or degrees
-fit_type = 't1_fa_linear_fit'; 
+fit_type = 't1_ti_exponential_fit';
 					% options{'none','t2_linear_simple','t2_linear_weighted','t2_exponential','t2_linear_fast'
 					%			't1_tr_fit','t1_fa_fit','t1_fa_linear_fit','t1_ti_exponential_fit'}
 odd_echoes = 0;		% boolean, if selected only odd parameters will be
@@ -34,10 +33,10 @@ fit_voxels     = 1;
 xy_smooth_size = 0;
 
 
-for m=size(file_list,1):-1:1
-    testfile=cell2mat(file_list(m));
-    file_list(m) = {fullfile(current_dir,testfile)};
-end
+% for m=size(file_list,1):-1:1
+%     testfile=cell2mat(file_list(m));
+%     file_list(m) = {fullfile(current_dir,testfile)};
+% end
 
 
 cur_dataset.file_list = file_list;
