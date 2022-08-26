@@ -1,13 +1,13 @@
 #!/bin/bash
 # FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, and Python are required
 # Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
-EN_Z_NORM=0
-EN_BIAS1=0
+EN_Z_NORM=1
+EN_BIAS1=1
 EN_BIAS2=0
 EN_MOTION_CORR=1
 ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 
-# cd to your main data directory
+# cd to your main data directory or remove this line if this script is already there
 cd /media/network_mriphysics/LLUCAS-USC/data
 
 # Generate bias corrected data for every subject timepoint
@@ -62,12 +62,12 @@ for dir in */*_timepoint/; do
 		3dcalc -a 12.nii -b 12_bias.nii.gz -expr a/b -prefix 12_bfc.nii
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15.nii
-		rm 15_mixeltype.nii.gz
+		#rm 15_mixeltype.nii.gz
 		#rm 15_pve_0.nii.gz
 		#rm 15_pve_1.nii.gz
 		#rm 15_pve_2.nii.gz
-		rm 15_pveseg.nii.gz
-		rm 15_seg.nii.gz
+		#rm 15_pveseg.nii.gz
+		#rm 15_seg.nii.gz
 		3dcalc -a 15.nii -b 15_bias.nii.gz -expr a/b -prefix 15_bfc.nii
 			
 		fslmaths 2_bfc.nii -mas brain_mask.nii.gz 2_b1corr.nii
@@ -106,6 +106,7 @@ if [ $EN_Z_NORM -eq 1 ]
 	cd ../..
 	echo Z-normalization on ALL subjects
 	python3 python_norm1.py
+	#python3 polyfit_norm.py /media/network_mriphysics/LLUCAS-USC/data/1101475_2nd_version/1st_timepoint
 	cd $dir
 fi
 
@@ -184,7 +185,7 @@ for dir in */*_timepoint/; do
 	3dvolreg -heptic -verbose -base 'VFA.nii[0]' -dfile VFA_motion.txt -prefix VFA.motioncorrected.nii VFA.nii
 
 	# T1 mapping where the input image is 'VFA.motioncorrected.nii'
-	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); T1mapping_fit('$SUBJECT_TP_PATH/'); exit;"
+	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts'; T1mapping_fit('$SUBJECT_TP_PATH/'); exit;"
 	#matlab -nodisplay -r "cd('/home/mrispec/Code/ROCKETSHIP/parametric_scripts/custom_scripts'); T1mapping_fit('/home/mrispec/Desktop/raw_data/1101428_2nd_version/1st_timepoint/'); exit;"
 	
 	# Motion correction of DCE-MRI images using AFNI
