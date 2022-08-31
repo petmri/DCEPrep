@@ -86,7 +86,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     data_mean1 = mean(norm_img)
 
     fig, ax = plt.subplots(figsize=(20, 6))
-    ax.plot(range(slice_num), wm_mean, '-ok',  label='orig')
+    ax.plot(range(slice_num), wm_mean, '-ok',  label='original')
     ax.plot(range(slice_num), norm_slices, ':ob', label='fit')
     ax.plot(range(slice_num), norm_wm, '--og', label='corrected')
     ax.set_xlabel('Slice #')

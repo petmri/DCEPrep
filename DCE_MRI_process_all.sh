@@ -4,9 +4,11 @@
 EN_Z_NORM=1
 EN_BIAS1=1
 EN_BIAS2=0
-EN_MOTION_CORR=1
+#EN_MOTION_CORR=1
+# path searching will probably break if >1 dir found
 ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
+SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
 
 # cd to your main data directory or remove this line if this script is already there
 cd /media/network_mriphysics/LLUCAS-USC/data
@@ -79,7 +81,7 @@ for dir in */*_timepoint/; do
 		3dcalc -a 12_masked.nii -b 12_masked_bias.nii.gz -expr a/b -prefix 12_bfc.nii
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15_masked.nii
-		#rm 15_masked_mixeltype.nii.gz
+		rm 15_masked_mixeltype.nii.gz
 		#rm 15_masked_pve_0.nii.gz
 		#rm 15_masked_pve_1.nii.gz
 		#rm 15_masked_pve_2.nii.gz
@@ -99,7 +101,7 @@ for dir in */*_timepoint/; do
 		echo begin slice normalization
 		
 		# threshold wm mask
-		fslmaths 15_masked_pve_2.nii.gz -thr 0.9 15_wm.nii
+		fslmaths 15_masked_pve_2.nii.gz -thr 0.9 -bin 15_wm.nii
 		
 		# apply wm mask to all VFAs
 		fslmaths 2_bfc.nii -mas 15_wm.nii.gz 2_bfc_wm.nii 
@@ -211,7 +213,7 @@ for dir in */*_timepoint/; do
 		flirt -in brain_mask.nii.gz -ref DCE_mc.nii -out brain_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
 		#bet 2.nii brain_dyn.nii -R -m -f 0.45 -g 0 -Z
 		fslcpgeom 2.nii brain_mask_dyn.nii
-		fslmaths DCE.nii -mas brain_mask_dyn.nii.gz DCE_mc_masked.nii
+		fslmaths DCE_mc.nii -mas brain_mask_dyn.nii.gz DCE_mc_masked.nii
 		
 		# Applying bias field correction on dynamic images
 		# ------------------------------
@@ -323,7 +325,7 @@ for dir in */*_timepoint/; do
 	#rm ref_rep.nii
 	
 	# align existing white matter mask to dynamic images
-	flirt -in 15_wm.nii.gz -ref dce_mc_bfc.nii -out 15_wm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
+	flirt -in 15_wm.nii.gz -ref ref_rep.nii -out 15_wm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
 	
 	# apply wm mask to all DCE images
 	fslmaths dce_mc_bfc.nii -mas 15_wm_mask_dyn.nii.gz DCE_mc_bfc_wm.nii.gz
@@ -331,7 +333,7 @@ for dir in */*_timepoint/; do
 	# normalize dynamic images
 	# ------------------------------
 	echo Normalizing dynamic images...
-	python $SUBJECT_TP_PATH
+	python $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH
 
 	# DCE
 	# ------------------------------
@@ -340,7 +342,30 @@ for dir in */*_timepoint/; do
 	cd ../../	
 	echo $dir processing complete!
 	
-	# Analyze results
+	# Analyze results (scouting)
 	# ------------------------------
+	# Make gm mask
+	fslmaths 15_masked_pve_1.nii.gz -thr 0.8 -bin 15_gm_mask.nii
+	fslmaths 15_bfc.nii -mas 15_gm_mask.nii.gz 15_gm.nii
+	# Align gm mask
+	flirt -in 15_gm.nii.gz -ref ref_rep.nii -out 15_gm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
+	
+	# Make CSF mask
+	fslmaths 15_masked_pve_0.nii.gz -thr 0.8 -bin 15_csf_mask.nii
+	fslmaths 15_bfc.nii -mas 15_csf_mask.nii.gz 15_csf.nii
+	# Align CSF mask
+	flirt -in 15_csf.nii.gz -ref ref_rep.nii -out 15_csf_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
+	
+	# Apply masks to T1 map
+	fslmaths t1_map_fixed_use_me.nii.gz -mas 15_wm.nii T1_wm.nii
+	fslmaths t1_map_fixed_use_me.nii.gz -mas 15_gm.nii T1_gm.nii
+	fslmaths t1_map_fixed_use_me.nii.gz -mas 15_csf.nii T1_csf.nii
+	
+	# Apply masks to Ktrans map
+	fslmaths dce_patlak_fit_Ktrans.nii -mas 15_wm.nii Ktrans_wm.nii
+	fslmaths dce_patlak_fit_Ktrans.nii -mas 15_gm.nii Ktrans_gm.nii
+	fslmaths dce_patlak_fit_Ktrans.nii -mas 15_csf.nii Ktrans_csf.nii
+	
+	python $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH
 done
 
