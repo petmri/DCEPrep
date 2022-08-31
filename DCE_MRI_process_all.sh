@@ -6,11 +6,13 @@ EN_BIAS1=1
 EN_BIAS2=0
 EN_MOTION_CORR=1
 ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
+GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
 
 # cd to your main data directory or remove this line if this script is already there
 cd /media/network_mriphysics/LLUCAS-USC/data
 
-# Generate bias corrected data for every subject timepoint
+# Run bias correction on VFA data 
+# ------------------------------
 for dir in */*_timepoint/; do
 	date
 	echo Processing ${dir}...
@@ -21,101 +23,103 @@ for dir in */*_timepoint/; do
 	bet 2.nii brain.nii -R -m -f 0.45 -g 0 -Z
 	fslcpgeom 2.nii brain_mask.nii
 	
+	# FAST documentation recommends brain masking first
+	fslmaths 2.nii -mas brain_mask.nii.gz 2_masked.nii 
+	fslmaths 5.nii -mas brain_mask.nii.gz 5_masked.nii
+	fslmaths 10.nii -mas brain_mask.nii.gz 10_masked.nii
+	fslmaths 12.nii -mas brain_mask.nii.gz 12_masked.nii
+	fslmaths 15.nii -mas brain_mask.nii.gz 15_masked.nii
+		
+	# unzip because sometimes they're zipped
+	#gunzip 2_masked.nii.gz
+	#gunzip 5_masked.nii.gz
+	#gunzip 10_masked.nii.gz
+	#gunzip 12_masked.nii.gz
+	#gunzip 15_masked.nii.gz
+	
 	if [ $EN_BIAS1 -eq 1 ]
 		then
+
 		echo Bias field correction with FAST
 		# don't forget to remove all unnecessary images 
-		fast -t 3 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 2.nii
-		rm 2_mixeltype.nii.gz
-		rm 2_pve_0.nii.gz
-		rm 2_pve_1.nii.gz
-		rm 2_pve_2.nii.gz
-		rm 2_pveseg.nii.gz
-		rm 2_seg.nii.gz
-		3dcalc -a 2.nii -b 2_bias.nii.gz -expr a/b -prefix 2_bfc.nii
+		fast -t 3 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 2_masked.nii
+		rm 2_masked_mixeltype.nii.gz
+		rm 2_masked_pve_0.nii.gz
+		rm 2_masked_pve_1.nii.gz
+		rm 2_masked_pve_2.nii.gz
+		rm 2_masked_pveseg.nii.gz
+		rm 2_masked_seg.nii.gz
+		3dcalc -a 2_masked.nii -b 2_masked_bias.nii.gz -expr a/b -prefix 2_bfc.nii
 		
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5.nii
-		rm 5_mixeltype.nii.gz
-		rm 5_pve_0.nii.gz
-		rm 5_pve_1.nii.gz
-		rm 5_pve_2.nii.gz
-		rm 5_pveseg.nii.gz
-		rm 5_seg.nii.gz
-		3dcalc -a 5.nii -b 5_bias.nii.gz -expr a/b -prefix 5_bfc.nii
+		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5_masked.nii
+		rm 5_masked_mixeltype.nii.gz
+		rm 5_masked_pve_0.nii.gz
+		rm 5_masked_pve_1.nii.gz
+		rm 5_masked_pve_2.nii.gz
+		rm 5_masked_pveseg.nii.gz
+		rm 5_masked_seg.nii.gz
+		3dcalc -a 5_masked.nii -b 5_masked_bias.nii.gz -expr a/b -prefix 5_bfc.nii
 
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10.nii
-		rm 10_mixeltype.nii.gz
-		rm 10_pve_0.nii.gz
-		rm 10_pve_1.nii.gz
-		rm 10_pve_2.nii.gz
-		rm 10_pveseg.nii.gz
-		rm 10_seg.nii.gz
-		3dcalc -a 10.nii -b 10_bias.nii.gz -expr a/b -prefix 10_bfc.nii
+		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10_masked.nii
+		rm 10_masked_mixeltype.nii.gz
+		rm 10_masked_pve_0.nii.gz
+		rm 10_masked_pve_1.nii.gz
+		rm 10_masked_pve_2.nii.gz
+		rm 10_masked_pveseg.nii.gz
+		rm 10_masked_seg.nii.gz
+		3dcalc -a 10_masked.nii -b 10_masked_bias.nii.gz -expr a/b -prefix 10_bfc.nii
 
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 12.nii
-		rm 12_mixeltype.nii.gz
-		rm 12_pve_0.nii.gz
-		rm 12_pve_1.nii.gz
-		rm 12_pve_2.nii.gz
-		rm 12_pveseg.nii.gz
-		rm 12_seg.nii.gz
-		3dcalc -a 12.nii -b 12_bias.nii.gz -expr a/b -prefix 12_bfc.nii
+		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 12_masked.nii
+		rm 12_masked_mixeltype.nii.gz
+		rm 12_masked_pve_0.nii.gz
+		rm 12_masked_pve_1.nii.gz
+		rm 12_masked_pve_2.nii.gz
+		rm 12_masked_pveseg.nii.gz
+		rm 12_masked_seg.nii.gz
+		3dcalc -a 12_masked.nii -b 12_masked_bias.nii.gz -expr a/b -prefix 12_bfc.nii
 
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15.nii
-		#rm 15_mixeltype.nii.gz
-		#rm 15_pve_0.nii.gz
-		#rm 15_pve_1.nii.gz
-		#rm 15_pve_2.nii.gz
-		#rm 15_pveseg.nii.gz
-		#rm 15_seg.nii.gz
-		3dcalc -a 15.nii -b 15_bias.nii.gz -expr a/b -prefix 15_bfc.nii
-			
-		fslmaths 2_bfc.nii -mas brain_mask.nii.gz 2_b1corr.nii
-		fslmaths 5_bfc.nii -mas brain_mask.nii.gz 5_b1corr.nii
-		fslmaths 10_bfc.nii -mas brain_mask.nii.gz 10_b1corr.nii
-		fslmaths 12_bfc.nii -mas brain_mask.nii.gz 12_b1corr.nii
-		fslmaths 15_bfc.nii -mas brain_mask.nii.gz 15_b1corr.nii
+		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15_masked.nii
+		#rm 15_masked_mixeltype.nii.gz
+		#rm 15_masked_pve_0.nii.gz
+		#rm 15_masked_pve_1.nii.gz
+		#rm 15_masked_pve_2.nii.gz
+		#rm 15_masked_pveseg.nii.gz
+		#rm 15_masked_seg.nii.gz
+		3dcalc -a 15_masked.nii -b 15_masked_bias.nii.gz -expr a/b -prefix 15_bfc.nii
 	else
 		echo Skipping BFC...
-		# mask existing data
-		fslmaths 2.nii -mas brain_mask.nii.gz 2_b1corr.nii 
-		fslmaths 5.nii -mas brain_mask.nii.gz 5_b1corr.nii
-		fslmaths 10.nii -mas brain_mask.nii.gz 10_b1corr.nii
-		fslmaths 12.nii -mas brain_mask.nii.gz 12_b1corr.nii
-		fslmaths 15.nii -mas brain_mask.nii.gz 15_b1corr.nii
 	fi
-	
-	# unzip because sometimes they're zipped
-	gunzip 2_b1corr.nii.gz
-	gunzip 5_b1corr.nii.gz
-	gunzip 10_b1corr.nii.gz
-	gunzip 12_b1corr.nii.gz
-	gunzip 15_b1corr.nii.gz
-	
-	# clean up
-	#rm 2_b1corr.nii.gz
-	#rm 5_b1corr.nii.gz
-	#rm 10_b1corr.nii.gz
-	#rm 12_b1corr.nii.gz
-	#rm 15_b1corr.nii.gz
-done
+#done
 
-# Z-axis normalization - all subjects
-if [ $EN_Z_NORM -eq 1 ] 
-	then
-	cd ../..
-	echo Z-normalization on ALL subjects
-	python3 python_norm1.py
-	#python3 polyfit_norm.py /media/network_mriphysics/LLUCAS-USC/data/1101475_2nd_version/1st_timepoint
-	cd $dir
-fi
+	# Run Z-axis normalization VFA data
+	# ------------------------------
+	if [ $EN_Z_NORM -eq 1 ] 
+		then
+		#cd ../..
+		echo begin slice normalization
+		
+		# threshold wm mask
+		fslmaths 15_masked_pve_2.nii.gz -thr 0.9 15_wm.nii
+		
+		# apply wm mask to all VFAs
+		fslmaths 2_bfc.nii -mas 15_wm.nii.gz 2_bfc_wm.nii 
+		fslmaths 5_bfc.nii -mas 15_wm.nii.gz 5_bfc_wm.nii
+		fslmaths 10_bfc.nii -mas 15_wm.nii.gz 10_bfc_wm.nii
+		fslmaths 12_bfc.nii -mas 15_wm.nii.gz 12_bfc_wm.nii
+		fslmaths 15_bfc.nii -mas 15_wm.nii.gz 15_bfc_wm.nii
+		
+		#python3 python_norm1.py
+		#python3 VFA_norm.py /media/network_mriphysics/LLUCAS-USC/data/1101475_2nd_version/1st_timepoint
+		python3 /home/mrispec/Code/in-house_toolbox/VFA_norm.py $SUBJECT_TP_PATH
+		#cd $dir
+	fi
 
-# process normalized data
-for dir in */*_timepoint/; do
+#for dir in */*_timepoint/; do
 	if [ $EN_BIAS2 -eq 1 ]
 		then
+		# 2nd Bias correction VFA data
+		# ------------------------------
 		echo Begin second round of BFC
-		# WE GO AGANE
 		# Bias field correction with FAST
 		# don't forget to remove all unnecessary images 
 		fast -t 3 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 2_corr_finalZ.nii
@@ -125,7 +129,7 @@ for dir in */*_timepoint/; do
 		rm 2_corr_finalZ_pve_2.nii.gz
 		rm 2_corr_finalZ_pveseg.nii.gz
 		rm 2_corr_finalZ_seg.nii.gz
-		3dcalc -a 2_corr_finalZ.nii -b 2_corr_finalZ_bias.nii.gz -expr a/b -prefix 2_b2corr.nii
+		3dcalc -a 2_BFC_Z.nii -b 2_BFC_Z_bias.nii.gz -expr a/b -prefix 2_b2corr.nii
 		#fslmaths 2_b1corr.nii -mas brain_mask.nii.gz 2_new.nii 
 		
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5_corr_finalZ.nii
@@ -135,7 +139,7 @@ for dir in */*_timepoint/; do
 		rm 5_corr_finalZ_pve_2.nii.gz
 		rm 5_corr_finalZ_pveseg.nii.gz
 		rm 5_corr_finalZ_seg.nii.gz
-		3dcalc -a 5_corr_finalZ.nii -b 5_corr_finalZ_bias.nii.gz -expr a/b -prefix 5_b2corr.nii
+		3dcalc -a 5_BFC_Z.nii -b 5_BFC_Z_bias.nii.gz -expr a/b -prefix 5_b2corr.nii
 		#fslmaths 5_b1corr.nii -mas brain_mask.nii.gz 5_new.nii 
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10_corr_finalZ.nii
@@ -145,7 +149,7 @@ for dir in */*_timepoint/; do
 		rm 10_corr_finalZ_pve_2.nii.gz
 		rm 10_corr_finalZ_pveseg.nii.gz
 		rm 10_corr_finalZ_seg.nii.gz
-		3dcalc -a 10_corr_finalZ.nii -b 10_corr_finalZ_bias.nii.gz -expr a/b -prefix 10_b2corr.nii
+		3dcalc -a 10_BFC_Z.nii -b 10_BFC_Z_bias.nii.gz -expr a/b -prefix 10_b2corr.nii
 		#fslmaths 10_b1corr.nii -mas brain_mask.nii.gz 10_new.nii 
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 12_corr_finalZ.nii
@@ -155,7 +159,7 @@ for dir in */*_timepoint/; do
 		rm 12_corr_finalZ_pve_2.nii.gz
 		rm 12_corr_finalZ_pveseg.nii.gz
 		rm 12_corr_finalZ_seg.nii.gz
-		3dcalc -a 12_corr_finalZ.nii -b 12_corr_finalZ_bias.nii.gz -expr a/b -prefix 12_b2corr.nii
+		3dcalc -a 12_BFC_Z.nii -b 12_BFC_Z_bias.nii.gz -expr a/b -prefix 12_b2corr.nii
 		#fslmaths 12_b1corr.nii -mas brain_mask.nii.gz 12_new.nii 
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15_corr_finalZ.nii
@@ -165,7 +169,7 @@ for dir in */*_timepoint/; do
 		rm 15_corr_finalZ_pve_2.nii.gz
 		rm 15_corr_finalZ_pveseg.nii.gz
 		rm 15_corr_finalZ_seg.nii.gz
-		3dcalc -a 15_corr_finalZ.nii -b 15_corr_finalZ_bias.nii.gz -expr a/b -prefix 15_b2corr.nii
+		3dcalc -a 15_BFC_Z.nii -b 15_BFC_Z_bias.nii.gz -expr a/b -prefix 15_b2corr.nii
 		#fslmaths 15_b1corr.nii -mas brain_mask.nii.gz 15_new.nii 
 		
 		# concatenates 5 images in one VFA.nii image  
@@ -174,36 +178,52 @@ for dir in */*_timepoint/; do
 		then
 		echo Concatenating Z-norm\'d images
 		# concatenates 5 images in one VFA.nii image
-		3dTcat -prefix VFA.nii 2_corr_finalZ.nii 5_corr_finalZ.nii 10_corr_finalZ.nii 12_corr_finalZ.nii 15_corr_finalZ.nii
+		3dTcat -prefix VFA.nii 2_BFC_Z.nii 5_BFC_Z.nii 10_BFC_Z.nii 12_BFC_Z.nii 15_BFC_Z.nii
 
 	else
 		echo Concatenating non Z\'d images
-		3dTcat -prefix VFA.nii 2_b1corr.nii 5_b1corr.nii 10_b1corr.nii 12_b1corr.nii 15_b1corr.nii
+		3dTcat -prefix VFA.nii 2_bfc.nii 5_bfc.nii 10_bfc.nii 12_bfc.nii 15_bfc.nii
 	fi
 	
 	# motion correction of VFA
+	# ------------------------------
 	3dvolreg -heptic -verbose -base 'VFA.nii[0]' -dfile VFA_motion.txt -prefix VFA.motioncorrected.nii VFA.nii
 
 	# T1 mapping where the input image is 'VFA.motioncorrected.nii'
+	# ------------------------------
 	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts'; T1mapping_fit('$SUBJECT_TP_PATH/'); exit;"
 	#matlab -nodisplay -r "cd('/home/mrispec/Code/ROCKETSHIP/parametric_scripts/custom_scripts'); T1mapping_fit('/home/mrispec/Desktop/raw_data/1101428_2nd_version/1st_timepoint/'); exit;"
-	
-	# Motion correction of DCE-MRI images using AFNI
+
 	if [ $EN_BIAS1 -eq 1 ]
 		then
-		echo Applying BFC to dynamic set
-		3dvolreg -heptic -verbose -base 'DCE.nii[1]' -dfile DCE_motion.txt -prefix DCE.motioncorrected.nii DCE.nii
+		# Motion correction of dynamic images using AFNI
+		# ------------------------------
+		echo Motion correcting dynamic images...
+		3dvolreg -heptic -verbose -base 'DCE.nii[1]' -dfile DCE_motion.txt -prefix DCE_mc.nii DCE.nii
 		
-		3dTcat -prefix ref_rep.nii DCE.motioncorrected.nii'[1]'
-		# Applying pseudo-dynamic bias field correction on dynamic images
-		3dTcat -prefix 1st_rep.nii DCE.motioncorrected.nii'[0]' # extract images from different DCE repetitions
-		3dTcat -prefix 5th_rep.nii DCE.motioncorrected.nii'[4]'
-		3dTcat -prefix 10th_rep.nii DCE.motioncorrected.nii'[9]'
-		3dTcat -prefix 20th_rep.nii DCE.motioncorrected.nii'[19]'
-		3dTcat -prefix 30th_rep.nii DCE.motioncorrected.nii'[29]'
-		3dTcat -prefix 40th_rep.nii DCE.motioncorrected.nii'[39]'
-		3dTcat -prefix 50th_rep.nii DCE.motioncorrected.nii'[49]'
-		3dTcat -prefix 60th_rep.nii DCE.motioncorrected.nii'[59]'
+		# Align T1 map with Dynamic data
+		# ------------------------------
+		# MC or no?
+		3dTcat -prefix ref_rep.nii DCE_mc.nii'[1]'
+		flirt -in T1_map_t1_fa_linear_fit_VFA.motioncorrected.nii -ref ref_rep.nii -out t1_map_fixed_use_me.nii -omat t12dcevol.mat -dof 6 -inweight brain_mask.nii.gz
+	
+		# align and apply brain mask
+		flirt -in brain_mask.nii.gz -ref DCE_mc.nii -out brain_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
+		#bet 2.nii brain_dyn.nii -R -m -f 0.45 -g 0 -Z
+		fslcpgeom 2.nii brain_mask_dyn.nii
+		fslmaths DCE.nii -mas brain_mask_dyn.nii.gz DCE_mc_masked.nii
+		
+		# Applying bias field correction on dynamic images
+		# ------------------------------
+		echo Applying BFC to dynamic images...
+		3dTcat -prefix 1st_rep.nii DCE_mc_masked.nii'[0]' # extract images from different DCE repetitions
+		3dTcat -prefix 5th_rep.nii DCE_mc_masked.nii'[4]'
+		3dTcat -prefix 10th_rep.nii DCE_mc_masked.nii'[9]'
+		3dTcat -prefix 20th_rep.nii DCE_mc_masked.nii'[19]'
+		3dTcat -prefix 30th_rep.nii DCE_mc_masked.nii'[29]'
+		3dTcat -prefix 40th_rep.nii DCE_mc_masked.nii'[39]'
+		3dTcat -prefix 50th_rep.nii DCE_mc_masked.nii'[49]'
+		3dTcat -prefix 60th_rep.nii DCE_mc_masked.nii'[59]'
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 1st_rep.nii
 		rm 1st_rep_mixeltype.nii.gz
@@ -217,7 +237,7 @@ for dir in */*_timepoint/; do
 		rm 5th_rep_mixeltype.nii.gz
 		rm 5th_rep_pve_0.nii.gz
 		rm 5th_rep_pve_1.nii.gz
-		rm 5th_rep_pve_2.nii.gz
+		#rm 5th_rep_pve_2.nii.gz
 		rm 5th_rep_pveseg.nii.gz
 		rm 5th_rep_seg.nii.gz
 
@@ -265,7 +285,7 @@ for dir in */*_timepoint/; do
 		rm 60th_rep_mixeltype.nii.gz
 		rm 60th_rep_pve_0.nii.gz
 		rm 60th_rep_pve_1.nii.gz
-		rm 60th_rep_pve_2.nii.gz
+		#rm 60th_rep_pve_2.nii.gz
 		rm 60th_rep_pveseg.nii.gz
 		rm 60th_rep_seg.nii.gz
 
@@ -276,7 +296,7 @@ for dir in */*_timepoint/; do
 		3dTstat -mean -prefix mean_dyn_bias_map.nii dyn_bias.nii'[0..7]'
 
 		# Normalizing motion corrected DCE image with mean bias field 
-		3dcalc -a DCE.motioncorrected.nii -b mean_dyn_bias_map.nii -expr a/b -prefix dce_mc_b1_corr.nii
+		3dcalc -a DCE_mc_masked.nii -b mean_dyn_bias_map.nii -expr a/b -prefix dce_mc_bfc.nii
 
 		# don't forget to remove all unnecessary images 
 		rm 1st_rep.nii
@@ -297,17 +317,30 @@ for dir in */*_timepoint/; do
 		rm 60th_rep_bias.nii.gz
 	else
 		echo Motion correcting dynamic set
-		3dvolreg -heptic -verbose -base 'DCE.nii[1]' -dfile DCE_motion.txt -prefix dce_mc_b1_corr.nii DCE.nii
-		3dTcat -prefix ref_rep.nii dce_mc_b1_corr.nii'[1]'
+		3dvolreg -heptic -verbose -base 'DCE.nii[1]' -dfile DCE_motion.txt -prefix dce_mc_bfc.nii DCE.nii
+		#3dTcat -prefix ref_rep.nii dce_mc_bfc'[1]'
 	fi
 	#rm ref_rep.nii
 	
-	# Align T1 map with Dynamic data, quick and dirty
-	flirt -in T1_map_t1_fa_linear_fit_VFA.motioncorrected.nii -ref ref_rep.nii -out t1_map_fixed_use_me.nii -omat t12dcevol.mat -dof 6 -inweight brain_mask.nii.gz
+	# align existing white matter mask to dynamic images
+	flirt -in 15_wm.nii.gz -ref dce_mc_bfc.nii -out 15_wm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
+	
+	# apply wm mask to all DCE images
+	fslmaths dce_mc_bfc.nii -mas 15_wm_mask_dyn.nii.gz DCE_mc_bfc_wm.nii.gz
+
+	# normalize dynamic images
+	# ------------------------------
+	echo Normalizing dynamic images...
+	python $SUBJECT_TP_PATH
 
 	# DCE
-	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); run_dce_auto('$SUBJECT_TP_PATH/'); exit;"
+	# ------------------------------
+	echo Begin DCE processing...
+	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH/matlab'; run_dce_auto('$SUBJECT_TP_PATH/'); exit;"
 	cd ../../	
 	echo $dir processing complete!
+	
+	# Analyze results
+	# ------------------------------
 done
 
