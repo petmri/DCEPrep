@@ -2,7 +2,7 @@
 # FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, and Python are required
 # Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
 EN_Z_NORM=1
-EN_BIAS1=0
+EN_BIAS1=1
 EN_BIAS2=0
 #EN_MOTION_CORR=1
 # path searching will probably break if >1 dir found
@@ -19,7 +19,7 @@ cd /media/network_mriphysics/LLUCAS-USC/data
 for dir in */*_timepoint/; do
 	date
 	echo Processing ${dir}...
-	SUBJECT_TP_PATH=$(realpath $dir)
+	SUBJECT_TP_PATH=$(realpath $dir) # /home/raghav/data/203/1st_timepoint
 	
 	cd $dir
 	# FSL brain mask extraction from VFA 2 image
@@ -319,7 +319,7 @@ for dir in */*_timepoint/; do
 		3dTstat -mean -prefix mean_dyn_bias_map.nii dyn_bias.nii'[0..7]'
 
 		# Normalizing motion corrected DCE image with mean bias field 
-		3dcalc -a DCE_mc_masked.nii -b mean_dyn_bias_map.nii -expr a/b -prefix dce_mc_bfc.nii
+		3dcalc -a DCE_mc_masked.nii -b mean_dyn_bias_map.nii -expr a/b -prefix DCE_mc_bfc.nii
 
 		# don't forget to remove all unnecessary images 
 		rm 1st_rep.nii
@@ -340,7 +340,7 @@ for dir in */*_timepoint/; do
 		rm 60th_rep_bias.nii.gz
 	else
 		echo Motion correcting dynamic set
-		3dvolreg -heptic -verbose -base 'DCE.nii[1]' -dfile DCE_motion.txt -prefix dce_mc_bfc.nii DCE.nii
+		3dvolreg -heptic -verbose -base 'DCE.nii[1]' -dfile DCE_motion.txt -prefix DCE_mc_bfc.nii DCE.nii
 		#3dTcat -prefix ref_rep.nii dce_mc_bfc'[1]'
 	fi
 	#rm ref_rep.nii
@@ -349,7 +349,7 @@ for dir in */*_timepoint/; do
 	flirt -in 15_wm.nii.gz -ref ref_rep.nii -out 15_wm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
 	
 	# apply wm mask to all DCE images
-	fslmaths dce_mc_bfc.nii -mas 15_wm_mask_dyn.nii.gz DCE_mc_bfc_wm.nii.gz
+	fslmaths DCE_mc_bfc.nii -mas 15_wm_mask_dyn.nii.gz DCE_mc_bfc_wm.nii.gz
 
 	# normalize dynamic images
 	# ------------------------------

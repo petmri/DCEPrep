@@ -92,7 +92,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     ax.set_xlabel('Slice #')
     ax.set_ylabel('White Matter Mean')
     ax.set_title("VFA Slice Normalization")
-    ax.legend();
+    ax.legend();    
 
     path2 = file_dir + '/' + str(num) +'_BFC_Z.png'   #THE STRING IN THE END CONTAINS THE FILE NAME OF THE GRAPHS GENERATED
     plt.savefig(path2)
@@ -111,6 +111,7 @@ for file in files_in_dir:
         file1 = str(file)
         print(file1)
         mask_file = file1.split('.', 1)
-        mask_file = mask_file[0] + '_wm.' + mask_file[1]
+        print(mask_file)
+        mask_file = mask_file[0] + '_wm.nii.gz'
         
         normalize(file1, mask_file, str(dir))   #CALLING THE 'normalize()' FUNCTION TO PERFORM THE NORMALIZATION

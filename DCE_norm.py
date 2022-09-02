@@ -27,7 +27,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     wm_data = wm_mask.get_fdata()
     mri_shape = mri_data.shape
     wm_shape = wm_data.shape
-    slice_num = min(mri_shape[0], mri_shape[1], mri_shape[2])
+    slice_num = min(mri_shape[0], mri_shape[1], mri_shape[2], mri_shape[3])
     slice_loc = mri_shape.index(slice_num)
     mri_data = np.reshape(mri_data, (mri_shape[min(dim-set([slice_loc]))], mri_shape[max(dim-set([slice_loc]))], slice_num, 64))
     wm_data = np.reshape(wm_data, (wm_shape[min(dim-set([slice_loc]))], wm_shape[max(dim-set([slice_loc]))], slice_num, 64))
@@ -107,9 +107,9 @@ print(sys.argv[1])
 dir = Path(sys.argv[1])     # takes timepoint directory as argument
 files_in_dir = dir.iterdir()
 for file in files_in_dir:
-    if str(file).endswith('mc_bfc.nii'):
+    if str(file).endswith('mc_bfc.nii') or str(file).endswith('mc_bfc.nii.gz'):
         file1 = str(file)
         mask_file = file1.split('.', 1)
-        mask_file = mask_file[0] + '_wm.' + mask_file[1] + '.gz'
+        mask_file = mask_file[0] + '_wm.nii.gz'
         
         normalize(file1, mask_file, str(dir))   #CALLING THE 'normalize()' FUNCTION TO PERFORM THE NORMALIZATION
