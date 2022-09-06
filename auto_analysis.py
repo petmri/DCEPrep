@@ -14,12 +14,13 @@ import matplotlib.pyplot as plt
 import nibabel as nib
 from scipy import ndimage
 from PIL import Image
-from statistics import mean, pstdev
+from statistics import mean, median, pstdev, stdev
 from pathlib import Path
 import re
 
 # add as arg? add mask arg?
 POLYFIT = True
+KTRANS_MIN_THRESHOLD = 0.00001
 
 def analyze(file_dir):
     # load files from script pipeline
@@ -49,9 +50,16 @@ def analyze(file_dir):
     T1_wm_mean = []
     T1_gm_mean = []
     T1_csf_mean = []
+    T1_wm_median = []
+    T1_gm_median = []
+    T1_csf_median = []
+    
     Ktrans_wm_mean = []
     Ktrans_gm_mean = []
     Ktrans_csf_mean = []
+    Ktrans_wm_median = []
+    Ktrans_gm_median = []
+    Ktrans_csf_median = []
 
     # get mean of each matter slice
     for i in range(slice_num):
@@ -62,12 +70,26 @@ def analyze(file_dir):
         a = np.where(T1_csf_data[:, :, i] > 0)
         T1_csf_mean.append(T1_csf_data[:, :, i][a].mean())
         
-        a = np.where(Ktrans_wm_data[:, :, i] > 0)
+        a = np.where(T1_wm_data[:, :, i] > 0)
+        T1_wm_median.append(median(T1_wm_data[:, :, i][a]))
+        a = np.where(T1_gm_data[:, :, i] > 0)
+        T1_gm_median.append(median(T1_gm_data[:, :, i][a]))
+        a = np.where(T1_csf_data[:, :, i] > 0)
+        T1_csf_median.append(median(T1_csf_data[:, :, i][a]))
+        
+        a = np.where(Ktrans_wm_data[:, :, i] > KTRANS_MIN_THRESHOLD)
         Ktrans_wm_mean.append(Ktrans_wm_data[:, :, i][a].mean())
-        a = np.where(Ktrans_gm_data[:, :, i] > 0)
+        a = np.where(Ktrans_gm_data[:, :, i] > KTRANS_MIN_THRESHOLD)
         Ktrans_gm_mean.append(Ktrans_gm_data[:, :, i][a].mean())
-        a = np.where(Ktrans_csf_data[:, :, i] > 0)
+        a = np.where(Ktrans_csf_data[:, :, i] > KTRANS_MIN_THRESHOLD)
         Ktrans_csf_mean.append(Ktrans_csf_data[:, :, i][a].mean())
+        
+        a = np.where(Ktrans_wm_data[:, :, i] > KTRANS_MIN_THRESHOLD)
+        Ktrans_wm_median.append(median(Ktrans_wm_data[:, :, i][a]))
+        a = np.where(Ktrans_gm_data[:, :, i] > KTRANS_MIN_THRESHOLD)
+        Ktrans_gm_median.append(median(Ktrans_gm_data[:, :, i][a]))
+        a = np.where(Ktrans_csf_data[:, :, i] > KTRANS_MIN_THRESHOLD)
+        Ktrans_csf_median.append(median(Ktrans_csf_data[:, :, i][a]))
 
     # Figure city
     n_bins = 500
@@ -83,30 +105,53 @@ def analyze(file_dir):
 
     ax0.set_xlabel('T1')
     ax0.set_ylabel('Frequency')
-    ax0.hist(T1_wm_data[T1_wm_data > 10], n_bins, range=(0, 4000), histtype='bar', color = 'pink', label = "wm")
-    ax0.hist(T1_gm_data[T1_gm_data > 10], n_bins, range=(0, 4000),histtype='bar', color = 'gray', label = 'gm')
-    ax0.hist(T1_csf_data[T1_csf_data > 10], n_bins, range=(0, 4000), histtype='bar', color = 'cyan', label = 'csf')
+    ax0.set_ylim([0, 2700])
+    ax0.hist(T1_wm_data, n_bins, range=(10, 4000), histtype='bar', color = 'pink', label = "wm")
+    ax0.hist(T1_gm_data, n_bins, range=(10, 4000),histtype='bar', color = 'gray', label = 'gm')
+    ax0.hist(T1_csf_data, n_bins, range=(10, 4000), histtype='bar', color = 'cyan', label = 'csf')
+    ax0.axvline(median(T1_wm_data[T1_wm_data > 0]), color = 'pink', linestyle = 'dashed')
+    ax0.axvline(median(T1_gm_data[T1_gm_data > 0]), color = 'gray', linestyle = 'dashed')
+    # ax0.axvline(mean(T1_csf_data[T1_csf_data > 0]), color = 'cyan', linestyle = 'dashed')
+    min_ylim, max_ylim = ax0.get_ylim()
+    ax0.text(median(T1_wm_data[T1_wm_data > 0])*.27, max_ylim*0.9, 'Median: {:.1f}'.format(median(T1_wm_data[T1_wm_data > 0])), color='pink')
+    ax0.text(median(T1_gm_data[T1_gm_data > 0])*1.02, max_ylim*0.9, 'Median: {:.1f}'.format(median(T1_gm_data[T1_gm_data > 0])), color='gray')
+    ax0.text(median(T1_wm_data[T1_wm_data > 0])*.27, max_ylim*0.8, 'stdev: {:.1f}'.format(pstdev(T1_wm_data[T1_wm_data > 0])), color='pink')
+    ax0.text(median(T1_gm_data[T1_gm_data > 0])*1.02, max_ylim*0.8, 'stdev: {:.1f}'.format(pstdev(T1_gm_data[T1_gm_data > 0])), color='gray')
     ax0.legend()
     
     ax1.set_xlabel('Ktrans')
     ax1.set_ylabel('Frequency')
-    ax1.hist(Ktrans_gm_data[Ktrans_gm_data > 0], n_bins, range=(0.000001, .02), histtype='bar', alpha=1, color = 'gray', label = 'gm')
-    ax1.hist(Ktrans_wm_data[Ktrans_wm_data > 0], n_bins, range=(0.000001, .02), histtype='bar', alpha=0.7, color = 'pink', label = 'wm')
-    ax1.hist(Ktrans_csf_data[Ktrans_csf_data > 0], n_bins, range=(0.000001, .02), histtype='bar', alpha=0.4, color = 'cyan', label = 'csf')
+    ax1.set_ylim([0, 500])
+    ax1.hist(Ktrans_gm_data, n_bins, range=(KTRANS_MIN_THRESHOLD, .02), histtype='bar', alpha=1, color = 'gray', label = 'gm')
+    ax1.hist(Ktrans_wm_data, n_bins, range=(KTRANS_MIN_THRESHOLD, .02), histtype='bar', alpha=0.9, color = 'pink', label = 'wm')
+    # ax1.hist(Ktrans_csf_data, n_bins, range=(KTRANS_MIN_THRESHOLD, .02), histtype='bar', alpha=0.4, color = 'cyan', label = 'csf')
+    min_ylim, max_ylim = ax1.get_ylim()
+    ax1.axvline(median(Ktrans_wm_data[Ktrans_wm_data > KTRANS_MIN_THRESHOLD]), color = 'pink', linestyle = 'dashed')
+    ax1.axvline(median(Ktrans_gm_data[Ktrans_gm_data > KTRANS_MIN_THRESHOLD]), color = 'gray', linestyle = 'dashed')
+    ax1.text(median(Ktrans_wm_data[Ktrans_wm_data > KTRANS_MIN_THRESHOLD])*.1, max_ylim*0.2, 'Median: {:.5f}'.format(median(Ktrans_wm_data[Ktrans_wm_data > KTRANS_MIN_THRESHOLD])), color='white')
+    ax1.text(median(Ktrans_gm_data[Ktrans_gm_data > KTRANS_MIN_THRESHOLD])*1.02, max_ylim*0.9, 'Median: {:.5f}'.format(median(Ktrans_gm_data[Ktrans_gm_data > KTRANS_MIN_THRESHOLD])), color='gray')
+    ax1.text(median(Ktrans_wm_data[Ktrans_wm_data > KTRANS_MIN_THRESHOLD])*.1, max_ylim*0.1, 'stdev: {:.5f}'.format(pstdev(Ktrans_wm_data[Ktrans_wm_data > KTRANS_MIN_THRESHOLD])), color='white')
+    ax1.text(median(Ktrans_gm_data[Ktrans_gm_data > KTRANS_MIN_THRESHOLD])*1.02, max_ylim*0.8, 'stdev: {:.5f}'.format(pstdev(Ktrans_gm_data[Ktrans_gm_data > KTRANS_MIN_THRESHOLD])), color='gray')
+    
+    # ax1.axvline(mean(Ktrans_csf_data[Ktrans_csf_data > 0]), color = 'cyan', linestyle = 'dashed')
     ax1.legend()
     
     ax2.set_xlabel('Slice #')
-    ax2.set_ylabel('T1 Matter Means')
-    ax2.plot(range(slice_num), T1_wm_mean, label = 'wm', color = 'pink')
-    ax2.plot(range(slice_num), T1_gm_mean, label = 'gm', color = 'gray')
-    ax2.plot(range(slice_num), T1_csf_mean, label = 'csf', color = 'cyan')
+    ax2.set_ylabel('T1 Medians')
+    ax2.set_ylim([0, 2200])
+    ax2.plot(range(slice_num), T1_wm_median, label = 'wm', color = 'pink')
+    ax2.plot(range(slice_num), T1_gm_median, label = 'gm', color = 'gray')
+    # ax2.plot(range(slice_num), T1_csf_mean, label = 'csf', color = 'cyan')
+    ax2.grid()
     ax2.legend()
     
     ax3.set_xlabel('Slice #')
-    ax3.set_ylabel('Ktrans Matter Means')
-    ax3.plot(range(slice_num), Ktrans_wm_mean, label = 'wm', color = 'pink')
-    ax3.plot(range(slice_num), Ktrans_gm_mean, label = 'gm', color = 'gray')
-    ax3.plot(range(slice_num), Ktrans_csf_mean, label = 'csf', color = 'cyan')
+    ax3.set_ylabel('Ktrans Medians')
+    ax3.set_ylim([0, 0.017])
+    ax3.plot(range(slice_num), Ktrans_wm_median, label = 'wm', color = 'pink')
+    ax3.plot(range(slice_num), Ktrans_gm_median, label = 'gm', color = 'gray')
+    # ax3.plot(range(slice_num), Ktrans_csf_mean, label = 'csf', color = 'cyan')
+    ax3.grid()
     ax3.legend()
 
     # Save graphs
