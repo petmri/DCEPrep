@@ -3,7 +3,7 @@
 # Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
 EN_Z_NORM=1
 EN_BIAS1=1
-EN_BIAS2=0
+EN_BIAS2=1
 #EN_MOTION_CORR=1
 # path searching will probably break if >1 dir found
 ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
@@ -19,22 +19,23 @@ cd /media/network_mriphysics/LLUCAS-USC/data
 for dir in */*_timepoint/; do
 	date
 	echo Processing ${dir}...
-	SUBJECT_TP_PATH=$(realpath $dir) # /home/raghav/data/203/1st_timepoint
+	 # /home/raghav/data/203/1st_timepoint
+	SUBJECT_TP_PATH=$(realpath $dir)
 	
 	cd $dir
 	# FSL brain mask extraction from VFA 2 image
 	bet 2.nii brain.nii -R -m -f 0.45 -g 0 -Z
 	fslcpgeom 2.nii brain_mask.nii
+			
+	# FAST documentation recommends brain masking first
+	fslmaths 2.nii -mas brain_mask.nii.gz 2_masked.nii 
+	fslmaths 5.nii -mas brain_mask.nii.gz 5_masked.nii
+	fslmaths 10.nii -mas brain_mask.nii.gz 10_masked.nii
+	fslmaths 12.nii -mas brain_mask.nii.gz 12_masked.nii
+	fslmaths 15.nii -mas brain_mask.nii.gz 15_masked.nii
 	
 	if [ $EN_BIAS1 -eq 1 ]
 		then
-		
-		# FAST documentation recommends brain masking first
-		fslmaths 2.nii -mas brain_mask.nii.gz 2_masked.nii 
-		fslmaths 5.nii -mas brain_mask.nii.gz 5_masked.nii
-		fslmaths 10.nii -mas brain_mask.nii.gz 10_masked.nii
-		fslmaths 12.nii -mas brain_mask.nii.gz 12_masked.nii
-		fslmaths 15.nii -mas brain_mask.nii.gz 15_masked.nii
 		
 		echo Bias field correction with FAST
 		# don't forget to remove all unnecessary images 
