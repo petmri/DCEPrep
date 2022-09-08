@@ -3,7 +3,7 @@
 # Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
 EN_Z_NORM=1
 EN_BIAS1=1
-EN_BIAS2=1
+EN_BIAS2=0
 #EN_MOTION_CORR=1
 # path searching will probably break if >1 dir found
 ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
@@ -340,9 +340,10 @@ for dir in */*_timepoint/; do
 		rm 60th_rep.nii
 		rm 60th_rep_bias.nii.gz
 	else
-		echo Motion correcting dynamic set
-		3dvolreg -heptic -verbose -base 'DCE.nii[1]' -dfile DCE_motion.txt -prefix DCE_mc_bfc.nii DCE.nii
+		#echo Motion correcting dynamic set
+		#3dvolreg -heptic -verbose -base 'DCE.nii[1]' -dfile DCE_motion.txt -prefix DCE_mc_bfc.nii DCE.nii
 		#3dTcat -prefix ref_rep.nii dce_mc_bfc'[1]'
+		mv DCE_mc.nii DCE_mc_bfc.nii
 	fi
 	#rm ref_rep.nii
 	
