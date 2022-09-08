@@ -65,32 +65,79 @@ def analyze(file_dir):
     # get mean/median of each matter slice
     for i in range(slice_num):
         a = np.where(T1_wm_data[:, :, i] > 0)
-        T1_wm_mean.append(T1_wm_data[:, :, i][a].mean())
+        # must check for empty slices
+        if a[0].size > 0:
+            T1_wm_mean.append(T1_wm_data[:, :, i][a].mean())
+        else:
+            T1_wm_mean.append(0)
+        
         a = np.where(T1_gm_data[:, :, i] > 0)
-        T1_gm_mean.append(T1_gm_data[:, :, i][a].mean())
+        if a[0].size > 0:
+            T1_gm_mean.append(T1_gm_data[:, :, i][a].mean())
+        else:
+            T1_gm_mean.append(0)
+        
         a = np.where(T1_csf_data[:, :, i] > 0)
-        T1_csf_mean.append(T1_csf_data[:, :, i][a].mean())
+        if a[0].size > 0:
+            T1_csf_mean.append(T1_csf_data[:, :, i][a].mean())
+        else:
+            T1_csf_mean.append(0)
         
         a = np.where(T1_wm_data[:, :, i] > 0)
-        T1_wm_median.append(median(T1_wm_data[:, :, i][a]))
+        if a[0].size > 0:
+            T1_wm_median.append(median(T1_wm_data[:, :, i][a]))
+        else:
+            T1_wm_median.append(0)
+        
         a = np.where(T1_gm_data[:, :, i] > 0)
-        T1_gm_median.append(median(T1_gm_data[:, :, i][a]))
+        if a[0].size > 0:
+            T1_gm_median.append(median(T1_gm_data[:, :, i][a]))
+        else:
+            T1_gm_median.append(0)
+        
         a = np.where(T1_csf_data[:, :, i] > 0)
-        T1_csf_median.append(median(T1_csf_data[:, :, i][a]))
+        if a[0].size > 0:
+            T1_csf_median.append(median(T1_csf_data[:, :, i][a]))
+        else:
+            T1_csf_median.append(0)
+        
         
         a = np.where(Ktrans_wm_data[:, :, i] > KTRANS_MIN_THRESHOLD)
-        Ktrans_wm_mean.append(Ktrans_wm_data[:, :, i][a].mean())
+        if a[0].size > 0:
+            Ktrans_wm_mean.append(Ktrans_wm_data[:, :, i][a].mean())
+        else:
+            Ktrans_wm_mean.append(0)
+        
         a = np.where(Ktrans_gm_data[:, :, i] > KTRANS_MIN_THRESHOLD)
-        Ktrans_gm_mean.append(Ktrans_gm_data[:, :, i][a].mean())
+        if a[0].size > 0:
+            Ktrans_gm_mean.append(Ktrans_gm_data[:, :, i][a].mean())
+        else:
+            Ktrans_gm_mean.append(0)
+        
         a = np.where(Ktrans_csf_data[:, :, i] > KTRANS_MIN_THRESHOLD)
-        Ktrans_csf_mean.append(Ktrans_csf_data[:, :, i][a].mean())
+        if a[0].size > 0:
+            Ktrans_csf_mean.append(Ktrans_csf_data[:, :, i][a].mean())
+        else:
+            Ktrans_csf_mean.append(0)
+        
         
         a = np.where(Ktrans_wm_data[:, :, i] > KTRANS_MIN_THRESHOLD)
-        Ktrans_wm_median.append(median(Ktrans_wm_data[:, :, i][a]))
+        if a[0].size > 0:
+            Ktrans_wm_median.append(median(Ktrans_wm_data[:, :, i][a]))
+        else:
+            Ktrans_wm_median.append(0)
+        
         a = np.where(Ktrans_gm_data[:, :, i] > KTRANS_MIN_THRESHOLD)
-        Ktrans_gm_median.append(median(Ktrans_gm_data[:, :, i][a]))
+        if a[0].size > 0:
+            Ktrans_gm_median.append(median(Ktrans_gm_data[:, :, i][a]))
+        else:
+            Ktrans_gm_median.append(0)
+        
         a = np.where(Ktrans_csf_data[:, :, i] > KTRANS_MIN_THRESHOLD)
-        Ktrans_csf_median.append(median(Ktrans_csf_data[:, :, i][a]))
+        if a[0].size > 0:
+            Ktrans_csf_median.append(median(Ktrans_csf_data[:, :, i][a]))
+        else:
+            Ktrans_csf_median.append(0)
 
     # Figure city
     n_bins = 500
@@ -122,23 +169,18 @@ def analyze(file_dir):
     ax0.axvline(T1_gm_median_truncated, color = 'gray', linestyle = 'dashed')
     # ax0.axvline(mean(T1_csf_data[T1_csf_data > 0]), color = 'cyan', linestyle = 'dashed')
     min_ylim, max_ylim = ax0.get_ylim()
-    ax0.text(T1_wm_median_truncated*.23, max_ylim*0.9, 'Median: {:.1f}'.format(T1_wm_median_truncated), color='pink')
-    ax0.text(T1_gm_median_truncated*1.2, max_ylim*0.9, 'Median: {:.1f}'.format(T1_gm_median_truncated), color='gray')
-    ax0.text(T1_wm_median_truncated*.23, max_ylim*0.8, 'stdev: {:.1f}'.format(pstdev(T1_wm_data[np.where(np.logical_and(T1_wm_data>0, T1_wm_data<4000))])), color='pink')
-    ax0.text(T1_gm_median_truncated*1.2, max_ylim*0.8, 'stdev: {:.1f}'.format(pstdev(T1_gm_data[np.where(np.logical_and(T1_gm_data>0, T1_gm_data<4000))])), color='gray')
     ax0.legend()
     # FWHMs
     wm_top10 = np.argpartition(wmn, -10)[-10:]
     wm_halfmax = mean(wmn[wm_top10])/2
     wm_upper_i = (np.abs(wmn - wm_halfmax)).argmin()
-    print((np.abs(wmn[250:501] - wm_halfmax)).argmin()+250)
+    # print((np.abs(wmn[250:501] - wm_halfmax)).argmin()+250)
     upper = wmins[wm_upper_i]
     ax0.axvline(upper, color = 'lightpink', linestyle = 'dotted')
     wm_lower_i = (np.abs(wmn[1:wm_upper_i-10] - wm_halfmax)).argmin()+1
     lower = wmins[wm_lower_i]
     ax0.axvline(lower, color = 'lightpink', linestyle = 'dotted')
     ax0.hlines(wm_halfmax, wmins[wm_lower_i], wmins[wm_upper_i], color='k')
-    ax0.text(wmins[wm_lower_i]*.37, wm_halfmax*1, 'FWHM: {:.1f}'.format(wmins[wm_upper_i]-wmins[wm_lower_i]), color='k')
     # gm
     gm_top10 = np.argpartition(gmn, -10)[-10:]
     gm_halfmax = mean(gmn[gm_top10])/2
@@ -150,7 +192,13 @@ def analyze(file_dir):
     lower = gmins[gm_lower_i]
     ax0.axvline(lower, color = 'gray', linestyle = 'dotted')
     ax0.hlines(gm_halfmax, gmins[gm_lower_i], gmins[gm_upper_i], color='k')
-    ax0.text(gmins[gm_upper_i]*1.02, gm_halfmax*1, 'FWHM: {:.1f}'.format(gmins[gm_upper_i]-gmins[gm_lower_i]), color='k')
+    ax0.text(wmins[wm_lower_i]*.15, max_ylim*0.9, 'Median: {:.1f}'.format(T1_wm_median_truncated), color='pink')
+    ax0.text(gmins[gm_upper_i]*1.04, max_ylim*0.9, 'Median: {:.1f}'.format(T1_gm_median_truncated), color='gray')
+    ax0.text(wmins[wm_lower_i]*.15, max_ylim*0.8, 'stdev: {:.1f}'.format(pstdev(T1_wm_data[np.where(np.logical_and(T1_wm_data>0, T1_wm_data<4000))])), color='pink')
+    ax0.text(gmins[gm_upper_i]*1.04, max_ylim*0.8, 'stdev: {:.1f}'.format(pstdev(T1_gm_data[np.where(np.logical_and(T1_gm_data>0, T1_gm_data<4000))])), color='gray')
+    ax0.text(wmins[wm_lower_i]*.3, wm_halfmax*1, 'FWHM: {:.1f}'.format(wmins[wm_upper_i]-wmins[wm_lower_i]), color='k')
+    ax0.text(gmins[gm_upper_i]*1.04, gm_halfmax*1, 'FWHM: {:.1f}'.format(gmins[gm_upper_i]-gmins[gm_lower_i]), color='k')
+    
 
     ## Ktrans histogram
     ax1.set_xlabel('Ktrans')

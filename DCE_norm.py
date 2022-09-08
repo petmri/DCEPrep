@@ -34,12 +34,23 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     wm_mean = []
     orig_img = []
     
+    total_wm_voxels = wm_data[wm_data > 0].size
+    polyfit_slice_weights = []
+    
     # get mean of each wm slice and each orig slice
     for i in range(slice_num):
         a = np.where(wm_data[:, :, i, :] > 0)
-        wm_mean.append(wm_data[:, :, i, :][a].mean())
+        polyfit_slice_weights.append(wm_data[:,:,i,:][a].size/total_wm_voxels)
+        if a[0].size > 0:
+            wm_mean.append(wm_data[:, :, i, :][a].mean())
+        else:
+            wm_mean.append(0)
+            
         a = np.where(mri_data[:, :, i, :] > 0)
-        orig_img.append(mri_data[:, :, i, :][a].mean())
+        if a[0].size > 0:
+            orig_img.append(mri_data[:, :, i, :][a].mean())
+        else:
+            orig_img.append(0)
 
     slice_index = []
     mri_final = mri_data
@@ -48,7 +59,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     # apply normalizations
     if POLYFIT is True:
         print("Using Polynomial fitting to normalize " + mri_file1)
-        poly_norm_curve = Polynomial.fit(list(range(slice_num)), wm_mean, 4)
+        poly_norm_curve = Polynomial.fit(list(range(slice_num)), wm_mean, 4, w=polyfit_slice_weights)
         norm_slices = polyval(list(range(slice_num)), poly_norm_curve.convert().coef)
         
         # apply scaling factor
@@ -79,9 +90,16 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     norm_wm = []
     for i in range(slice_num):
         a = np.where(mri_final[:, :, i, :] > 0)
-        norm_img.append(mri_final[:, :, i, :][a].mean())
+        if a[0].size > 0:
+            norm_img.append(mri_final[:, :, i, :][a].mean())
+        else:
+            norm_img.append(0)
+        
         a = np.where(wm2[:, :, i, :] > 0)
-        norm_wm.append(wm2[:, :, i, :][a].mean())
+        if a[0].size > 0:
+            norm_wm.append(wm2[:, :, i, :][a].mean())
+        else:
+            norm_wm.append(0)
         
     data_mean1 = mean(norm_img)
 
