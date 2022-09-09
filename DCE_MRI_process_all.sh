@@ -232,7 +232,14 @@ for dir in */*_timepoint/; do
 	flirt -in brain_mask.nii.gz -ref DCE_mc.nii -out brain_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
 	#bet 2.nii brain_dyn.nii -R -m -f 0.45 -g 0 -Z
 	fslcpgeom 2.nii brain_mask_dyn.nii
-	fslmaths DCE_mc.nii -mas brain_mask_dyn.nii.gz DCE_mc_masked.nii
+	cp aif.nii aif_aligned.nii
+	fslcpgeom brain_mask_dyn.nii aif_aligned.nii
+	fslmaths aif_aligned.nii -thr 0 aif_pos.nii
+	rm aif_aligned.nii
+	
+	fslmaths brain_mask_dyn.nii -add aif_pos.nii -bin brain_mask_dyn_aif.nii
+	#fslmaths brain_mask_dyn_aif.nii -add 1 -thr 0.5 -bin brain_mask_dyn_aif.nii
+	fslmaths DCE_mc.nii -mas brain_mask_dyn_aif.nii.gz DCE_mc_masked.nii
 		
 	if [ $EN_BIAS1 -eq 1 ]
 		then
@@ -377,7 +384,7 @@ for dir in */*_timepoint/; do
 	fi
 	
 	# Align gm mask
-	flirt -in 15_gm.nii.gz -ref ref_rep.nii -out 15_gm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
+	flirt -in 15_gm.nii.gz -ref ref_rep.nii -out 15_gm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
 	
 	# Make CSF mask
 	if [ $EN_BIAS1 -eq 1 ]
