@@ -144,15 +144,14 @@ def analyze(file_dir):
     fig, ((ax0, ax1), (ax2, ax3)) = plt.subplots(2, 2, figsize=(20,6))
     
     ## Initialize values
-    T1_wm_data = np.reshape(T1_wm_data, (320*320*14))
-    T1_gm_data = np.reshape(T1_gm_data, (320*320*14))
-    T1_csf_data = np.reshape(T1_csf_data, (320*320*14))
+    T1_wm_data = T1_wm_data.flatten()
+    T1_gm_data = T1_gm_data.flatten()
     T1_wm_median_truncated = median(T1_wm_data[np.where(np.logical_and(T1_wm_data>0, T1_wm_data<4000))])
     T1_gm_median_truncated = median(T1_gm_data[np.where(np.logical_and(T1_gm_data>0, T1_gm_data<4000))])
     
-    Ktrans_wm_data = np.reshape(Ktrans_wm_data, (320*320*14))
-    Ktrans_gm_data = np.reshape(Ktrans_gm_data, (320*320*14))
-    Ktrans_csf_data = np.reshape(Ktrans_csf_data, (320*320*14))
+    Ktrans_wm_data = Ktrans_wm_data.flatten()
+    Ktrans_gm_data = Ktrans_gm_data.flatten()
+    # Ktrans_csf_data = Ktrans_csf_data.flatten()
     Ktrans_wm_median_truncated = median(Ktrans_wm_data[Ktrans_wm_data>KTRANS_MIN_THRESHOLD])
     Ktrans_gm_median_truncated = median(Ktrans_gm_data[Ktrans_gm_data>KTRANS_MIN_THRESHOLD])
     Ktrans_wm_stdev_truncated = stdev(Ktrans_wm_data[Ktrans_wm_data>KTRANS_MIN_THRESHOLD])
@@ -161,49 +160,53 @@ def analyze(file_dir):
     ## T1 Histogram
     ax0.set_xlabel('T1')
     ax0.set_ylabel('Frequency')
-    ax0.set_ylim([0, 2700])
+    # ax0.set_ylim([0, 2700])
     wmn, wmins, wmpatches = ax0.hist(T1_wm_data, n_bins, range=(10, 4000), histtype='bar', color = 'pink', label = "wm")
     gmn, gmins, gmpatches = ax0.hist(T1_gm_data, n_bins, range=(10, 4000),histtype='bar', alpha = 0.9, color = 'gray', label = 'gm')
     # ax0.hist(T1_csf_data, n_bins, range=(10, 4000), histtype='bar', color = 'cyan', label = 'csf')
     ax0.axvline(T1_wm_median_truncated, color = 'lightpink', linestyle = 'dashed')
     ax0.axvline(T1_gm_median_truncated, color = 'gray', linestyle = 'dashed')
+    print(T1_gm_median_truncated)
     # ax0.axvline(mean(T1_csf_data[T1_csf_data > 0]), color = 'cyan', linestyle = 'dashed')
     min_ylim, max_ylim = ax0.get_ylim()
     ax0.legend()
     # FWHMs
+    ## wm
+    wm_median_bindex = (np.abs(wmins - T1_wm_median_truncated)).argmin()
     wm_top10 = np.argpartition(wmn, -10)[-10:]
     wm_halfmax = mean(wmn[wm_top10])/2
-    wm_upper_i = (np.abs(wmn - wm_halfmax)).argmin()
+    wm_lower_i = (np.abs(wmn[0:wm_median_bindex] - wm_halfmax)).argmin()
+    lower = wmins[wm_lower_i]
+    ax0.axvline(lower, color = 'lightpink', linestyle = 'dotted')
+    wm_upper_i = (np.abs(wmn[wm_median_bindex:n_bins+1] - wm_halfmax)).argmin()+wm_median_bindex
     # print((np.abs(wmn[250:501] - wm_halfmax)).argmin()+250)
     upper = wmins[wm_upper_i]
     ax0.axvline(upper, color = 'lightpink', linestyle = 'dotted')
-    wm_lower_i = (np.abs(wmn[1:wm_upper_i-10] - wm_halfmax)).argmin()+1
-    lower = wmins[wm_lower_i]
-    ax0.axvline(lower, color = 'lightpink', linestyle = 'dotted')
     ax0.hlines(wm_halfmax, wmins[wm_lower_i], wmins[wm_upper_i], color='k')
-    # gm
+    ## gm
+    gm_median_bindex = (np.abs(gmins - T1_gm_median_truncated)).argmin()
     gm_top10 = np.argpartition(gmn, -10)[-10:]
     gm_halfmax = mean(gmn[gm_top10])/2
-    gm_upper_i = (np.abs(gmn[250:501] - gm_halfmax)).argmin()+250
+    gm_lower_i = (np.abs(gmn[0:gm_median_bindex] - gm_halfmax)).argmin()
+    lower = gmins[gm_lower_i]
+    ax0.axvline(lower, color = 'gray', linestyle = 'dotted')
+    gm_upper_i = (np.abs(gmn[gm_median_bindex:n_bins+1] - gm_halfmax)).argmin()+gm_median_bindex
     # print((np.abs(gmn[0:250] - gm_halfmax)).argmin())
     upper = gmins[gm_upper_i]
     ax0.axvline(upper, color = 'gray', linestyle = 'dotted')
-    gm_lower_i = (np.abs(gmn[1:gm_upper_i-10] - gm_halfmax)).argmin()+1
-    lower = gmins[gm_lower_i]
-    ax0.axvline(lower, color = 'gray', linestyle = 'dotted')
     ax0.hlines(gm_halfmax, gmins[gm_lower_i], gmins[gm_upper_i], color='k')
-    ax0.text(wmins[wm_lower_i]*.15, max_ylim*0.9, 'Median: {:.1f}'.format(T1_wm_median_truncated), color='pink')
+    ax0.text(wmins[wm_lower_i]*.1, max_ylim*0.9, 'Median: {:.1f}'.format(T1_wm_median_truncated), color='pink')
     ax0.text(gmins[gm_upper_i]*1.04, max_ylim*0.9, 'Median: {:.1f}'.format(T1_gm_median_truncated), color='gray')
-    ax0.text(wmins[wm_lower_i]*.15, max_ylim*0.8, 'stdev: {:.1f}'.format(pstdev(T1_wm_data[np.where(np.logical_and(T1_wm_data>0, T1_wm_data<4000))])), color='pink')
+    ax0.text(wmins[wm_lower_i]*.1, max_ylim*0.8, 'stdev: {:.1f}'.format(pstdev(T1_wm_data[np.where(np.logical_and(T1_wm_data>0, T1_wm_data<4000))])), color='pink')
     ax0.text(gmins[gm_upper_i]*1.04, max_ylim*0.8, 'stdev: {:.1f}'.format(pstdev(T1_gm_data[np.where(np.logical_and(T1_gm_data>0, T1_gm_data<4000))])), color='gray')
-    ax0.text(wmins[wm_lower_i]*.3, wm_halfmax*1, 'FWHM: {:.1f}'.format(wmins[wm_upper_i]-wmins[wm_lower_i]), color='k')
+    ax0.text(wmins[wm_lower_i]*.1, wm_halfmax*1, 'FWHM: {:.1f}'.format(wmins[wm_upper_i]-wmins[wm_lower_i]), color='k')
     ax0.text(gmins[gm_upper_i]*1.04, gm_halfmax*1, 'FWHM: {:.1f}'.format(gmins[gm_upper_i]-gmins[gm_lower_i]), color='k')
     
 
     ## Ktrans histogram
     ax1.set_xlabel('Ktrans')
     ax1.set_ylabel('Frequency')
-    ax1.set_ylim([0, 500])
+    # ax1.set_ylim([0, 1400])
     ax1.hist(Ktrans_gm_data, n_bins, range=(KTRANS_MIN_THRESHOLD, .02), histtype='bar', alpha=1, color = 'gray', label = 'gm')
     ax1.hist(Ktrans_wm_data, n_bins, range=(KTRANS_MIN_THRESHOLD, .02), histtype='bar', alpha=0.9, color = 'pink', label = 'wm')
     # ax1.hist(Ktrans_csf_data, n_bins, range=(KTRANS_MIN_THRESHOLD, .02), histtype='bar', alpha=0.4, color = 'cyan', label = 'csf')
