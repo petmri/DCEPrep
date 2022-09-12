@@ -128,6 +128,9 @@ for file in files_in_dir:
     if str(file).endswith('mc_bfc.nii') or str(file).endswith('mc_bfc.nii.gz'):
         file1 = str(file)
         mask_file = file1.split('.', 1)
-        mask_file = mask_file[0] + '_wm.nii.gz'
+        mask_file = mask_file[0] + '_wm.nii'
         
-        normalize(file1, mask_file, str(dir))   #CALLING THE 'normalize()' FUNCTION TO PERFORM THE NORMALIZATION
+        try:
+            normalize(file1, mask_file, str(dir))   #CALLING THE 'normalize()' FUNCTION TO PERFORM THE NORMALIZATION
+        except FileNotFoundError:
+            normalize(file1, mask_file + ".gz", str(dir))

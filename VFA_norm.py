@@ -119,13 +119,15 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     nib.save(final_img, path3)
 
 
-# print(sys.argv[1])
 dir = Path(sys.argv[1])     # takes timepoint directory as argument
 files_in_dir = dir.iterdir()
 for file in files_in_dir:
-    if str(file).endswith('_bfc.nii') or str(file).endswith('_bfc.nii.gz'):
+    if re.search('\d+_bfc.nii.*', str(file)):
         file1 = str(file)
         mask_file = file1.split('.', 1)
-        mask_file = mask_file[0] + '_wm.nii.gz'
-        
-        normalize(file1, mask_file, str(dir))   #CALLING THE 'normalize()' FUNCTION TO PERFORM THE NORMALIZATION
+        mask_file = mask_file[0] + '_wm.nii'
+ 
+        try:
+            normalize(file1, mask_file, str(dir))   #CALLING THE 'normalize()' FUNCTION TO PERFORM THE NORMALIZATION
+        except FileNotFoundError:
+            normalize(file1, mask_file + ".gz", str(dir))
