@@ -125,4 +125,5 @@ if __name__ == "__main__":
         parser.add_argument('-p','--plot', help='Show 1D Motion Plot', action="store_true")
         parser.add_argument('-d','--drift', help='Create voxel drift image', action="store_true")
         args = parser.parse_args()
-    main()    
+    main()
+

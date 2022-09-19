@@ -67,5 +67,5 @@ for file in files_in_dir1:
             if ((str(item).split('/')[-1] == '1st_timepoint') or (str(item).split('/')[-1] == '2nd_timepoint')):   #SEARCHES FOR THE FOLDERS WITH THESE SPECIFIC NAMES (ENCLOSED IN STRINGS)
                 files_in_dir3 = item.iterdir()
                 for b1_imgs in files_in_dir3:
-                    if ((str(b1_imgs).split('/')[-1] == '2_b1corr.nii') or (str(b1_imgs).split('/')[-1] == '5_b1corr.nii') or (str(b1_imgs).split('/')[-1] == '10_b1corr.nii') or (str(b1_imgs).split('/')[-1] == '12_b1corr.nii') or (str(b1_imgs).split('/')[-1] == '15_b1corr.nii')):   #SEARCHES FOR THE NIFTI FILES WITH THESE SPECIFIC NAMES (ENCLOSED IN STRINGS)
+                    if str(b1_imgs).endswith('_bfc.nii'):
                         normalize(str(b1_imgs), str(item))   #CALLING THE 'normalize()' FUNCTION TO PERFORM THE NORMALIZATION
