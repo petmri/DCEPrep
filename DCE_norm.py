@@ -121,7 +121,6 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     nib.save(final_img, path3)
 
 
-print(sys.argv[1])
 dir = Path(sys.argv[1])     # takes timepoint directory as argument
 files_in_dir = dir.iterdir()
 for file in files_in_dir:

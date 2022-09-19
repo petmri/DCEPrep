@@ -1,6 +1,7 @@
 #!/bin/bash
 # FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, and Python are required
 # Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
+# control variables
 EN_Z_NORM=1
 EN_BIAS1=1
 EN_BIAS2=0
@@ -8,11 +9,11 @@ EN_BIAS2=0
 # path searching will probably break if >1 dir found
 ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
-SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
-#SCRIPT_PATH=/home/mrispec/Code/in-house_toolbox
+#SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
+SCRIPT_PATH=/home/mrispec/Code/in-house_toolbox
 
 # cd to your main data directory or remove this line if this script is already there
-cd /media/network_mriphysics/LLUCAS-USC/data
+cd /media/network_mriphysics/USC-PPG/data
 
 # Run bias correction on VFA data 
 # ------------------------------
@@ -77,15 +78,15 @@ for dir in */*_timepoint/; do
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15_masked.nii
 		rm 15_masked_mixeltype.nii.gz
-		#rm 15_masked_pve_0.nii.gz
-		#rm 15_masked_pve_1.nii.gz
-		#rm 15_masked_pve_2.nii.gz
+		rm 15_masked_pve_0.nii.gz
+		rm 15_masked_pve_1.nii.gz
+		rm 15_masked_pve_2.nii.gz
 		rm 15_masked_pveseg.nii.gz
-		rm 15_masked_seg.nii.gz
+		#rm 15_masked_seg.nii.gz
 		3dcalc -a 15_masked.nii -b 15_masked_bias.nii.gz -expr a/b -prefix 15_bfc.nii
 			
 		# threshold and binarize wm mask
-		fslmaths 15_masked_pve_2.nii.gz -thr 0.9 -bin 15_wm.nii
+		fslmaths 15_masked_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
 		# apply wm mask to all VFAs
 		fslmaths 2_bfc.nii -mas 15_wm.nii.gz 2_bfc_wm.nii 
 		fslmaths 5_bfc.nii -mas 15_wm.nii.gz 5_bfc_wm.nii
@@ -111,7 +112,7 @@ for dir in */*_timepoint/; do
 		#3dcalc -a 15_masked.nii -b 15_masked_bias.nii.gz -expr a/b -prefix 15_bfc.nii
 		
 		# threshold and binarize wm mask
-		fslmaths 15_bfc_pve_2.nii.gz -thr 0.9 -bin 15_wm.nii
+		fslmaths 15_masked_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
 		# apply wm mask to all VFAs
 		fslmaths 2_bfc.nii -mas 15_wm.nii.gz 2_bfc_wm.nii 
 		fslmaths 5_bfc.nii -mas 15_wm.nii.gz 5_bfc_wm.nii
@@ -127,7 +128,6 @@ for dir in */*_timepoint/; do
 		#cd ../..
 		echo begin slice normalization
 
-		#python3 python_norm1.py
 		#python3 VFA_norm.py /media/network_mriphysics/LLUCAS-USC/data/1101475_2nd_version/1st_timepoint
 		python3 $SCRIPT_PATH/VFA_norm.py $SUBJECT_TP_PATH
 		#cd $dir
@@ -210,8 +210,11 @@ for dir in */*_timepoint/; do
 	
 	# motion correction of VFA
 	# ------------------------------
-	3dvolreg -heptic -verbose -base 'VFA.nii[0]' -dfile VFA_motion.txt -prefix VFA.motioncorrected.nii VFA.nii
-
+	3dvolreg -heptic -verbose -base 'VFA.nii[0]' -dfile VFA_motion.txt -prefix VFA_mc.nii VFA.nii
+	
+	# smooth
+	#3dBlurToFWHM -input VFA_mc.nii -FWHM 5 -prefix VFA_mc_blurred.nii
+	
 	# T1 mapping where the input image is 'VFA.motioncorrected.nii'
 	# ------------------------------
 	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts'; T1mapping_fit('$SUBJECT_TP_PATH/'); exit;"
@@ -226,7 +229,7 @@ for dir in */*_timepoint/; do
 	# ------------------------------
 	# MC or no?
 	3dTcat -prefix ref_rep.nii DCE_mc.nii'[1]'
-	flirt -in T1_map_t1_fa_linear_fit_VFA.motioncorrected.nii -ref ref_rep.nii -out t1_map_fixed_use_me.nii -omat t12dcevol.mat -dof 6 -inweight brain_mask.nii.gz
+	flirt -in T1_map_t1_fa_fit_VFA_mc.nii -ref ref_rep.nii -out t1_map_fixed_use_me.nii -omat t12dcevol.mat -dof 6 -inweight brain_mask.nii.gz
 	
 	# align and apply brain mask
 	flirt -in brain_mask.nii.gz -ref DCE_mc.nii -out brain_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
@@ -354,8 +357,9 @@ for dir in */*_timepoint/; do
 	fi
 	#rm ref_rep.nii
 	
-	# align existing white matter mask to dynamic images
-	flirt -in 15_wm.nii.gz -ref ref_rep.nii -out 15_wm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
+	# align existing white matter mask to dynamic images and re-binarize
+	flirt -in 15_wm.nii.gz -ref ref_rep.nii -out 15_wm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
+	fslmaths 15_wm_mask_dyn.nii.gz -thr 1.7 -bin 15_wm_mask_dyn.nii
 	
 	# apply wm mask to all DCE images
 	fslmaths DCE_mc_bfc.nii -mas 15_wm_mask_dyn.nii.gz DCE_mc_bfc_wm.nii.gz
@@ -364,6 +368,9 @@ for dir in */*_timepoint/; do
 	# ------------------------------
 	echo Normalizing dynamic images...
 	python $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH
+	
+	# smooth dynamic set
+	#3dBlurToFWHM -input DCE_mc_bfc_norm.nii -FWHM 4 -prefix DCE_mc_bfc_norm_blurred.nii
 
 	# DCE
 	# ------------------------------
@@ -376,28 +383,30 @@ for dir in */*_timepoint/; do
 	# Make gm mask
 	if [ $EN_BIAS1 -eq 1 ]
 		then
-		fslmaths 15_masked_pve_1.nii.gz -thr 0.8 -bin 15_gm_mask.nii
+		fslmaths 15_masked_seg.nii.gz -thr 2 -uthr 2 -bin 15_gm_mask.nii
 		fslmaths 15_bfc.nii -mas 15_gm_mask.nii.gz 15_gm.nii
 	else
-		fslmaths 15_bfc_pve_1.nii.gz -thr 0.8 -bin 15_gm_mask.nii
+		fslmaths 15_bfc_seg.nii.gz -thr 2 -uthr 2 -bin 15_gm_mask.nii
 		fslmaths 15_bfc.nii -mas 15_gm_mask.nii.gz 15_gm.nii
 	fi
 	
-	# Align gm mask
+	# Align then re-binarize gm mask
 	flirt -in 15_gm.nii.gz -ref ref_rep.nii -out 15_gm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
+	fslmaths 15_gm_mask_dyn.nii.gz -thr 20 -bin 15_gm_mask_dyn.nii
 	
 	# Make CSF mask
 	if [ $EN_BIAS1 -eq 1 ]
 		then
-		fslmaths 15_masked_pve_0.nii.gz -thr 0.8 -bin 15_csf_mask.nii
+		fslmaths 15_masked_seg.nii.gz -thr 1 -uthr 1 -bin 15_csf_mask.nii
 		fslmaths 15_bfc.nii -mas 15_csf_mask.nii.gz 15_csf.nii
 	else
-		fslmaths 15_bfc_pve_0.nii.gz -thr 0.8 -bin 15_csf_mask.nii
+		fslmaths 15_bfc_seg.nii.gz -thr 1 -uthr 1 -bin 15_csf_mask.nii
 		fslmaths 15_bfc.nii -mas 15_csf_mask.nii.gz 15_csf.nii
 	fi
 	
 	# Align CSF mask
-	flirt -in 15_csf.nii.gz -ref ref_rep.nii -out 15_csf_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
+	flirt -in 15_csf.nii.gz -ref ref_rep.nii -out 15_csf_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
+	fslmaths 15_csf_mask_dyn.nii.gz -thr 20 -bin 15_csf_mask_dyn.nii
 	
 	# Apply masks to T1 map
 	fslmaths t1_map_fixed_use_me.nii.gz -mas 15_wm.nii T1_wm.nii
