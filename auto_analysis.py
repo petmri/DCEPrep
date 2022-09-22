@@ -3,6 +3,7 @@ from pathlib import Path
 from statistics import mean, median, pstdev, stdev
 import numpy as np
 import matplotlib
+from numpy.lib.function_base import average
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
@@ -157,7 +158,7 @@ def analyze(file_dir):
         
         a = np.where((gm_data[:, :, i] > 0) & (Ktrans_gm_data[:, :, i] <= KTRANS_MIN_THRESHOLD))
         if a[0].size > 0:
-            Ktrans_gm_zeros.append(len(Ktrans_gm_data[:, :, i][a]) / len(Ktrans_gm_data[:, :, i][wm_data[:, :, i] > 0]) * 100)
+            Ktrans_gm_zeros.append(len(Ktrans_gm_data[:, :, i][a]) / len(Ktrans_gm_data[:, :, i][gm_data[:, :, i] > 0]) * 100)
         else:
             Ktrans_gm_zeros.append(0)
 
@@ -171,20 +172,20 @@ def analyze(file_dir):
     T1_wm_median_truncated = median(T1_wm_data[np.where(np.logical_and(T1_wm_data > 0, T1_wm_data < 4000))])
     T1_gm_median_truncated = median(T1_gm_data[np.where(np.logical_and(T1_gm_data > 0, T1_gm_data < 4000))])
 
-    Ktrans_wm_data = Ktrans_wm_data.flatten()
-    Ktrans_gm_data = Ktrans_gm_data.flatten()
+    Ktrans_wm_1D = Ktrans_wm_data.flatten()
+    Ktrans_gm_1D = Ktrans_gm_data.flatten()
     # Ktrans_csf_data = Ktrans_csf_data.flatten()
-    Ktrans_wm_median_truncated = median(Ktrans_wm_data[Ktrans_wm_data > KTRANS_MIN_THRESHOLD])
-    Ktrans_gm_median_truncated = median(Ktrans_gm_data[Ktrans_gm_data > KTRANS_MIN_THRESHOLD])
-    Ktrans_wm_stdev_truncated = stdev(Ktrans_wm_data[Ktrans_wm_data > KTRANS_MIN_THRESHOLD])
-    Ktrans_gm_stdev_truncated = stdev(Ktrans_gm_data[Ktrans_gm_data > KTRANS_MIN_THRESHOLD])
+    Ktrans_wm_median_truncated = median(Ktrans_wm_1D[Ktrans_wm_1D > KTRANS_MIN_THRESHOLD])
+    Ktrans_gm_median_truncated = median(Ktrans_gm_1D[Ktrans_gm_1D > KTRANS_MIN_THRESHOLD])
+    Ktrans_wm_stdev_truncated = stdev(Ktrans_wm_1D[Ktrans_wm_1D > KTRANS_MIN_THRESHOLD])
+    Ktrans_gm_stdev_truncated = stdev(Ktrans_gm_1D[Ktrans_gm_1D > KTRANS_MIN_THRESHOLD])
 
     # for i in range(slice_num)
     #     T1_wm_zeros = size(T1_wm_data[T1_wm_data[:,:,i] == 0])
     #     T1_gm_zeros = size(T1_gm_data[T1_gm_data[:,:,i] == 0])
     #
-    #     Ktrans_wm_zeros = size(Ktrans_wm_data[Ktrans_wm_data == 0])
-    #     Ktrans_gm_zeros = size(Ktrans_gm_data[Ktrans_gm_data == 0])
+    #     Ktrans_wm_zeros = size(Ktrans_wm_1D[Ktrans_wm_1D == 0])
+    #     Ktrans_gm_zeros = size(Ktrans_gm_1D[Ktrans_gm_1D == 0])
     
     ## T1 Histogram
     ax0.set_xlabel('T1')
@@ -235,8 +236,8 @@ def analyze(file_dir):
     ax1.set_xlabel('Ktrans')
     ax1.set_ylabel('Frequency')
     # ax1.set_ylim([0, 1400])
-    ax1.hist(Ktrans_gm_data, n_bins, range=(KTRANS_MIN_THRESHOLD, .02), histtype='bar', alpha=1, color='gray', label='gm')
-    ax1.hist(Ktrans_wm_data, n_bins, range=(KTRANS_MIN_THRESHOLD, .02), histtype='bar', alpha=0.9, color='pink', label='wm')
+    ax1.hist(Ktrans_gm_1D, n_bins, range=(KTRANS_MIN_THRESHOLD, .02), histtype='bar', alpha=1, color='gray', label='gm')
+    ax1.hist(Ktrans_wm_1D, n_bins, range=(KTRANS_MIN_THRESHOLD, .02), histtype='bar', alpha=0.9, color='pink', label='wm')
     # ax1.hist(Ktrans_csf_data, n_bins, range=(KTRANS_MIN_THRESHOLD, .02), histtype='bar', alpha=0.4, color = 'cyan', label = 'csf')
     _, max_ylim = ax1.get_ylim()
     ax1.axvline(Ktrans_wm_median_truncated, color='pink', linestyle='dashed')
@@ -271,6 +272,7 @@ def analyze(file_dir):
     # Save graphs
     path2 = file_dir + '/T1_Ktrans_analysis.png'
     plt.savefig(path2)
+    
     # Zeros
     fig2, ((ax4, ax5)) = plt.subplots(2, 1, figsize=(20,6))
 
@@ -281,6 +283,7 @@ def analyze(file_dir):
     ax4.plot(range(slice_num), T1_wm_zeros, label='wm', color='pink')
     ax4.plot(range(slice_num), T1_gm_zeros, label='gm', color='gray')
     # ax3.plot(range(slice_num), Ktrans_csf_mean, label = 'csf', color = 'cyan')
+    # ax4.text(wmins[wm_lower_i]*.1, max_ylim*0.9, 'Median: {:.1f}'.format(T1_wm_median_truncated), color='pink')
     ax4.yaxis.set_major_formatter(mtick.PercentFormatter())
     ax4.grid()
     ax4.legend()
@@ -292,6 +295,22 @@ def analyze(file_dir):
     ax5.plot(range(slice_num), Ktrans_wm_zeros, label='wm', color='pink')
     ax5.plot(range(slice_num), Ktrans_gm_zeros, label='gm', color='gray')
     # ax3.plot(range(slice_num), Ktrans_csf_mean, label = 'csf', color = 'cyan')
+    # print(Ktrans_wm_zeros)
+    Ktrans_wm_slicevoxels = []
+    Ktrans_gm_slicevoxels = []
+    for i in range(slice_num):
+        Ktrans_wm_slicevoxels.append(len(Ktrans_wm_data[:, :, i][wm_data[:, :, i] > 0]))
+        Ktrans_gm_slicevoxels.append(len(Ktrans_gm_data[:, :, i][gm_data[:, :, i] > 0]))
+    # print(Ktrans_wm_slicevoxels)
+    # print(average(Ktrans_wm_zeros, weights=Ktrans_wm_slicevoxels))
+    Ktrans_wm_zero_avg = average(Ktrans_wm_zeros, weights=Ktrans_wm_slicevoxels)
+    Ktrans_gm_zero_avg = average(Ktrans_gm_zeros, weights=Ktrans_gm_slicevoxels)
+    min_ylim, max_ylim = ax5.get_ylim()
+    min_xlim, max_xlim = ax5.get_xlim()
+    ax5.hlines(Ktrans_wm_zero_avg, min_xlim, max_xlim, color='pink', linestyle='dashed')
+    ax5.text(min_xlim*.9, Ktrans_wm_zero_avg*1.02, 'WTD AVG: {:.1f}%'.format(Ktrans_wm_zero_avg), color='pink')
+    ax5.hlines(Ktrans_gm_zero_avg, min_xlim, max_xlim, color='gray', linestyle='dashed')
+    ax5.text(min_xlim*.9, Ktrans_gm_zero_avg*1.02, 'WTD AVG: {:.1f}%'.format(Ktrans_gm_zero_avg), color='gray')
     ax5.yaxis.set_major_formatter(mtick.PercentFormatter())
     ax5.grid()
     ax5.legend()

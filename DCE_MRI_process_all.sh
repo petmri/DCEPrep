@@ -9,8 +9,8 @@ EN_BIAS2=0
 # path searching will probably break if >1 dir found
 ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
-#SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
-SCRIPT_PATH=/home/mrispec/Code/in-house_toolbox
+SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
+#SCRIPT_PATH=/home/mrispec/Code/in-house_toolbox
 
 # cd to your main data directory or remove this line if this script is already there
 cd /media/network_mriphysics/USC-PPG/data
@@ -86,7 +86,9 @@ for dir in */*_timepoint/; do
 		3dcalc -a 15_masked.nii -b 15_masked_bias.nii.gz -expr a/b -prefix 15_bfc.nii
 			
 		# threshold and binarize wm mask
+		#fslmaths 15_masked_pve_2.nii.gz -thr 0.9 -bin 15_wm.nii
 		fslmaths 15_masked_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
+		
 		# apply wm mask to all VFAs
 		fslmaths 2_bfc.nii -mas 15_wm.nii.gz 2_bfc_wm.nii 
 		fslmaths 5_bfc.nii -mas 15_wm.nii.gz 5_bfc_wm.nii
@@ -112,7 +114,9 @@ for dir in */*_timepoint/; do
 		#3dcalc -a 15_masked.nii -b 15_masked_bias.nii.gz -expr a/b -prefix 15_bfc.nii
 		
 		# threshold and binarize wm mask
+		#fslmaths 15_masked_pve_2.nii.gz -thr 0.9 -bin 15_wm.nii
 		fslmaths 15_masked_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
+		
 		# apply wm mask to all VFAs
 		fslmaths 2_bfc.nii -mas 15_wm.nii.gz 2_bfc_wm.nii 
 		fslmaths 5_bfc.nii -mas 15_wm.nii.gz 5_bfc_wm.nii
@@ -125,12 +129,8 @@ for dir in */*_timepoint/; do
 	# ------------------------------
 	if [ $EN_Z_NORM -eq 1 ] 
 		then
-		#cd ../..
 		echo begin slice normalization
-
-		#python3 VFA_norm.py /media/network_mriphysics/LLUCAS-USC/data/1101475_2nd_version/1st_timepoint
 		python3 $SCRIPT_PATH/VFA_norm.py $SUBJECT_TP_PATH
-		#cd $dir
 	fi
 
 	if [ $EN_BIAS2 -eq 1 ]
@@ -223,7 +223,10 @@ for dir in */*_timepoint/; do
 	# Motion correction of dynamic images using AFNI
 	# ------------------------------
 	echo Motion correcting dynamic images...
-	3dvolreg -heptic -verbose -base 'DCE.nii[1]' -dfile DCE_motion.txt -prefix DCE_mc.nii DCE.nii
+	#3dvolreg -heptic -verbose -base 'DCE.nii[1]' -dfile DCE_motion.txt -prefix DCE_mc.nii DCE.nii
+	#2dImReg -input DCE.nii -base 'DCE.nii[1]' -prefix DCE_mc.nii
+	mcflirt -in DCE.nii -refvol 'DCE.nii[1]' -cost mutualinfo -report -o DCE_mc.nii
+	#cp DCE.nii DCE_mc.nii
 	
 	# Align T1 map with Dynamic data
 	# ------------------------------
@@ -234,14 +237,14 @@ for dir in */*_timepoint/; do
 	# align and apply brain mask
 	flirt -in brain_mask.nii.gz -ref DCE_mc.nii -out brain_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
 	#bet 2.nii brain_dyn.nii -R -m -f 0.45 -g 0 -Z
+	
+	# ensure AIF is included in mask
 	fslcpgeom 2.nii brain_mask_dyn.nii
 	cp aif.nii aif_aligned.nii
 	fslcpgeom brain_mask_dyn.nii aif_aligned.nii
 	fslmaths aif_aligned.nii -thr 0 aif_pos.nii
 	rm aif_aligned.nii
-	
-	fslmaths brain_mask_dyn.nii -add aif_pos.nii -bin brain_mask_dyn_aif.nii
-	#fslmaths brain_mask_dyn_aif.nii -add 1 -thr 0.5 -bin brain_mask_dyn_aif.nii
+	fslmaths brain_mask_dyn.nii -add aif_pos.nii -thr 1 -bin brain_mask_dyn_aif.nii
 	fslmaths DCE_mc.nii -mas brain_mask_dyn_aif.nii.gz DCE_mc_masked.nii
 		
 	if [ $EN_BIAS1 -eq 1 ]
@@ -271,7 +274,7 @@ for dir in */*_timepoint/; do
 		rm 5th_rep_mixeltype.nii.gz
 		rm 5th_rep_pve_0.nii.gz
 		rm 5th_rep_pve_1.nii.gz
-		#rm 5th_rep_pve_2.nii.gz
+		rm 5th_rep_pve_2.nii.gz
 		rm 5th_rep_pveseg.nii.gz
 		rm 5th_rep_seg.nii.gz
 
@@ -319,7 +322,7 @@ for dir in */*_timepoint/; do
 		rm 60th_rep_mixeltype.nii.gz
 		rm 60th_rep_pve_0.nii.gz
 		rm 60th_rep_pve_1.nii.gz
-		#rm 60th_rep_pve_2.nii.gz
+		rm 60th_rep_pve_2.nii.gz
 		rm 60th_rep_pveseg.nii.gz
 		rm 60th_rep_seg.nii.gz
 
@@ -360,6 +363,8 @@ for dir in */*_timepoint/; do
 	# align existing white matter mask to dynamic images and re-binarize
 	flirt -in 15_wm.nii.gz -ref ref_rep.nii -out 15_wm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
 	fslmaths 15_wm_mask_dyn.nii.gz -thr 1.7 -bin 15_wm_mask_dyn.nii
+	# align existing white matter mask to dynamic images
+	#flirt -in 15_wm.nii.gz -ref ref_rep.nii -out 15_wm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
 	
 	# apply wm mask to all DCE images
 	fslmaths DCE_mc_bfc.nii -mas 15_wm_mask_dyn.nii.gz DCE_mc_bfc_wm.nii.gz
@@ -384,6 +389,7 @@ for dir in */*_timepoint/; do
 	if [ $EN_BIAS1 -eq 1 ]
 		then
 		fslmaths 15_masked_seg.nii.gz -thr 2 -uthr 2 -bin 15_gm_mask.nii
+		#fslmaths 15_masked_pve_1.nii.gz -thr 0.8 -bin 15_gm_mask.nii
 		fslmaths 15_bfc.nii -mas 15_gm_mask.nii.gz 15_gm.nii
 	else
 		fslmaths 15_bfc_seg.nii.gz -thr 2 -uthr 2 -bin 15_gm_mask.nii
@@ -398,6 +404,7 @@ for dir in */*_timepoint/; do
 	if [ $EN_BIAS1 -eq 1 ]
 		then
 		fslmaths 15_masked_seg.nii.gz -thr 1 -uthr 1 -bin 15_csf_mask.nii
+		#fslmaths 15_masked_pve_0.nii.gz -thr 0.8 -bin 15_csf_mask.nii
 		fslmaths 15_bfc.nii -mas 15_csf_mask.nii.gz 15_csf.nii
 	else
 		fslmaths 15_bfc_seg.nii.gz -thr 1 -uthr 1 -bin 15_csf_mask.nii
@@ -409,14 +416,14 @@ for dir in */*_timepoint/; do
 	fslmaths 15_csf_mask_dyn.nii.gz -thr 20 -bin 15_csf_mask_dyn.nii
 	
 	# Apply masks to T1 map
-	fslmaths t1_map_fixed_use_me.nii.gz -mas 15_wm.nii T1_wm.nii
-	fslmaths t1_map_fixed_use_me.nii.gz -mas 15_gm.nii T1_gm.nii
-	fslmaths t1_map_fixed_use_me.nii.gz -mas 15_csf.nii T1_csf.nii
+	fslmaths t1_map_fixed_use_me.nii.gz -mas 15_wm_mask_dyn.nii T1_wm.nii
+	fslmaths t1_map_fixed_use_me.nii.gz -mas 15_gm_mask_dyn.nii T1_gm.nii
+	fslmaths t1_map_fixed_use_me.nii.gz -mas 15_csf_mask_dyn.nii T1_csf.nii
 	
 	# Apply masks to Ktrans map
-	fslmaths dce_patlak_fit_Ktrans.nii -mas 15_wm.nii Ktrans_wm.nii
-	fslmaths dce_patlak_fit_Ktrans.nii -mas 15_gm.nii Ktrans_gm.nii
-	fslmaths dce_patlak_fit_Ktrans.nii -mas 15_csf.nii Ktrans_csf.nii
+	fslmaths dce_patlak_fit_Ktrans.nii -mas 15_wm_mask_dyn.nii Ktrans_wm.nii
+	fslmaths dce_patlak_fit_Ktrans.nii -mas 15_gm_mask_dyn.nii Ktrans_gm.nii
+	fslmaths dce_patlak_fit_Ktrans.nii -mas 15_csf_mask_dyn.nii Ktrans_csf.nii
 	
 	python $SCRIPT_PATH/auto_analysis.py $SUBJECT_TP_PATH
 	cd ../../	
