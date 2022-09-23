@@ -232,10 +232,13 @@ for dir in */*_timepoint/; do
 	# ------------------------------
 	# MC or no?
 	3dTcat -prefix ref_rep.nii DCE_mc.nii'[1]'
-	flirt -in T1_map_t1_fa_fit_VFA_mc.nii -ref ref_rep.nii -out t1_map_fixed_use_me.nii -omat t12dcevol.mat -dof 6 -inweight brain_mask.nii.gz
+	#flirt -in T1_map_t1_fa_fit_VFA_mc.nii -ref ref_rep.nii -out t1_map_fixed_use_me.nii -omat t12dcevol.mat -dof 6 -inweight brain_mask.nii.gz
+	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_map_t1_fa_fit_VFA_mc.nii t1_map_fixed_use_me.nii.gz
 	
 	# align and apply brain mask
-	flirt -in brain_mask.nii.gz -ref DCE_mc.nii -out brain_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
+	#flirt -in brain_mask.nii.gz -ref DCE_mc.nii -out brain_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
+	bash $SCRIPT_PATH/tktregistration.sh DCE_mc.nii brain_mask.nii.gz brain_mask_dyn.nii.gz
+	
 	#bet 2.nii brain_dyn.nii -R -m -f 0.45 -g 0 -Z
 	
 	# ensure AIF is included in mask
@@ -361,10 +364,9 @@ for dir in */*_timepoint/; do
 	#rm ref_rep.nii
 	
 	# align existing white matter mask to dynamic images and re-binarize
-	flirt -in 15_wm.nii.gz -ref ref_rep.nii -out 15_wm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
-	fslmaths 15_wm_mask_dyn.nii.gz -thr 1.7 -bin 15_wm_mask_dyn.nii
-	# align existing white matter mask to dynamic images
 	#flirt -in 15_wm.nii.gz -ref ref_rep.nii -out 15_wm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
+	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii 15_wm.nii.gz 15_wm_mask_dyn.nii.gz
+	fslmaths 15_wm_mask_dyn.nii.gz -thr 1.7 -bin 15_wm_mask_dyn.nii
 	
 	# apply wm mask to all DCE images
 	fslmaths DCE_mc_bfc.nii -mas 15_wm_mask_dyn.nii.gz DCE_mc_bfc_wm.nii.gz
@@ -397,7 +399,8 @@ for dir in */*_timepoint/; do
 	fi
 	
 	# Align then re-binarize gm mask
-	flirt -in 15_gm.nii.gz -ref ref_rep.nii -out 15_gm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
+	#flirt -in 15_gm.nii.gz -ref ref_rep.nii -out 15_gm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
+	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii 15_gm.nii.gz 15_gm_mask_dyn.nii.gz
 	fslmaths 15_gm_mask_dyn.nii.gz -thr 20 -bin 15_gm_mask_dyn.nii
 	
 	# Make CSF mask
@@ -413,6 +416,7 @@ for dir in */*_timepoint/; do
 	
 	# Align CSF mask
 	flirt -in 15_csf.nii.gz -ref ref_rep.nii -out 15_csf_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
+	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii 15_csf.nii.gz 15_csf_mask_dyn.nii.gz
 	fslmaths 15_csf_mask_dyn.nii.gz -thr 20 -bin 15_csf_mask_dyn.nii
 	
 	# Apply masks to T1 map
