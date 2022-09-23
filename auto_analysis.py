@@ -274,19 +274,20 @@ def analyze(file_dir):
     plt.savefig(path2)
     
     # Zeros
-    fig2, ((ax4, ax5)) = plt.subplots(2, 1, figsize=(20,6))
+    # fig2, ((ax4, ax5)) = plt.subplots(2, 1, figsize=(20,6))
+    fig2, ax5 = plt.subplots(2, 1, figsize=(20,6))
 
     ## T1 zeros plot
-    ax4.set_xlabel('Slice #')
-    ax4.set_ylabel('T1 Zeros')
+    # ax4.set_xlabel('Slice #')
+    # ax4.set_ylabel('T1 Zeros')
     # ax4.set_ylim([0, 0.017])
-    ax4.plot(range(slice_num), T1_wm_zeros, label='wm', color='pink')
-    ax4.plot(range(slice_num), T1_gm_zeros, label='gm', color='gray')
+    # ax4.plot(range(slice_num), T1_wm_zeros, label='wm', color='pink')
+    # ax4.plot(range(slice_num), T1_gm_zeros, label='gm', color='gray')
     # ax3.plot(range(slice_num), Ktrans_csf_mean, label = 'csf', color = 'cyan')
     # ax4.text(wmins[wm_lower_i]*.1, max_ylim*0.9, 'Median: {:.1f}'.format(T1_wm_median_truncated), color='pink')
-    ax4.yaxis.set_major_formatter(mtick.PercentFormatter())
-    ax4.grid()
-    ax4.legend()
+    # ax4.yaxis.set_major_formatter(mtick.PercentFormatter())
+    # ax4.grid()
+    # ax4.legend()
 
     ## Ktrans zeros plot
     ax5.set_xlabel('Slice #')
