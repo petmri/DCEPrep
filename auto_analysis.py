@@ -275,7 +275,7 @@ def analyze(file_dir):
     
     # Zeros
     # fig2, ((ax4, ax5)) = plt.subplots(2, 1, figsize=(20,6))
-    fig2, ax5 = plt.subplots(2, 1, figsize=(20,6))
+    fig2, ax5 = plt.subplots(1, 1, figsize=(20,6))
 
     ## T1 zeros plot
     # ax4.set_xlabel('Slice #')
