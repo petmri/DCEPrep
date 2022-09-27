@@ -86,7 +86,6 @@ for dir in */*_timepoint/; do
 		3dcalc -a 15_masked.nii -b 15_masked_bias.nii.gz -expr a/b -prefix 15_bfc.nii
 			
 		# threshold and binarize wm mask
-		#fslmaths 15_masked_pve_2.nii.gz -thr 0.9 -bin 15_wm.nii
 		fslmaths 15_masked_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
 		
 		# apply wm mask to all VFAs
@@ -106,16 +105,14 @@ for dir in */*_timepoint/; do
 		echo Skipping BFC... but still segmenting one VFA for matter masks
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15_bfc.nii
 		rm 15_bfc_mixeltype.nii.gz
-		#rm 15_masked_pve_0.nii.gz
-		#rm 15_masked_pve_1.nii.gz
-		#rm 15_masked_pve_2.nii.gz
+		rm 15_bfc_pve_0.nii.gz
+		rm 15_bfc_pve_1.nii.gz
+		rm 15_bfc_pve_2.nii.gz
 		rm 15_bfc_pveseg.nii.gz
-		rm 15_bfc_seg.nii.gz
-		#3dcalc -a 15_masked.nii -b 15_masked_bias.nii.gz -expr a/b -prefix 15_bfc.nii
+		#rm 15_bfc_seg.nii.gz
 		
 		# threshold and binarize wm mask
-		#fslmaths 15_masked_pve_2.nii.gz -thr 0.9 -bin 15_wm.nii
-		fslmaths 15_masked_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
+		fslmaths 15_bfc_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
 		
 		# apply wm mask to all VFAs
 		fslmaths 2_bfc.nii -mas 15_wm.nii.gz 2_bfc_wm.nii 
@@ -148,7 +145,6 @@ for dir in */*_timepoint/; do
 		rm 2_BFC_Z_pveseg.nii.gz
 		rm 2_BFC_Z_seg.nii.gz
 		3dcalc -a 2_BFC_Z.nii -b 2_BFC_Z_bias.nii.gz -expr a/b -prefix 2_b2corr.nii
-		#fslmaths 2_b1corr.nii -mas brain_mask.nii.gz 2_new.nii 
 		
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5_BFC_Z.nii
 		rm 5_BFC_Z_mixeltype.nii.gz
@@ -158,7 +154,6 @@ for dir in */*_timepoint/; do
 		rm 5_BFC_Z_pveseg.nii.gz
 		rm 5_BFC_Z_seg.nii.gz
 		3dcalc -a 5_BFC_Z.nii -b 5_BFC_Z_bias.nii.gz -expr a/b -prefix 5_b2corr.nii
-		#fslmaths 5_b1corr.nii -mas brain_mask.nii.gz 5_new.nii 
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10_BFC_Z.nii
 		rm 10_BFC_Z_mixeltype.nii.gz
@@ -168,7 +163,6 @@ for dir in */*_timepoint/; do
 		rm 10_BFC_Z_pveseg.nii.gz
 		rm 10_BFC_Z_seg.nii.gz
 		3dcalc -a 10_BFC_Z.nii -b 10_BFC_Z_bias.nii.gz -expr a/b -prefix 10_b2corr.nii
-		#fslmaths 10_b1corr.nii -mas brain_mask.nii.gz 10_new.nii 
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 12_BFC_Z.nii
 		rm 12_BFC_Z_mixeltype.nii.gz
@@ -178,7 +172,6 @@ for dir in */*_timepoint/; do
 		rm 12_BFC_Z_pveseg.nii.gz
 		rm 12_BFC_Z_seg.nii.gz
 		3dcalc -a 12_BFC_Z.nii -b 12_BFC_Z_bias.nii.gz -expr a/b -prefix 12_b2corr.nii
-		#fslmaths 12_b1corr.nii -mas brain_mask.nii.gz 12_new.nii 
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15_BFC_Z.nii
 		rm 15_BFC_Z_mixeltype.nii.gz
@@ -188,7 +181,6 @@ for dir in */*_timepoint/; do
 		rm 15_BFC_Z_pveseg.nii.gz
 		rm 15_BFC_Z_seg.nii.gz
 		3dcalc -a 15_BFC_Z.nii -b 15_BFC_Z_bias.nii.gz -expr a/b -prefix 15_b2corr.nii
-		#fslmaths 15_b1corr.nii -mas brain_mask.nii.gz 15_new.nii 
 		
 		# concatenates 5 images in one VFA.nii image  
 		3dTcat -prefix VFA.nii 2_b2corr.nii 5_b2corr.nii 10_b2corr.nii 12_b2corr.nii 15_b2corr.nii
@@ -210,7 +202,8 @@ for dir in */*_timepoint/; do
 	
 	# motion correction of VFA
 	# ------------------------------
-	3dvolreg -heptic -verbose -base 'VFA.nii[0]' -dfile VFA_motion.txt -prefix VFA_mc.nii VFA.nii
+	mcflirt -in VFA.nii -refvol 'VFA.nii[0]' -cost mutualinfo -report -verbose -plots -o VFA_mc.nii
+	gunzip VFA_mc.nii.gz
 	
 	# smooth
 	#3dBlurToFWHM -input VFA_mc.nii -FWHM 5 -prefix VFA_mc_blurred.nii
@@ -223,23 +216,17 @@ for dir in */*_timepoint/; do
 	# Motion correction of dynamic images using AFNI
 	# ------------------------------
 	echo Motion correcting dynamic images...
-	#3dvolreg -heptic -verbose -base 'DCE.nii[1]' -dfile DCE_motion.txt -prefix DCE_mc.nii DCE.nii
-	#2dImReg -input DCE.nii -base 'DCE.nii[1]' -prefix DCE_mc.nii
-	mcflirt -in DCE.nii -refvol 'DCE.nii[1]' -cost mutualinfo -report -o DCE_mc.nii
-	#cp DCE.nii DCE_mc.nii
+	mcflirt -in DCE.nii -refvol 'DCE.nii[1]' -cost mutualinfo -report -verbose -plots -o DCE_mc.nii
+	python max_disp.py $SUBJECT_TP_PATH
 	
 	# Align T1 map with Dynamic data
 	# ------------------------------
 	# MC or no?
 	3dTcat -prefix ref_rep.nii DCE_mc.nii'[1]'
-	#flirt -in T1_map_t1_fa_fit_VFA_mc.nii -ref ref_rep.nii -out t1_map_fixed_use_me.nii -omat t12dcevol.mat -dof 6 -inweight brain_mask.nii.gz
 	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_map_t1_fa_fit_VFA_mc.nii t1_map_fixed_use_me.nii.gz
 	
 	# align and apply brain mask
-	#flirt -in brain_mask.nii.gz -ref DCE_mc.nii -out brain_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm 
 	bash $SCRIPT_PATH/tktregistration.sh DCE_mc.nii brain_mask.nii.gz brain_mask_dyn.nii.gz
-	
-	#bet 2.nii brain_dyn.nii -R -m -f 0.45 -g 0 -Z
 	
 	# ensure AIF is included in mask
 	fslcpgeom 2.nii brain_mask_dyn.nii
@@ -361,10 +348,8 @@ for dir in */*_timepoint/; do
 		#3dTcat -prefix ref_rep.nii dce_mc_bfc'[1]'
 		mv DCE_mc.nii DCE_mc_bfc.nii
 	fi
-	#rm ref_rep.nii
 	
 	# align existing white matter mask to dynamic images and re-binarize
-	#flirt -in 15_wm.nii.gz -ref ref_rep.nii -out 15_wm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
 	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii 15_wm.nii.gz 15_wm_mask_dyn.nii.gz
 	fslmaths 15_wm_mask_dyn.nii.gz -thr 1.7 -bin 15_wm_mask_dyn.nii
 	
@@ -391,7 +376,6 @@ for dir in */*_timepoint/; do
 	if [ $EN_BIAS1 -eq 1 ]
 		then
 		fslmaths 15_masked_seg.nii.gz -thr 2 -uthr 2 -bin 15_gm_mask.nii
-		#fslmaths 15_masked_pve_1.nii.gz -thr 0.8 -bin 15_gm_mask.nii
 		fslmaths 15_bfc.nii -mas 15_gm_mask.nii.gz 15_gm.nii
 	else
 		fslmaths 15_bfc_seg.nii.gz -thr 2 -uthr 2 -bin 15_gm_mask.nii
@@ -399,7 +383,6 @@ for dir in */*_timepoint/; do
 	fi
 	
 	# Align then re-binarize gm mask
-	#flirt -in 15_gm.nii.gz -ref ref_rep.nii -out 15_gm_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
 	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii 15_gm.nii.gz 15_gm_mask_dyn.nii.gz
 	fslmaths 15_gm_mask_dyn.nii.gz -thr 20 -bin 15_gm_mask_dyn.nii
 	
@@ -407,7 +390,6 @@ for dir in */*_timepoint/; do
 	if [ $EN_BIAS1 -eq 1 ]
 		then
 		fslmaths 15_masked_seg.nii.gz -thr 1 -uthr 1 -bin 15_csf_mask.nii
-		#fslmaths 15_masked_pve_0.nii.gz -thr 0.8 -bin 15_csf_mask.nii
 		fslmaths 15_bfc.nii -mas 15_csf_mask.nii.gz 15_csf.nii
 	else
 		fslmaths 15_bfc_seg.nii.gz -thr 1 -uthr 1 -bin 15_csf_mask.nii
