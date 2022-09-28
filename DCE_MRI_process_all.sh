@@ -216,7 +216,7 @@ for dir in */*_timepoint/; do
 	# Motion correction of dynamic images using AFNI
 	# ------------------------------
 	echo Motion correcting dynamic images...
-	mcflirt -in DCE.nii -refvol 'DCE.nii[1]' -cost mutualinfo -report -verbose -plots -o DCE_mc.nii
+	mcflirt -in DCE.nii -refvol 'DCE.nii[1]' -cost mutualinfo -report -plots -o DCE_mc.nii
 	python max_disp.py $SUBJECT_TP_PATH
 	
 	# Align T1 map with Dynamic data
