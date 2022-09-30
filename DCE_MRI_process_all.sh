@@ -6,10 +6,9 @@ EN_Z_NORM=1
 EN_BIAS1=1
 EN_BIAS2=0
 #EN_MOTION_CORR=1
-# path searching will probably break if >1 dir found
-ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
+ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit)
 GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
-SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
+SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit)
 #SCRIPT_PATH=/home/mrispec/Code/in-house_toolbox
 
 # cd to your main data directory or remove this line if this script is already there
