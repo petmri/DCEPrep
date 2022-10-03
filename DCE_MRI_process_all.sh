@@ -45,7 +45,7 @@ if [ -z "$DATA_DIR" ]
 		echo "ERROR: Please use '-d [dir_path]' to pass the path to your main data directory to this script."
 		exit 1
 fi
-
+cd $DATA_DIR
 ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit)
 GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
 SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit)
