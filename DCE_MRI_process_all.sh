@@ -166,6 +166,15 @@ for dir in */*_timepoint/; do
 		python3 $SCRIPT_PATH/VFA_norm.py $SUBJECT_TP_PATH
 	fi
 
+	if [ $ff -eq 1 ]
+		then
+			if [ ! -f "15_BFC_Z.nii" ]
+				then
+					echo "Missing Z-normalized files. Z-norm likely failed due to non-existent inputs."
+					exit 1
+			fi
+	fi
+
 	if [ $EN_BIAS2 -eq 1 ]
 		then
 		# 2nd Bias correction VFA data
@@ -236,31 +245,68 @@ for dir in */*_timepoint/; do
 		3dTcat -prefix VFA.nii 2_masked.nii 5_masked.nii 10_masked.nii 12_masked.nii 15_masked.nii
 	fi
 	
+	if [ $ff -eq 1 ]
+		then
+			if [ ! -f "VFA.nii" ]
+				then
+					echo "Missing VFA file. Component files may have failed."
+					exit 1
+			fi
+	fi
+	
 	# motion correction of VFA
 	# ------------------------------
 	mcflirt -in VFA.nii -refvol 'VFA.nii[0]' -cost mutualinfo -report -verbose -plots -o VFA_mc.nii
 	gunzip VFA_mc.nii.gz
 	
+	if [ $ff -eq 1 ]
+		then
+			if [ ! -f "VFA_mc.nii" ]
+				then
+					echo "Missing VFA_mc file. Motion correction may have failed."
+					exit 1
+			fi
+	fi
 	# smooth
 	#3dBlurToFWHM -input VFA_mc.nii -FWHM 5 -prefix VFA_mc_blurred.nii
 	
 	# T1 mapping where the input image is 'VFA.motioncorrected.nii'
 	# ------------------------------
 	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts'; T1mapping_fit('$SUBJECT_TP_PATH/'); exit;"
-	#matlab -nodisplay -r "cd('/home/mrispec/Code/ROCKETSHIP/parametric_scripts/custom_scripts'); T1mapping_fit('/home/mrispec/Desktop/raw_data/1101428_2nd_version/1st_timepoint/'); exit;"
-
+	if [ $ff -eq 1 ]
+		then
+			if [ ! -f "T1_map_t1_fa_fit_VFA_mc.nii" ]
+				then
+					echo "Missing T1 map file. T1 mapping may have failed."
+					exit 1
+			fi
+	fi
 	# Motion correction of dynamic images using AFNI
 	# ------------------------------
 	echo Motion correcting dynamic images...
 	mcflirt -in DCE.nii -refvol 'DCE.nii[1]' -cost mutualinfo -report -plots -o DCE_mc.nii
-	python max_disp.py $SUBJECT_TP_PATH
-	
+	python3 $SCRIPT_PATH/max_disp.py $SUBJECT_TP_PATH
+	if [ $ff -eq 1 ]
+		then
+			if [ ! -f "DCE_mc.nii.gz" ]
+				then
+					echo "Missing motion corrected DCE file."
+					exit 1
+			fi
+	fi
 	# Align T1 map with Dynamic data
 	# ------------------------------
 	# MC or no?
 	3dTcat -prefix ref_rep.nii DCE_mc.nii'[1]'
 	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_map_t1_fa_fit_VFA_mc.nii t1_map_fixed_use_me.nii.gz
-	
+	if [ $ff -eq 1 ]
+		then
+			if [ ! -f "t1_map_fixed_use_me.nii.gz" ]
+				then
+					echo "Missing registered T1 map."
+					exit 1
+			fi
+	fi
 	# align and apply brain mask
 	bash $SCRIPT_PATH/tktregistration.sh DCE_mc.nii brain_mask.nii.gz brain_mask_dyn.nii.gz
 	
@@ -405,6 +451,14 @@ for dir in */*_timepoint/; do
 	echo Begin DCE processing...
 	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH/matlab'; run_dce_auto('$SUBJECT_TP_PATH/'); exit;"
 
+	if [ $ff -eq 1 ]
+		then
+			if [ ! -f "dce_patlak_fit_Ktrans.nii" ]
+				then
+					echo "Missing Ktrans maps. Check terminal--DCE failed or inputs were not generated."
+					exit 1
+			fi
+	fi
 	
 	# Analyze results (scouting)
 	# ------------------------------
