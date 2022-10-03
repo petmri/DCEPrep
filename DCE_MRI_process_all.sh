@@ -2,17 +2,54 @@
 # FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, and Python are required
 # Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
 # control variables
-EN_Z_NORM=1
-EN_BIAS1=1
+EN_Z_NORM=0
+EN_BIAS1=0
 EN_BIAS2=0
 #EN_MOTION_CORR=1
+
+# make this your main data directory or pass it as an option to -d
+#DATA_DIR=/media/network_mriphysics/USC-PPG/data
+
+# options
+while getopts ":d:bBZFh" options; do
+
+	case "${options}" in
+		b)
+			EN_BIAS1=1
+			;;
+		B)	EN_BIAS2=1
+			;;
+		d)
+			DATA_DIR=${OPTARG}
+			;;
+		F)
+			ff=1
+			;;
+		h)
+			echo "This script runs through all subject folders of a specified main data directory, processing every folder ending in '_timepoint'."
+			echo "-b: enable first round of bias field corrections"
+			echo "-B: enable second round of bias field corrections, post-Z-norm if enabled"
+			echo "-Z: enable Z-slice normalization"
+			echo "-d: specify main data directory containing all subject folders"
+			echo "-F: fail fast, any command failures will end the script"
+			echo "-h: display this message"
+			;;
+		Z)
+			EN_Z_NORM=1
+			;;
+	esac
+done
+
+if [ -z "$DATA_DIR" ]
+	then
+		echo "ERROR: Please use '-d [dir_path]' to pass the path to your main data directory to this script."
+		exit 1
+fi
+
 ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit)
 GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
 SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit)
 #SCRIPT_PATH=/home/mrispec/Code/in-house_toolbox
-
-# cd to your main data directory or remove this line if this script is already there
-cd /media/network_mriphysics/USC-PPG/data
 
 # Run bias correction on VFA data 
 # ------------------------------
