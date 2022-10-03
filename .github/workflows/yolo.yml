@@ -49,7 +49,7 @@ jobs:
     - name: Run the whole script
       run: |
         cd /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint
-        rm -f !("2.nii"|"5.nii"|"10.nii"|"12.nii"|"15.nii"|"DCE.nii"|"aif.nii")
+        #rm -f !("2.nii"|"5.nii"|"10.nii"|"12.nii"|"15.nii"|"DCE.nii"|"aif.nii")
         cd /home/mrispec/actions-runner/_work/in-house_toolbox/in-house_toolbox
         ./DCE_MRI_process_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA -b -Z
     
