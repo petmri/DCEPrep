@@ -5,6 +5,7 @@
 EN_Z_NORM=0
 EN_BIAS1=0
 EN_BIAS2=0
+ff=0
 #EN_MOTION_CORR=1
 
 # make this your main data directory or pass it as an option to -d
