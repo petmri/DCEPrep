@@ -33,6 +33,7 @@ while getopts ":d:bBZFh" options; do
 			echo "-d: specify main data directory containing all subject folders"
 			echo "-F: fail fast, any command failures will end the script"
 			echo "-h: display this message"
+			exit 0
 			;;
 		Z)
 			EN_Z_NORM=1
