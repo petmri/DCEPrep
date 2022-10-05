@@ -5,6 +5,7 @@
 EN_Z_NORM=0
 EN_BIAS1=0
 EN_BIAS2=0
+ff=0
 #EN_MOTION_CORR=1
 
 # make this your main data directory or pass it as an option to -d
@@ -82,7 +83,7 @@ for dir in */*_timepoint/; do
 		rm 2_masked_pve_2.nii.gz
 		rm 2_masked_pveseg.nii.gz
 		rm 2_masked_seg.nii.gz
-		3dcalc -a 2_masked.nii -b 2_masked_bias.nii.gz -expr a/b -prefix 2_bfc.nii
+		3dcalc -a 2_masked.nii -b 2_masked_bias.nii.gz -expr a/b -prefix 2_bfc.nii -overwrite
 		
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5_masked.nii
 		rm 5_masked_mixeltype.nii.gz
@@ -91,7 +92,7 @@ for dir in */*_timepoint/; do
 		rm 5_masked_pve_2.nii.gz
 		rm 5_masked_pveseg.nii.gz
 		rm 5_masked_seg.nii.gz
-		3dcalc -a 5_masked.nii -b 5_masked_bias.nii.gz -expr a/b -prefix 5_bfc.nii
+		3dcalc -a 5_masked.nii -b 5_masked_bias.nii.gz -expr a/b -prefix 5_bfc.nii -overwrite
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10_masked.nii
 		rm 10_masked_mixeltype.nii.gz
@@ -100,7 +101,7 @@ for dir in */*_timepoint/; do
 		rm 10_masked_pve_2.nii.gz
 		rm 10_masked_pveseg.nii.gz
 		rm 10_masked_seg.nii.gz
-		3dcalc -a 10_masked.nii -b 10_masked_bias.nii.gz -expr a/b -prefix 10_bfc.nii
+		3dcalc -a 10_masked.nii -b 10_masked_bias.nii.gz -expr a/b -prefix 10_bfc.nii -overwrite
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 12_masked.nii
 		rm 12_masked_mixeltype.nii.gz
@@ -109,7 +110,7 @@ for dir in */*_timepoint/; do
 		rm 12_masked_pve_2.nii.gz
 		rm 12_masked_pveseg.nii.gz
 		rm 12_masked_seg.nii.gz
-		3dcalc -a 12_masked.nii -b 12_masked_bias.nii.gz -expr a/b -prefix 12_bfc.nii
+		3dcalc -a 12_masked.nii -b 12_masked_bias.nii.gz -expr a/b -prefix 12_bfc.nii -overwrite
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15_masked.nii
 		rm 15_masked_mixeltype.nii.gz
@@ -118,7 +119,7 @@ for dir in */*_timepoint/; do
 		rm 15_masked_pve_2.nii.gz
 		rm 15_masked_pveseg.nii.gz
 		#rm 15_masked_seg.nii.gz
-		3dcalc -a 15_masked.nii -b 15_masked_bias.nii.gz -expr a/b -prefix 15_bfc.nii
+		3dcalc -a 15_masked.nii -b 15_masked_bias.nii.gz -expr a/b -prefix 15_bfc.nii -overwrite
 			
 		# threshold and binarize wm mask
 		fslmaths 15_masked_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
@@ -188,7 +189,7 @@ for dir in */*_timepoint/; do
 		rm 2_BFC_Z_pve_2.nii.gz
 		rm 2_BFC_Z_pveseg.nii.gz
 		rm 2_BFC_Z_seg.nii.gz
-		3dcalc -a 2_BFC_Z.nii -b 2_BFC_Z_bias.nii.gz -expr a/b -prefix 2_b2corr.nii
+		3dcalc -a 2_BFC_Z.nii -b 2_BFC_Z_bias.nii.gz -expr a/b -prefix 2_b2corr.nii -overwrite
 		
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5_BFC_Z.nii
 		rm 5_BFC_Z_mixeltype.nii.gz
@@ -197,7 +198,7 @@ for dir in */*_timepoint/; do
 		rm 5_BFC_Z_pve_2.nii.gz
 		rm 5_BFC_Z_pveseg.nii.gz
 		rm 5_BFC_Z_seg.nii.gz
-		3dcalc -a 5_BFC_Z.nii -b 5_BFC_Z_bias.nii.gz -expr a/b -prefix 5_b2corr.nii
+		3dcalc -a 5_BFC_Z.nii -b 5_BFC_Z_bias.nii.gz -expr a/b -prefix 5_b2corr.nii -overwrite
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10_BFC_Z.nii
 		rm 10_BFC_Z_mixeltype.nii.gz
@@ -206,7 +207,7 @@ for dir in */*_timepoint/; do
 		rm 10_BFC_Z_pve_2.nii.gz
 		rm 10_BFC_Z_pveseg.nii.gz
 		rm 10_BFC_Z_seg.nii.gz
-		3dcalc -a 10_BFC_Z.nii -b 10_BFC_Z_bias.nii.gz -expr a/b -prefix 10_b2corr.nii
+		3dcalc -a 10_BFC_Z.nii -b 10_BFC_Z_bias.nii.gz -expr a/b -prefix 10_b2corr.nii -overwrite
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 12_BFC_Z.nii
 		rm 12_BFC_Z_mixeltype.nii.gz
@@ -215,7 +216,7 @@ for dir in */*_timepoint/; do
 		rm 12_BFC_Z_pve_2.nii.gz
 		rm 12_BFC_Z_pveseg.nii.gz
 		rm 12_BFC_Z_seg.nii.gz
-		3dcalc -a 12_BFC_Z.nii -b 12_BFC_Z_bias.nii.gz -expr a/b -prefix 12_b2corr.nii
+		3dcalc -a 12_BFC_Z.nii -b 12_BFC_Z_bias.nii.gz -expr a/b -prefix 12_b2corr.nii -overwrite
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15_BFC_Z.nii
 		rm 15_BFC_Z_mixeltype.nii.gz
@@ -224,24 +225,24 @@ for dir in */*_timepoint/; do
 		rm 15_BFC_Z_pve_2.nii.gz
 		rm 15_BFC_Z_pveseg.nii.gz
 		rm 15_BFC_Z_seg.nii.gz
-		3dcalc -a 15_BFC_Z.nii -b 15_BFC_Z_bias.nii.gz -expr a/b -prefix 15_b2corr.nii
+		3dcalc -a 15_BFC_Z.nii -b 15_BFC_Z_bias.nii.gz -expr a/b -prefix 15_b2corr.nii -overwrite
 		
 		# concatenates 5 images in one VFA.nii image  
-		3dTcat -prefix VFA.nii 2_b2corr.nii 5_b2corr.nii 10_b2corr.nii 12_b2corr.nii 15_b2corr.nii
+		3dTcat -prefix VFA.nii 2_b2corr.nii 5_b2corr.nii 10_b2corr.nii 12_b2corr.nii 15_b2corr.nii -overwrite
 		
 	elif [ $EN_Z_NORM -eq 1 ] 
 		then
 		echo Concatenating Z-norm\'d images
 		# concatenates 5 images in one VFA.nii image
-		3dTcat -prefix VFA.nii 2_BFC_Z.nii 5_BFC_Z.nii 10_BFC_Z.nii 12_BFC_Z.nii 15_BFC_Z.nii
+		3dTcat -prefix VFA.nii 2_BFC_Z.nii 5_BFC_Z.nii 10_BFC_Z.nii 12_BFC_Z.nii 15_BFC_Z.nii -overwrite
 
 	elif [ $EN_BIAS1 -eq 1 ]
 		then
 		echo Concatenating non Z\'d images
-		3dTcat -prefix VFA.nii 2_bfc.nii 5_bfc.nii 10_bfc.nii 12_bfc.nii 15_bfc.nii
+		3dTcat -prefix VFA.nii 2_bfc.nii 5_bfc.nii 10_bfc.nii 12_bfc.nii 15_bfc.nii -overwrite
 	else
 		echo Concatenating raw images
-		3dTcat -prefix VFA.nii 2_masked.nii 5_masked.nii 10_masked.nii 12_masked.nii 15_masked.nii
+		3dTcat -prefix VFA.nii 2_masked.nii 5_masked.nii 10_masked.nii 12_masked.nii 15_masked.nii -overwrite
 	fi
 	
 	if [ $ff -eq 1 ]
@@ -256,7 +257,7 @@ for dir in */*_timepoint/; do
 	# motion correction of VFA
 	# ------------------------------
 	mcflirt -in VFA.nii -refvol 'VFA.nii[0]' -cost mutualinfo -report -verbose -plots -o VFA_mc.nii
-	gunzip VFA_mc.nii.gz
+	gunzip -f VFA_mc.nii.gz
 	
 	if [ $ff -eq 1 ]
 		then
@@ -284,7 +285,8 @@ for dir in */*_timepoint/; do
 	# ------------------------------
 	echo Motion correcting dynamic images...
 	mcflirt -in DCE.nii -refvol 'DCE.nii[1]' -cost mutualinfo -report -plots -o DCE_mc.nii
-	python3 $SCRIPT_PATH/max_disp.py $SUBJECT_TP_PATH
+	max=$(python3 $SCRIPT_PATH/max_disp.py $SUBJECT_TP_PATH)
+	echo -e "\e[1;33m$max\e[0m"
 	if [ $ff -eq 1 ]
 		then
 			if [ ! -f "DCE_mc.nii.gz" ]
@@ -296,7 +298,7 @@ for dir in */*_timepoint/; do
 	# Align T1 map with Dynamic data
 	# ------------------------------
 	# MC or no?
-	3dTcat -prefix ref_rep.nii DCE_mc.nii'[1]'
+	3dTcat -prefix ref_rep.nii DCE_mc.nii'[1]' -overwrite
 	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_map_t1_fa_fit_VFA_mc.nii t1_map_fixed_use_me.nii.gz
 	if [ $ff -eq 1 ]
 		then
@@ -324,14 +326,14 @@ for dir in */*_timepoint/; do
 		# Applying bias field correction on dynamic images
 		# ------------------------------
 		echo Applying BFC to dynamic images...
-		3dTcat -prefix 1st_rep.nii DCE_mc_masked.nii'[0]' # extract images from different DCE repetitions
-		3dTcat -prefix 5th_rep.nii DCE_mc_masked.nii'[4]'
-		3dTcat -prefix 10th_rep.nii DCE_mc_masked.nii'[9]'
-		3dTcat -prefix 20th_rep.nii DCE_mc_masked.nii'[19]'
-		3dTcat -prefix 30th_rep.nii DCE_mc_masked.nii'[29]'
-		3dTcat -prefix 40th_rep.nii DCE_mc_masked.nii'[39]'
-		3dTcat -prefix 50th_rep.nii DCE_mc_masked.nii'[49]'
-		3dTcat -prefix 60th_rep.nii DCE_mc_masked.nii'[59]'
+		3dTcat -prefix 1st_rep.nii DCE_mc_masked.nii'[0]' -overwrite # extract images from different DCE repetitions
+		3dTcat -prefix 5th_rep.nii DCE_mc_masked.nii'[4]' -overwrite
+		3dTcat -prefix 10th_rep.nii DCE_mc_masked.nii'[9]' -overwrite
+		3dTcat -prefix 20th_rep.nii DCE_mc_masked.nii'[19]' -overwrite
+		3dTcat -prefix 30th_rep.nii DCE_mc_masked.nii'[29]' -overwrite
+		3dTcat -prefix 40th_rep.nii DCE_mc_masked.nii'[39]' -overwrite
+		3dTcat -prefix 50th_rep.nii DCE_mc_masked.nii'[49]' -overwrite
+		3dTcat -prefix 60th_rep.nii DCE_mc_masked.nii'[59]' -overwrite
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 1st_rep.nii
 		rm 1st_rep_mixeltype.nii.gz
@@ -398,13 +400,13 @@ for dir in */*_timepoint/; do
 		rm 60th_rep_seg.nii.gz
 
 		# Concatenation1
-		3dTcat -prefix dyn_bias.nii 1st_rep_bias.nii.gz 5th_rep_bias.nii.gz 10th_rep_bias.nii.gz 20th_rep_bias.nii.gz 30th_rep_bias.nii.gz 40th_rep_bias.nii.gz 50th_rep_bias.nii.gz 60th_rep_bias.nii.gz 
+		3dTcat -prefix dyn_bias.nii 1st_rep_bias.nii.gz 5th_rep_bias.nii.gz 10th_rep_bias.nii.gz 20th_rep_bias.nii.gz 30th_rep_bias.nii.gz 40th_rep_bias.nii.gz 50th_rep_bias.nii.gz 60th_rep_bias.nii.gz -overwrite
 
 		# Computing average across 8 bias field that have been sampled
-		3dTstat -mean -prefix mean_dyn_bias_map.nii dyn_bias.nii'[0..7]'
+		3dTstat -mean -prefix mean_dyn_bias_map.nii dyn_bias.nii'[0..7]' -overwrite
 
 		# Normalizing motion corrected DCE image with mean bias field 
-		3dcalc -a DCE_mc_masked.nii -b mean_dyn_bias_map.nii -expr a/b -prefix DCE_mc_bfc.nii
+		3dcalc -a DCE_mc_masked.nii -b mean_dyn_bias_map.nii -expr a/b -prefix DCE_mc_bfc.nii -overwrite
 
 		# don't forget to remove all unnecessary images 
 		rm 1st_rep.nii
@@ -445,6 +447,6 @@ for dir in */*_timepoint/; do
 	# smooth dynamic set
 	#3dBlurToFWHM -input DCE_mc_bfc_norm.nii -FWHM 4 -prefix DCE_mc_bfc_norm_blurred.nii
 
-	cd ../../	
+	cd ../../
 	echo $dir preprocessing complete!
 done

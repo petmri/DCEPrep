@@ -2,7 +2,7 @@
 # FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, and Python are required
 # Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
 # control variables
-EN_Z_NORM=
+EN_Z_NORM=0
 EN_BIAS1=1
 EN_BIAS2=0
 ff=0
@@ -13,7 +13,6 @@ ff=0
 
 # options
 while getopts ":d:bBZFh" options; do
-
 	case "${options}" in
 		b)
 			EN_BIAS1=1
@@ -28,6 +27,7 @@ while getopts ":d:bBZFh" options; do
 			;;
 		h)
 			echo "This script runs through all subject folders of a specified main data directory, processing every folder ending in '_timepoint'."
+			echo "The output is mainly the DCE outputs (Ktrans maps) and QC graphs."
 			echo "-b: enable first round of bias field corrections"
 			echo "-B: enable second round of bias field corrections, post-Z-norm if enabled"
 			echo "-Z: enable Z-slice normalization"

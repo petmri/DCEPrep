@@ -296,14 +296,11 @@ def analyze(file_dir):
     ax5.plot(range(slice_num), Ktrans_wm_zeros, label='wm', color='pink')
     ax5.plot(range(slice_num), Ktrans_gm_zeros, label='gm', color='gray')
     # ax3.plot(range(slice_num), Ktrans_csf_mean, label = 'csf', color = 'cyan')
-    # print(Ktrans_wm_zeros)
     Ktrans_wm_slicevoxels = []
     Ktrans_gm_slicevoxels = []
     for i in range(slice_num):
         Ktrans_wm_slicevoxels.append(len(Ktrans_wm_data[:, :, i][wm_data[:, :, i] > 0]))
         Ktrans_gm_slicevoxels.append(len(Ktrans_gm_data[:, :, i][gm_data[:, :, i] > 0]))
-    # print(Ktrans_wm_slicevoxels)
-    # print(average(Ktrans_wm_zeros, weights=Ktrans_wm_slicevoxels))
     Ktrans_wm_zero_avg = average(Ktrans_wm_zeros, weights=Ktrans_wm_slicevoxels)
     Ktrans_gm_zero_avg = average(Ktrans_gm_zeros, weights=Ktrans_gm_slicevoxels)
     min_ylim, max_ylim = ax5.get_ylim()
