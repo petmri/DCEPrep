@@ -114,7 +114,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
 
     path2 = file_dir +'/DCE_mc_bfc_norm.png'   #THE STRING IN THE END CONTAINS THE FILE NAME OF THE GRAPHS GENERATED
     plt.savefig(path2)
-    print(file_dir)
+    # print(file_dir)
     mri_final = np.reshape(mri_final, mri_shape)
     final_img = nib.Nifti1Image(mri_final, mri.affine)
     path3 = file_dir + '/DCE_mc_bfc_norm.nii'  #THE STRING IN THE END CONTAINS THE FILE NAME OF THE NORMALIZED NIFTI IMAGE GENERATED

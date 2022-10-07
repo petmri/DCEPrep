@@ -1,4 +1,5 @@
 #!/bin/bash
+shopt -s extglob
 # FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, and Python are required
 # Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
 # control variables
@@ -6,18 +7,22 @@ EN_Z_NORM=0
 EN_BIAS1=0
 EN_BIAS2=0
 ff=0
+clean=0
 #EN_MOTION_CORR=1
 
 # make this your main data directory or pass it as an option to -d
 #DATA_DIR=/media/network_mriphysics/USC-PPG/data
 
 # options
-while getopts ":d:bBZFh" options; do
+while getopts ":d:bBZFhc" options; do
 	case "${options}" in
 		b)
 			EN_BIAS1=1
 			;;
 		B)	EN_BIAS2=1
+			;;
+		c)
+			clean=1
 			;;
 		d)
 			DATA_DIR=${OPTARG}
@@ -30,6 +35,7 @@ while getopts ":d:bBZFh" options; do
 			echo "The output is the DCE input, which are the corrected dynamic images, brain mask, T1 maps."
 			echo "-b: enable first round of bias field corrections"
 			echo "-B: enable second round of bias field corrections, post-Z-norm if enabled"
+			echo "-c: clean generated files prior to processing"
 			echo "-Z: enable Z-slice normalization"
 			echo "-d: specify main data directory containing all subject folders"
 			echo "-F: fail fast, any command failures will end the script"
@@ -48,9 +54,9 @@ if [ -z "$DATA_DIR" ]
 		exit 1
 fi
 cd $DATA_DIR
-ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit)
-GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
-SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit)
+ROCKETSHIP_PATH=$(find $HOME -name "*run_dce_auto.m" -printf '%h\n' -quit)
+#GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
+SCRIPT_PATH=$(find $HOME -name "*auto_analysis.py" -printf '%h\n' -quit)
 
 # Run bias correction on VFA data 
 # ------------------------------
@@ -59,6 +65,11 @@ for dir in */*_timepoint/; do
 	echo Preprocessing ${dir}...
 	SUBJECT_TP_PATH=$(realpath $dir)
 	cd $dir
+	
+	if [ $clean -eq 1 ]
+		then
+        rm !(2.nii|5.nii|10.nii|12.nii|15.nii|DCE.nii|aif.nii)
+    fi
 	
 	# FSL brain mask extraction from VFA 2 image
 	bet 2.nii brain.nii -R -m -f 0.45 -g 0 -Z
@@ -73,63 +84,66 @@ for dir in */*_timepoint/; do
 	
 	if [ $EN_BIAS1 -eq 1 ]
 		then
-		
-		echo Bias field correction with FAST
-		# don't forget to remove all unnecessary images 
-		fast -t 3 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 2_masked.nii
-		rm 2_masked_mixeltype.nii.gz
-		rm 2_masked_pve_0.nii.gz
-		rm 2_masked_pve_1.nii.gz
-		rm 2_masked_pve_2.nii.gz
-		rm 2_masked_pveseg.nii.gz
-		rm 2_masked_seg.nii.gz
-		3dcalc -a 2_masked.nii -b 2_masked_bias.nii.gz -expr a/b -prefix 2_bfc.nii -overwrite
-		
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5_masked.nii
-		rm 5_masked_mixeltype.nii.gz
-		rm 5_masked_pve_0.nii.gz
-		rm 5_masked_pve_1.nii.gz
-		rm 5_masked_pve_2.nii.gz
-		rm 5_masked_pveseg.nii.gz
-		rm 5_masked_seg.nii.gz
-		3dcalc -a 5_masked.nii -b 5_masked_bias.nii.gz -expr a/b -prefix 5_bfc.nii -overwrite
-
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10_masked.nii
-		rm 10_masked_mixeltype.nii.gz
-		rm 10_masked_pve_0.nii.gz
-		rm 10_masked_pve_1.nii.gz
-		rm 10_masked_pve_2.nii.gz
-		rm 10_masked_pveseg.nii.gz
-		rm 10_masked_seg.nii.gz
-		3dcalc -a 10_masked.nii -b 10_masked_bias.nii.gz -expr a/b -prefix 10_bfc.nii -overwrite
-
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 12_masked.nii
-		rm 12_masked_mixeltype.nii.gz
-		rm 12_masked_pve_0.nii.gz
-		rm 12_masked_pve_1.nii.gz
-		rm 12_masked_pve_2.nii.gz
-		rm 12_masked_pveseg.nii.gz
-		rm 12_masked_seg.nii.gz
-		3dcalc -a 12_masked.nii -b 12_masked_bias.nii.gz -expr a/b -prefix 12_bfc.nii -overwrite
-
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15_masked.nii
-		rm 15_masked_mixeltype.nii.gz
-		rm 15_masked_pve_0.nii.gz
-		rm 15_masked_pve_1.nii.gz
-		rm 15_masked_pve_2.nii.gz
-		rm 15_masked_pveseg.nii.gz
-		#rm 15_masked_seg.nii.gz
-		3dcalc -a 15_masked.nii -b 15_masked_bias.nii.gz -expr a/b -prefix 15_bfc.nii -overwrite
+		if [ ! -f "15_bfc.nii" ]
+		then
+			echo Bias field correction with FAST
+			# don't forget to remove all unnecessary images 
+			fast -t 3 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 2_masked.nii
+			rm 2_masked_mixeltype.nii.gz
+			rm 2_masked_pve_0.nii.gz
+			rm 2_masked_pve_1.nii.gz
+			rm 2_masked_pve_2.nii.gz
+			rm 2_masked_pveseg.nii.gz
+			rm 2_masked_seg.nii.gz
+			3dcalc -a 2_masked.nii -b 2_masked_bias.nii.gz -expr a/b -prefix 2_bfc.nii -overwrite
 			
-		# threshold and binarize wm mask
-		fslmaths 15_masked_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
-		
-		# apply wm mask to all VFAs
-		fslmaths 2_bfc.nii -mas 15_wm.nii.gz 2_bfc_wm.nii 
-		fslmaths 5_bfc.nii -mas 15_wm.nii.gz 5_bfc_wm.nii
-		fslmaths 10_bfc.nii -mas 15_wm.nii.gz 10_bfc_wm.nii
-		fslmaths 12_bfc.nii -mas 15_wm.nii.gz 12_bfc_wm.nii
-		fslmaths 15_bfc.nii -mas 15_wm.nii.gz 15_bfc_wm.nii
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5_masked.nii
+			rm 5_masked_mixeltype.nii.gz
+			rm 5_masked_pve_0.nii.gz
+			rm 5_masked_pve_1.nii.gz
+			rm 5_masked_pve_2.nii.gz
+			rm 5_masked_pveseg.nii.gz
+			rm 5_masked_seg.nii.gz
+			3dcalc -a 5_masked.nii -b 5_masked_bias.nii.gz -expr a/b -prefix 5_bfc.nii -overwrite
+	
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10_masked.nii
+			rm 10_masked_mixeltype.nii.gz
+			rm 10_masked_pve_0.nii.gz
+			rm 10_masked_pve_1.nii.gz
+			rm 10_masked_pve_2.nii.gz
+			rm 10_masked_pveseg.nii.gz
+			rm 10_masked_seg.nii.gz
+			3dcalc -a 10_masked.nii -b 10_masked_bias.nii.gz -expr a/b -prefix 10_bfc.nii -overwrite
+	
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 12_masked.nii
+			rm 12_masked_mixeltype.nii.gz
+			rm 12_masked_pve_0.nii.gz
+			rm 12_masked_pve_1.nii.gz
+			rm 12_masked_pve_2.nii.gz
+			rm 12_masked_pveseg.nii.gz
+			rm 12_masked_seg.nii.gz
+			3dcalc -a 12_masked.nii -b 12_masked_bias.nii.gz -expr a/b -prefix 12_bfc.nii -overwrite
+	
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15_masked.nii
+			rm 15_masked_mixeltype.nii.gz
+			rm 15_masked_pve_0.nii.gz
+			rm 15_masked_pve_1.nii.gz
+			rm 15_masked_pve_2.nii.gz
+			rm 15_masked_pveseg.nii.gz
+			#rm 15_masked_seg.nii.gz
+			3dcalc -a 15_masked.nii -b 15_masked_bias.nii.gz -expr a/b -prefix 15_bfc.nii -overwrite
+		else
+			echo Found BFC VFAs. Skipping BFC...
+		fi
+			# threshold and binarize wm mask
+			fslmaths 15_masked_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
+			
+			# apply wm mask to all VFAs
+			fslmaths 2_bfc.nii -mas 15_wm.nii.gz 2_bfc_wm.nii 
+			fslmaths 5_bfc.nii -mas 15_wm.nii.gz 5_bfc_wm.nii
+			fslmaths 10_bfc.nii -mas 15_wm.nii.gz 10_bfc_wm.nii
+			fslmaths 12_bfc.nii -mas 15_wm.nii.gz 12_bfc_wm.nii
+			fslmaths 15_bfc.nii -mas 15_wm.nii.gz 15_bfc_wm.nii
 	else
 		# dumb file name management for norm only runs
 		fslmaths 2.nii -mas brain_mask.nii.gz 2_bfc.nii 
@@ -322,113 +336,118 @@ for dir in */*_timepoint/; do
 		
 	if [ $EN_BIAS1 -eq 1 ]
 		then
-
-		# Applying bias field correction on dynamic images
-		# ------------------------------
-		echo Applying BFC to dynamic images...
-		3dTcat -prefix 1st_rep.nii DCE_mc_masked.nii'[0]' -overwrite # extract images from different DCE repetitions
-		3dTcat -prefix 5th_rep.nii DCE_mc_masked.nii'[4]' -overwrite
-		3dTcat -prefix 10th_rep.nii DCE_mc_masked.nii'[9]' -overwrite
-		3dTcat -prefix 20th_rep.nii DCE_mc_masked.nii'[19]' -overwrite
-		3dTcat -prefix 30th_rep.nii DCE_mc_masked.nii'[29]' -overwrite
-		3dTcat -prefix 40th_rep.nii DCE_mc_masked.nii'[39]' -overwrite
-		3dTcat -prefix 50th_rep.nii DCE_mc_masked.nii'[49]' -overwrite
-		3dTcat -prefix 60th_rep.nii DCE_mc_masked.nii'[59]' -overwrite
-
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 1st_rep.nii
-		rm 1st_rep_mixeltype.nii.gz
-		rm 1st_rep_pve_0.nii.gz
-		rm 1st_rep_pve_1.nii.gz
-		rm 1st_rep_pve_2.nii.gz
-		rm 1st_rep_pveseg.nii.gz
-		rm 1st_rep_seg.nii.gz
-
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5th_rep.nii
-		rm 5th_rep_mixeltype.nii.gz
-		rm 5th_rep_pve_0.nii.gz
-		rm 5th_rep_pve_1.nii.gz
-		rm 5th_rep_pve_2.nii.gz
-		rm 5th_rep_pveseg.nii.gz
-		rm 5th_rep_seg.nii.gz
-
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10th_rep.nii
-		rm 10th_rep_mixeltype.nii.gz
-		rm 10th_rep_pve_0.nii.gz
-		rm 10th_rep_pve_1.nii.gz
-		rm 10th_rep_pve_2.nii.gz
-		rm 10th_rep_pveseg.nii.gz
-		rm 10th_rep_seg.nii.gz
-
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 20th_rep.nii
-		rm 20th_rep_mixeltype.nii.gz
-		rm 20th_rep_pve_0.nii.gz
-		rm 20th_rep_pve_1.nii.gz
-		rm 20th_rep_pve_2.nii.gz
-		rm 20th_rep_pveseg.nii.gz
-		rm 20th_rep_seg.nii.gz
-
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 30th_rep.nii
-		rm 30th_rep_mixeltype.nii.gz
-		rm 30th_rep_pve_0.nii.gz
-		rm 30th_rep_pve_1.nii.gz
-		rm 30th_rep_pve_2.nii.gz
-		rm 30th_rep_pveseg.nii.gz
-		rm 30th_rep_seg.nii.gz
-
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 40th_rep.nii
-		rm 40th_rep_mixeltype.nii.gz
-		rm 40th_rep_pve_0.nii.gz
-		rm 40th_rep_pve_1.nii.gz
-		rm 40th_rep_pve_2.nii.gz
-		rm 40th_rep_pveseg.nii.gz
-		rm 40th_rep_seg.nii.gz
-
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 50th_rep.nii
-		rm 50th_rep_mixeltype.nii.gz
-		rm 50th_rep_pve_0.nii.gz
-		rm 50th_rep_pve_1.nii.gz
-		rm 50th_rep_pve_2.nii.gz
-		rm 50th_rep_pveseg.nii.gz
-		rm 50th_rep_seg.nii.gz
-
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 60th_rep.nii
-		rm 60th_rep_mixeltype.nii.gz
-		rm 60th_rep_pve_0.nii.gz
-		rm 60th_rep_pve_1.nii.gz
-		rm 60th_rep_pve_2.nii.gz
-		rm 60th_rep_pveseg.nii.gz
-		rm 60th_rep_seg.nii.gz
-
-		# Concatenation1
-		3dTcat -prefix dyn_bias.nii 1st_rep_bias.nii.gz 5th_rep_bias.nii.gz 10th_rep_bias.nii.gz 20th_rep_bias.nii.gz 30th_rep_bias.nii.gz 40th_rep_bias.nii.gz 50th_rep_bias.nii.gz 60th_rep_bias.nii.gz -overwrite
-
-		# Computing average across 8 bias field that have been sampled
-		3dTstat -mean -prefix mean_dyn_bias_map.nii dyn_bias.nii'[0..7]' -overwrite
-
-		# Normalizing motion corrected DCE image with mean bias field 
-		3dcalc -a DCE_mc_masked.nii -b mean_dyn_bias_map.nii -expr a/b -prefix DCE_mc_bfc.nii -overwrite
-
-		# don't forget to remove all unnecessary images 
-		rm 1st_rep.nii
-		rm 1st_rep_bias.nii.gz
-		rm 5th_rep.nii
-		rm 5th_rep_bias.nii.gz
-		rm 10th_rep.nii
-		rm 10th_rep_bias.nii.gz
-		rm 20th_rep.nii
-		rm 20th_rep_bias.nii.gz
-		rm 30th_rep.nii
-		rm 30th_rep_bias.nii.gz
-		rm 40th_rep.nii
-		rm 40th_rep_bias.nii.gz
-		rm 50th_rep.nii
-		rm 50th_rep_bias.nii.gz
-		rm 60th_rep.nii
-		rm 60th_rep_bias.nii.gz
+		if [ ! -f "DCE_mc_bfc.nii" ]
+			then
+			# Applying bias field correction on dynamic images
+			# ------------------------------
+			echo Applying BFC to dynamic images...
+			3dTcat -prefix 1st_rep.nii DCE_mc_masked.nii'[0]' -overwrite # extract images from different DCE repetitions
+			3dTcat -prefix 5th_rep.nii DCE_mc_masked.nii'[4]' -overwrite
+			3dTcat -prefix 10th_rep.nii DCE_mc_masked.nii'[9]' -overwrite
+			3dTcat -prefix 20th_rep.nii DCE_mc_masked.nii'[19]' -overwrite
+			3dTcat -prefix 30th_rep.nii DCE_mc_masked.nii'[29]' -overwrite
+			3dTcat -prefix 40th_rep.nii DCE_mc_masked.nii'[39]' -overwrite
+			3dTcat -prefix 50th_rep.nii DCE_mc_masked.nii'[49]' -overwrite
+			3dTcat -prefix 60th_rep.nii DCE_mc_masked.nii'[59]' -overwrite
+	
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 1st_rep.nii
+			rm 1st_rep_mixeltype.nii.gz
+			rm 1st_rep_pve_0.nii.gz
+			rm 1st_rep_pve_1.nii.gz
+			rm 1st_rep_pve_2.nii.gz
+			rm 1st_rep_pveseg.nii.gz
+			rm 1st_rep_seg.nii.gz
+	
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5th_rep.nii
+			rm 5th_rep_mixeltype.nii.gz
+			rm 5th_rep_pve_0.nii.gz
+			rm 5th_rep_pve_1.nii.gz
+			rm 5th_rep_pve_2.nii.gz
+			rm 5th_rep_pveseg.nii.gz
+			rm 5th_rep_seg.nii.gz
+	
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10th_rep.nii
+			rm 10th_rep_mixeltype.nii.gz
+			rm 10th_rep_pve_0.nii.gz
+			rm 10th_rep_pve_1.nii.gz
+			rm 10th_rep_pve_2.nii.gz
+			rm 10th_rep_pveseg.nii.gz
+			rm 10th_rep_seg.nii.gz
+	
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 20th_rep.nii
+			rm 20th_rep_mixeltype.nii.gz
+			rm 20th_rep_pve_0.nii.gz
+			rm 20th_rep_pve_1.nii.gz
+			rm 20th_rep_pve_2.nii.gz
+			rm 20th_rep_pveseg.nii.gz
+			rm 20th_rep_seg.nii.gz
+	
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 30th_rep.nii
+			rm 30th_rep_mixeltype.nii.gz
+			rm 30th_rep_pve_0.nii.gz
+			rm 30th_rep_pve_1.nii.gz
+			rm 30th_rep_pve_2.nii.gz
+			rm 30th_rep_pveseg.nii.gz
+			rm 30th_rep_seg.nii.gz
+	
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 40th_rep.nii
+			rm 40th_rep_mixeltype.nii.gz
+			rm 40th_rep_pve_0.nii.gz
+			rm 40th_rep_pve_1.nii.gz
+			rm 40th_rep_pve_2.nii.gz
+			rm 40th_rep_pveseg.nii.gz
+			rm 40th_rep_seg.nii.gz
+	
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 50th_rep.nii
+			rm 50th_rep_mixeltype.nii.gz
+			rm 50th_rep_pve_0.nii.gz
+			rm 50th_rep_pve_1.nii.gz
+			rm 50th_rep_pve_2.nii.gz
+			rm 50th_rep_pveseg.nii.gz
+			rm 50th_rep_seg.nii.gz
+	
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 60th_rep.nii
+			rm 60th_rep_mixeltype.nii.gz
+			rm 60th_rep_pve_0.nii.gz
+			rm 60th_rep_pve_1.nii.gz
+			rm 60th_rep_pve_2.nii.gz
+			rm 60th_rep_pveseg.nii.gz
+			rm 60th_rep_seg.nii.gz
+	
+			# Concatenation1
+			3dTcat -prefix dyn_bias.nii 1st_rep_bias.nii.gz 5th_rep_bias.nii.gz 10th_rep_bias.nii.gz 20th_rep_bias.nii.gz 30th_rep_bias.nii.gz 40th_rep_bias.nii.gz 50th_rep_bias.nii.gz 60th_rep_bias.nii.gz -overwrite
+	
+			# Computing average across 8 bias field that have been sampled
+			3dTstat -mean -prefix mean_dyn_bias_map.nii dyn_bias.nii'[0..7]' -overwrite
+	
+			# Normalizing motion corrected DCE image with mean bias field 
+			3dcalc -a DCE_mc_masked.nii -b mean_dyn_bias_map.nii -expr a/b -prefix DCE_mc_bfc.nii -overwrite
+	
+			# don't forget to remove all unnecessary images 
+			rm 1st_rep.nii
+			rm 1st_rep_bias.nii.gz
+			rm 5th_rep.nii
+			rm 5th_rep_bias.nii.gz
+			rm 10th_rep.nii
+			rm 10th_rep_bias.nii.gz
+			rm 20th_rep.nii
+			rm 20th_rep_bias.nii.gz
+			rm 30th_rep.nii
+			rm 30th_rep_bias.nii.gz
+			rm 40th_rep.nii
+			rm 40th_rep_bias.nii.gz
+			rm 50th_rep.nii
+			rm 50th_rep_bias.nii.gz
+			rm 60th_rep.nii
+			rm 60th_rep_bias.nii.gz
+		else
+			echo Skipping DCE BFC...
+		fi
 	else
 		#echo Motion correcting dynamic set
 		#3dvolreg -heptic -verbose -base 'DCE.nii[1]' -dfile DCE_motion.txt -prefix DCE_mc_bfc.nii DCE.nii
 		#3dTcat -prefix ref_rep.nii dce_mc_bfc'[1]'
+		gunzip -f DCE_mc.nii.gz
 		mv DCE_mc.nii DCE_mc_bfc.nii
 	fi
 	
