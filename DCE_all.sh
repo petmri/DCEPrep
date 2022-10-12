@@ -115,7 +115,8 @@ for dir in */*_timepoint/; do
 	fslmaths dce_patlak_fit_Ktrans.nii -mas 15_gm_mask_dyn.nii Ktrans_gm.nii
 	fslmaths dce_patlak_fit_Ktrans.nii -mas 15_csf_mask_dyn.nii Ktrans_csf.nii
 	
-	python $SCRIPT_PATH/auto_analysis.py $SUBJECT_TP_PATH
+	python3 $SCRIPT_PATH/auto_analysis.py $SUBJECT_TP_PATH
+	python3 $SCRIPT_PATH/report.py $SUBJECT_TP_PATH
 	cd ../../	
 	echo $dir processing complete!
 done

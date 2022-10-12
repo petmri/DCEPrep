@@ -208,7 +208,6 @@ def analyze(file_dir):
     lower = wmins[wm_lower_i]
     ax0.axvline(lower, color='lightpink', linestyle='dotted')
     wm_upper_i = (np.abs(wmn[wm_median_bindex:n_bins+1] - wm_halfmax)).argmin()+wm_median_bindex
-    # print((np.abs(wmn[250:501] - wm_halfmax)).argmin()+250)
     upper = wmins[wm_upper_i]
     ax0.axvline(upper, color='lightpink', linestyle='dotted')
     ax0.hlines(wm_halfmax, wmins[wm_lower_i], wmins[wm_upper_i], color='k')
@@ -271,7 +270,7 @@ def analyze(file_dir):
 
     # Save graphs
     path2 = file_dir + '/T1_Ktrans_analysis.png'
-    plt.savefig(path2)
+    plt.savefig(path2, bbox_inches='tight')
     
     # Zeros
     # fig2, ((ax4, ax5)) = plt.subplots(2, 1, figsize=(20,6))
@@ -313,8 +312,7 @@ def analyze(file_dir):
     ax5.grid()
     ax5.legend()
 
-    plt.savefig(file_dir + '/T1_Ktrans_zeros.png')
-    print(file_dir)
+    plt.savefig(file_dir + '/T1_Ktrans_zeros.png', bbox_inches='tight')
 
 
 dir = Path(sys.argv[1])     # takes timepoint directory as argument
