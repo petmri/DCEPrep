@@ -61,7 +61,7 @@ jobs:
       with:
         name: T1_Ktrans_graphs
         path: |
-          /media/network_mriphysics/USC-PPG/data/1101743/1st_timepoint/T1_Ktrans_analysis.png
-          /media/network_mriphysics/USC-PPG/data/1101743/1st_timepoint/T1_Ktrans_zeros.png
+          /media/network_mriphysics/USC-PPG/data/1101743/1st_timepoint/report.png
         retention-days: 5
+        if-no-files-found: error
 
