@@ -47,7 +47,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
 
     slice_index = []
     mri_final = mri_data
-    wm2 = wm_data
+    wm_final = wm_data
 
     # apply normalizations
     if POLYFIT is True:
@@ -59,7 +59,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
         for i in range(slice_num):
             scaling_factor = norm_slices[i] / mean(norm_slices)
             mri_final[:, :, i, :] /= scaling_factor
-            wm2[:, :, i, :] /= scaling_factor
+            wm_final[:, :, i, :] /= scaling_factor
 
     else:
         print("Using Z-normalization")
@@ -78,6 +78,8 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
         for i in slice_index:
             norm_val1 = mri_data[:, :, i, :] * (data_mean/wm_mean[i])
             mri_final[:, :, i, :] = norm_val1
+            wm_final[:, :, i, :] = norm_val1
+            
 
     norm_img = []
     norm_wm = []
@@ -88,9 +90,9 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
         else:
             norm_img.append(0)
 
-        a = np.where(wm2[:, :, i, :] > 0)
+        a = np.where(wm_final[:, :, i, :] > 0)
         if a[0].size > 0:
-            norm_wm.append(wm2[:, :, i, :][a].mean())
+            norm_wm.append(wm_final[:, :, i, :][a].mean())
         else:
             norm_wm.append(0)
 
@@ -98,7 +100,8 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
 
     fig, ax = plt.subplots(figsize=(20, 6))
     ax.plot(range(slice_num), wm_mean, '-ok', label='original')
-    ax.plot(range(slice_num), norm_slices, ':ob', label='fit')
+    if POLYFIT is True:
+        ax.plot(range(slice_num), norm_slices, ':ob', label='fit')
     ax.plot(range(slice_num), norm_wm, '--og', label='corrected')
     ax.set_xlabel('Slice #')
     ax.set_ylabel('White Matter Mean')
@@ -114,8 +117,8 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     nib.save(final_img, path3)
 
 
-DIR = Path(sys.argv[1])     # takes timepoint directory as argument
-files_in_dir = DIR.iterdir()
+dir = Path(sys.argv[1])     # takes timepoint directory as argument
+files_in_dir = dir.iterdir()
 for file in files_in_dir:
     if str(file).endswith('mc_bfc.nii') or str(file).endswith('mc_bfc.nii.gz'):
         file1 = str(file)

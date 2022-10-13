@@ -7,6 +7,7 @@ EN_Z_NORM=0
 EN_BIAS1=0
 EN_BIAS2=0
 ff=0
+fail=0
 clean=0
 #EN_MOTION_CORR=1
 
@@ -54,9 +55,12 @@ if [ -z "$DATA_DIR" ]
 		exit 1
 fi
 cd $DATA_DIR
-ROCKETSHIP_PATH=$(find $HOME -name "*run_dce_auto.m" -printf '%h\n' -quit)
-#GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
-SCRIPT_PATH=$(find $HOME -name "*auto_analysis.py" -printf '%h\n' -quit)
+ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
+SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
+if [[ "$OSTYPE" == "linux-gnu" ]]; then
+	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit)
+	SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit)
+fi
 
 # Run bias correction on VFA data 
 # ------------------------------
@@ -65,6 +69,12 @@ for dir in */*_timepoint/; do
 	echo Preprocessing ${dir}...
 	SUBJECT_TP_PATH=$(realpath $dir)
 	cd $dir
+
+	if [ ! -f "2.nii" ] || [ ! -f "5.nii" ] || [ ! -f "10.nii" ] || [ ! -f "12.nii" ] || [ ! -f "15.nii" ] || [ ! -f "DCE.nii" ]
+		then
+		echo Base files missing! Skipping timepoint...
+		continue
+	fi
 	
 	if [ $clean -eq 1 ]
 		then
@@ -76,11 +86,17 @@ for dir in */*_timepoint/; do
 	fslcpgeom 2.nii brain_mask.nii
 			
 	# FAST documentation recommends brain masking first
-	fslmaths 2.nii -mas brain_mask.nii.gz 2_masked.nii 
-	fslmaths 5.nii -mas brain_mask.nii.gz 5_masked.nii
-	fslmaths 10.nii -mas brain_mask.nii.gz 10_masked.nii
-	fslmaths 12.nii -mas brain_mask.nii.gz 12_masked.nii
-	fslmaths 15.nii -mas brain_mask.nii.gz 15_masked.nii
+	#fslmaths 2.nii -mas brain_mask.nii.gz 2_masked.nii 
+	#fslmaths 5.nii -mas brain_mask.nii.gz 5_masked.nii
+	#fslmaths 10.nii -mas brain_mask.nii.gz 10_masked.nii
+	#fslmaths 12.nii -mas brain_mask.nii.gz 12_masked.nii
+	#fslmaths 15.nii -mas brain_mask.nii.gz 15_masked.nii
+	cp 2.nii 2_masked.nii
+	cp 5.nii 5_masked.nii
+	cp 10.nii 10_masked.nii
+	cp 12.nii 12_masked.nii
+	cp 15.nii 15_masked.nii
+	gzip *_masked.nii
 	
 	if [ $EN_BIAS1 -eq 1 ]
 		then
@@ -185,7 +201,8 @@ for dir in */*_timepoint/; do
 			if [ ! -f "15_BFC_Z.nii" ]
 				then
 					echo "Missing Z-normalized files. Z-norm likely failed due to non-existent inputs."
-					exit 1
+					fail=1
+					continue
 			fi
 	fi
 
@@ -264,7 +281,8 @@ for dir in */*_timepoint/; do
 			if [ ! -f "VFA.nii" ]
 				then
 					echo "Missing VFA file. Component files may have failed."
-					exit 1
+					fail=1
+					continue
 			fi
 	fi
 	
@@ -278,7 +296,8 @@ for dir in */*_timepoint/; do
 			if [ ! -f "VFA_mc.nii" ]
 				then
 					echo "Missing VFA_mc file. Motion correction may have failed."
-					exit 1
+					fail=1
+					continue
 			fi
 	fi
 	# smooth
@@ -292,7 +311,8 @@ for dir in */*_timepoint/; do
 			if [ ! -f "T1_map_t1_fa_fit_VFA_mc.nii" ]
 				then
 					echo "Missing T1 map file. T1 mapping may have failed."
-					exit 1
+					fail=1
+					continue
 			fi
 	fi
 	# Motion correction of dynamic images using AFNI
@@ -306,7 +326,8 @@ for dir in */*_timepoint/; do
 			if [ ! -f "DCE_mc.nii.gz" ]
 				then
 					echo "Missing motion corrected DCE file."
-					exit 1
+					fail=1
+					continue
 			fi
 	fi
 	# Align T1 map with Dynamic data
@@ -319,7 +340,8 @@ for dir in */*_timepoint/; do
 			if [ ! -f "t1_map_fixed_use_me.nii.gz" ]
 				then
 					echo "Missing registered T1 map."
-					exit 1
+					fail=1
+					continue
 			fi
 	fi
 	# align and apply brain mask
@@ -461,11 +483,24 @@ for dir in */*_timepoint/; do
 	# normalize dynamic images
 	# ------------------------------
 	echo Normalizing dynamic images...
-	python $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH
-	
+	python3 $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH
+	if [ $ff -eq 1 ]
+		then
+			if [ ! -f "DCE_mc_bfc_norm.nii" ]
+				then
+					echo "Missing normalized DCE file."
+					fail=1
+					continue
+			fi
+	fi
 	# smooth dynamic set
 	#3dBlurToFWHM -input DCE_mc_bfc_norm.nii -FWHM 4 -prefix DCE_mc_bfc_norm_blurred.nii
 
 	cd ../../
 	echo $dir preprocessing complete!
 done
+
+if [ $fail -eq 1 ]
+	then
+	exit 1
+fi

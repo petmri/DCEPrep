@@ -1,4 +1,5 @@
 #!/bin/bash
+# Oct 13, 2022
 # FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, and Python are required
 # Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
 # control variables
@@ -48,9 +49,13 @@ if [ -z "$DATA_DIR" ]
 		exit 1
 fi
 cd $DATA_DIR
-ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit)
+ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
-SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit)
+SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
+if [[ "$OSTYPE" == "linux-gnu" ]]; then
+	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit)
+	SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit)
+fi
 
 # Run bias correction on VFA data 
 # ------------------------------
@@ -70,7 +75,8 @@ for dir in */*_timepoint/; do
 			if [ ! -f "dce_patlak_fit_Ktrans.nii" ]
 				then
 					echo "Missing Ktrans maps. Check terminal--DCE failed or inputs were not generated."
-					exit 1
+					fail=1
+					continue
 			fi
 	fi
 	
