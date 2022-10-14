@@ -12,7 +12,7 @@ import nibabel as nib
 matplotlib.use('Agg')
 
 # add as arg? add mask arg?
-POLYFIT = True
+POLYFIT = False
 
 def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE NORMALIZATION
     dim = {0, 1, 2}
@@ -66,8 +66,8 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     else:
         print("Using Z-normalization")
         # calc stats of all slices
-        data_mean = mean(wm_mean[0:13])
-        std_dev = pstdev(wm_mean[0:13])
+        data_mean = mean(wm_mean[0:slice_num-1])
+        std_dev = pstdev(wm_mean[0:slice_num-1])
         err = 0.1*std_dev
         # find slices out of range
         min_val = data_mean - err

@@ -57,13 +57,11 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit)
 fi
 
-# Run bias correction on VFA data 
-# ------------------------------
 for dir in */*_timepoint/; do
 	date
 	echo DCE processing ${dir}...
-	SUBJECT_TP_PATH=$(realpath $dir)
 	cd $dir
+	SUBJECT_TP_PATH=$(pwd)
 
 	# DCE
 	# ------------------------------
@@ -80,46 +78,28 @@ for dir in */*_timepoint/; do
 			fi
 	fi
 	
-	# Analyze results (scouting)
+	# Analyze results
 	# ------------------------------
-	# Make gm mask
-	if [ $EN_BIAS1 -eq 1 ]
-		then
-		fslmaths 15_masked_seg.nii.gz -thr 2 -uthr 2 -bin 15_gm_mask.nii
-		fslmaths 15_bfc.nii -mas 15_gm_mask.nii.gz 15_gm.nii
-	else
-		fslmaths 15_bfc_seg.nii.gz -thr 2 -uthr 2 -bin 15_gm_mask.nii
-		fslmaths 15_bfc.nii -mas 15_gm_mask.nii.gz 15_gm.nii
-	fi
 	
 	# Align then re-binarize gm mask
-	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii 15_gm.nii.gz 15_gm_mask_dyn.nii.gz
-	fslmaths 15_gm_mask_dyn.nii.gz -thr 20 -bin 15_gm_mask_dyn.nii
+	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii segmented_t1_seg_1.nii.gz t1w_gm_dyn.nii.gz
+	#fslmaths 15_gm_mask_dyn.nii.gz -thr 20 -bin 15_gm_mask_dyn.nii
 	
-	# Make CSF mask
-	if [ $EN_BIAS1 -eq 1 ]
-		then
-		fslmaths 15_masked_seg.nii.gz -thr 1 -uthr 1 -bin 15_csf_mask.nii
-		fslmaths 15_bfc.nii -mas 15_csf_mask.nii.gz 15_csf.nii
-	else
-		fslmaths 15_bfc_seg.nii.gz -thr 1 -uthr 1 -bin 15_csf_mask.nii
-		fslmaths 15_bfc.nii -mas 15_csf_mask.nii.gz 15_csf.nii
-	fi
 	
 	# Align CSF mask
-	flirt -in 15_csf.nii.gz -ref ref_rep.nii -out 15_csf_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
-	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii 15_csf.nii.gz 15_csf_mask_dyn.nii.gz
-	fslmaths 15_csf_mask_dyn.nii.gz -thr 20 -bin 15_csf_mask_dyn.nii
+	#flirt -in 15_csf.nii.gz -ref ref_rep.nii -out 15_csf_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
+	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii segmented_t1_seg_0.nii.gz t1w_csf_dyn.nii.gz
+	#fslmaths 15_csf_mask_dyn.nii.gz -thr 20 -bin 15_csf_mask_dyn.nii
 	
 	# Apply masks to T1 map
-	fslmaths t1_map_fixed_use_me.nii.gz -mas 15_wm_mask_dyn.nii T1_wm.nii
-	fslmaths t1_map_fixed_use_me.nii.gz -mas 15_gm_mask_dyn.nii T1_gm.nii
-	fslmaths t1_map_fixed_use_me.nii.gz -mas 15_csf_mask_dyn.nii T1_csf.nii
+	fslmaths t1_map_fixed_use_me.nii.gz -mas t1w_wm_dyn.nii T1_wm.nii
+	fslmaths t1_map_fixed_use_me.nii.gz -mas t1w_gm_dyn.nii T1_gm.nii
+	fslmaths t1_map_fixed_use_me.nii.gz -mas t1w_csf_dyn.nii T1_csf.nii
 	
 	# Apply masks to Ktrans map
-	fslmaths dce_patlak_fit_Ktrans.nii -mas 15_wm_mask_dyn.nii Ktrans_wm.nii
-	fslmaths dce_patlak_fit_Ktrans.nii -mas 15_gm_mask_dyn.nii Ktrans_gm.nii
-	fslmaths dce_patlak_fit_Ktrans.nii -mas 15_csf_mask_dyn.nii Ktrans_csf.nii
+	fslmaths dce_patlak_fit_Ktrans.nii -mas t1w_wm_dyn.nii Ktrans_wm.nii
+	fslmaths dce_patlak_fit_Ktrans.nii -mas t1w_gm_dyn.nii Ktrans_gm.nii
+	fslmaths dce_patlak_fit_Ktrans.nii -mas t1w_csf_dyn.nii Ktrans_csf.nii
 	
 	python3 $SCRIPT_PATH/auto_analysis.py $SUBJECT_TP_PATH
 	python3 $SCRIPT_PATH/report.py $SUBJECT_TP_PATH
