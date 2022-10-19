@@ -22,8 +22,8 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     wm_shape = wm_data.shape
     slice_num = min(mri_shape[0], mri_shape[1], mri_shape[2], mri_shape[3])
     slice_loc = mri_shape.index(slice_num)
-    mri_data = np.reshape(mri_data, (mri_shape[min(dim-set([slice_loc]))], mri_shape[max(dim-set([slice_loc]))], slice_num, 64))
-    wm_data = np.reshape(wm_data, (wm_shape[min(dim-set([slice_loc]))], wm_shape[max(dim-set([slice_loc]))], slice_num, 64))
+    mri_data = np.reshape(mri_data, (mri_shape[min(dim-set([slice_loc]))], mri_shape[max(dim-set([slice_loc]))], slice_num, mri_shape[3]))
+    wm_data = np.reshape(wm_data, (wm_shape[min(dim-set([slice_loc]))], wm_shape[max(dim-set([slice_loc]))], slice_num, mri_shape[3]))
     wm_mean = []
     orig_img = []
 
@@ -64,9 +64,9 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     else:
         print("Using Z-normalization")
         # calc stats of all slices
-        data_mean = mean(wm_mean[1:13])
-        std_dev = pstdev(wm_mean[1:13])
-        err = 1*std_dev
+        data_mean = mean(wm_mean[0:slice_num-1])
+        std_dev = pstdev(wm_mean[0:slice_num-1])
+        err = .1*std_dev
         # find slices out of range
         min_val = data_mean - err
         max_val = data_mean + err

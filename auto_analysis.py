@@ -17,7 +17,7 @@ KTRANS_MIN_THRESHOLD = 0.00001
 def analyze(file_dir):
     # load files from script pipeline
     files = ['/T1_wm.nii.gz', '/T1_gm.nii.gz', '/T1_csf.nii.gz', '/Ktrans_wm.nii.gz',
-            '/Ktrans_gm.nii.gz', '/Ktrans_csf.nii.gz', '/15_wm_mask_dyn.nii.gz', '/15_gm_mask_dyn.nii.gz']
+            '/Ktrans_gm.nii.gz', '/Ktrans_csf.nii.gz', '/t1w_wm_dyn.nii.gz', '/t1w_gm_dyn.nii.gz']
     for i, file in enumerate(files):
         files[i] = file_dir + file
 
@@ -251,7 +251,7 @@ def analyze(file_dir):
     ## T1 medians plot
     ax2.set_xlabel('Slice #')
     ax2.set_ylabel('T1 Medians')
-    ax2.set_ylim([0, 2200])
+    ax2.set_ylim([0, 2700])
     ax2.plot(range(slice_num), T1_wm_median, label='wm', color='pink')
     ax2.plot(range(slice_num), T1_gm_median, label='gm', color='gray')
     # ax2.plot(range(slice_num), T1_csf_mean, label = 'csf', color = 'cyan')
@@ -261,7 +261,7 @@ def analyze(file_dir):
     ## Ktrans medians plot
     ax3.set_xlabel('Slice #')
     ax3.set_ylabel('Ktrans Medians')
-    ax3.set_ylim([0, 0.017])
+    ax3.set_ylim([0, 0.005])
     ax3.plot(range(slice_num), Ktrans_wm_median, label='wm', color='pink')
     ax3.plot(range(slice_num), Ktrans_gm_median, label='gm', color='gray')
     # ax3.plot(range(slice_num), Ktrans_csf_mean, label = 'csf', color = 'cyan')

@@ -53,7 +53,10 @@ gridspec = axs[2].get_subplotspec().get_gridspec()
 gridspec2 = axs[3].get_subplotspec().get_gridspec()
 subfig = fig.add_subfigure(gridspec[2,:])
 subfig2 = fig.add_subfigure(gridspec[3,:])
-row = subfig.subplots(2,int(slice_num/2))
+if slice_num > 8:
+    row = subfig.subplots(2,int(slice_num/2))
+else:
+    row = subfig.subplots(1,slice_num)
 curve_rows = subfig2.subplots(1,2)
 
 # cmap = 'gnuplot'
