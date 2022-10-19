@@ -481,7 +481,7 @@ for dir in */*_timepoint/; do
 			rm 60th_rep.nii
 			rm 60th_rep_bias.nii.gz
 		else
-			echo Skipping DCE BFC...
+			echo Skipping DCE BFC because it already exists...
 		fi
 	else
 		#echo Motion correcting dynamic set

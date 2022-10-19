@@ -251,7 +251,7 @@ def analyze(file_dir):
     ## T1 medians plot
     ax2.set_xlabel('Slice #')
     ax2.set_ylabel('T1 Medians')
-    ax2.set_ylim([0, 2200])
+    ax2.set_ylim([0, 2700])
     ax2.plot(range(slice_num), T1_wm_median, label='wm', color='pink')
     ax2.plot(range(slice_num), T1_gm_median, label='gm', color='gray')
     # ax2.plot(range(slice_num), T1_csf_mean, label = 'csf', color = 'cyan')
@@ -261,7 +261,7 @@ def analyze(file_dir):
     ## Ktrans medians plot
     ax3.set_xlabel('Slice #')
     ax3.set_ylabel('Ktrans Medians')
-    ax3.set_ylim([0, 0.017])
+    ax3.set_ylim([0, 0.005])
     ax3.plot(range(slice_num), Ktrans_wm_median, label='wm', color='pink')
     ax3.plot(range(slice_num), Ktrans_gm_median, label='gm', color='gray')
     # ax3.plot(range(slice_num), Ktrans_csf_mean, label = 'csf', color = 'cyan')

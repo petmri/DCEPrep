@@ -10,7 +10,7 @@ import nibabel as nib
 matplotlib.use('Agg')
 
 # add as arg? add mask arg?
-POLYFIT = False
+POLYFIT = True
 
 def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE NORMALIZATION
     dim = {0, 1, 2}
@@ -22,8 +22,8 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     wm_shape = wm_data.shape
     slice_num = min(mri_shape[0], mri_shape[1], mri_shape[2], mri_shape[3])
     slice_loc = mri_shape.index(slice_num)
-    mri_data = np.reshape(mri_data, (mri_shape[min(dim-set([slice_loc]))], mri_shape[max(dim-set([slice_loc]))], slice_num, 64))
-    wm_data = np.reshape(wm_data, (wm_shape[min(dim-set([slice_loc]))], wm_shape[max(dim-set([slice_loc]))], slice_num, 64))
+    mri_data = np.reshape(mri_data, (mri_shape[min(dim-set([slice_loc]))], mri_shape[max(dim-set([slice_loc]))], slice_num, mri_shape[3]))
+    wm_data = np.reshape(wm_data, (wm_shape[min(dim-set([slice_loc]))], wm_shape[max(dim-set([slice_loc]))], slice_num, mri_shape[3]))
     wm_mean = []
     orig_img = []
 
