@@ -47,11 +47,10 @@ jobs:
       run: |
         cd /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint
         shopt -s extglob
-        rm -f !(2.nii|5.nii|10.nii|12.nii|15.nii|DCE.nii|aif.nii)
         cd /home/mrispec/actions-runner/_work/in-house_toolbox/in-house_toolbox
         
     - name: Preprocess the data
-      run:  ./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA -b -Z
+      run:  ./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA -b -Z -c -F
       
     - name: Run DCE
       run:  ./DCE_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA -b -Z
