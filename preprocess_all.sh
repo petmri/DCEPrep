@@ -78,7 +78,7 @@ for dir in */*_timepoint/; do
 	
 	if [ $clean -eq 1 ]
 		then
-        rm !(2.nii|5.nii|10.nii|12.nii|15.nii|DCE.nii|aif.nii|t1w.nii)
+        rm !(2.nii|5.nii|10.nii|12.nii|15.nii|DCE.nii|aif.nii|t1w.nii|*.json)
     fi
 	
 	# FSL brain mask extraction from VFA 2 image
@@ -107,7 +107,7 @@ for dir in */*_timepoint/; do
 	cp 10.nii 10_masked.nii
 	cp 12.nii 12_masked.nii
 	cp 15.nii 15_masked.nii
-	gzip *_masked.nii
+	gzip -f *_masked.nii
 	
 	if [ $EN_BIAS1 -eq 1 ]
 		then
