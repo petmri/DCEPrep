@@ -17,7 +17,7 @@ KTRANS_MIN_THRESHOLD = 0.00001
 def analyze(file_dir):
     # load files from script pipeline
     files = ['/T1_wm.nii.gz', '/T1_gm.nii.gz', '/T1_csf.nii.gz', '/Ktrans_wm.nii.gz',
-            '/Ktrans_gm.nii.gz', '/Ktrans_csf.nii.gz', '/t1w_wm_dyn.nii.gz', '/t1w_gm_dyn.nii.gz']
+            '/Ktrans_gm.nii.gz', '/Ktrans_csf.nii.gz', '/T1_wm_dyn.nii.gz', '/T1_gm_dyn.nii.gz']
     for i, file in enumerate(files):
         files[i] = file_dir + file
 

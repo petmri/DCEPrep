@@ -82,24 +82,24 @@ for dir in */*_timepoint/; do
 	# ------------------------------
 	
 	# Align then re-binarize gm mask
-	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii segmented_t1_seg_1.nii.gz t1w_gm_dyn.nii.gz
+	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii segmented_t1_seg_1.nii.gz T1_gm_dyn.nii.gz
 	#fslmaths 15_gm_mask_dyn.nii.gz -thr 20 -bin 15_gm_mask_dyn.nii
 	
 	
 	# Align CSF mask
 	#flirt -in 15_csf.nii.gz -ref ref_rep.nii -out 15_csf_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
-	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii segmented_t1_seg_0.nii.gz t1w_csf_dyn.nii.gz
+	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii segmented_t1_seg_0.nii.gz T1_csf_dyn.nii.gz
 	#fslmaths 15_csf_mask_dyn.nii.gz -thr 20 -bin 15_csf_mask_dyn.nii
 	
 	# Apply masks to T1 map
-	fslmaths t1_map_fixed_use_me.nii.gz -mas t1w_wm_dyn.nii T1_wm.nii
-	fslmaths t1_map_fixed_use_me.nii.gz -mas t1w_gm_dyn.nii T1_gm.nii
-	fslmaths t1_map_fixed_use_me.nii.gz -mas t1w_csf_dyn.nii T1_csf.nii
+	fslmaths t1_map_fixed_use_me.nii.gz -mas T1_wm_dyn.nii T1_wm.nii
+	fslmaths t1_map_fixed_use_me.nii.gz -mas T1_gm_dyn.nii T1_gm.nii
+	fslmaths t1_map_fixed_use_me.nii.gz -mas T1_csf_dyn.nii T1_csf.nii
 	
 	# Apply masks to Ktrans map
-	fslmaths dce_patlak_fit_Ktrans.nii -mas t1w_wm_dyn.nii Ktrans_wm.nii
-	fslmaths dce_patlak_fit_Ktrans.nii -mas t1w_gm_dyn.nii Ktrans_gm.nii
-	fslmaths dce_patlak_fit_Ktrans.nii -mas t1w_csf_dyn.nii Ktrans_csf.nii
+	fslmaths dce_patlak_fit_Ktrans.nii -mas T1_wm_dyn.nii Ktrans_wm.nii
+	fslmaths dce_patlak_fit_Ktrans.nii -mas T1_gm_dyn.nii Ktrans_gm.nii
+	fslmaths dce_patlak_fit_Ktrans.nii -mas T1_csf_dyn.nii Ktrans_csf.nii
 	
 	python3 $SCRIPT_PATH/auto_analysis.py $SUBJECT_TP_PATH
 	python3 $SCRIPT_PATH/report.py $SUBJECT_TP_PATH
