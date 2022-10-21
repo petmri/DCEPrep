@@ -1,3 +1,4 @@
+import json
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib.gridspec as gridspec
@@ -9,7 +10,6 @@ import numpy as np
 import nibabel as nib
 from pathlib import Path
 import sys
-from nibabel import orientations
 
 
 dir = Path(sys.argv[1])
@@ -27,6 +27,9 @@ curves = []
 curves.append(mpimg.imread(str(dir) + '/dceAIF_fitting.png'))
 curves.append(mpimg.imread(str(dir) + '/dce_timecurves.png'))
 ktrans = nib.load(str(dir) + '/dce_patlak_fit_Ktrans.nii')
+json_file = open(str(dir) + '/DCE.json')
+json_dict = json.load(json_file)
+site = json_dict['InstitutionName']
 
 dim = {0,1,2}
 ktrans_data = ktrans.get_fdata()
@@ -40,7 +43,7 @@ for i in range(slice_num):
 
 fig, axs = plt.subplots(4, 1, figsize=(8.5,11))
 subject = str(dir).split('/')[5]
-axs[0].set_title(subject, y=1.02) #+ " (" + str(dir) + "")
+axs[0].set_title(subject + ' (' + site + ')', y=1.02) #+ " (" + str(dir) + "")
 plt.suptitle(str(dir), fontsize='small', y=1)
 axs[0].axis('off')
 axs[0].imshow(analysis)
