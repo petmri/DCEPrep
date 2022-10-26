@@ -41,6 +41,9 @@
       "customLabels": "task-rest",
       "criteria": {
         "ProtocolName": "*resting*"
+      },
+      "sidecarChanges": {
+        "TaskName": "rest"
       }
     },
     {
