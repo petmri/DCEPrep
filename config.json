@@ -1,0 +1,73 @@
+{
+  "dcm2niixOptions": "-b y -ba n -z y -f '%3s_%f_%p_%t'",
+  "compKeys": ["AcquisitionDateTime","SeriesNumber", "AcquisitionTime", "SidecarFilename"],
+  "descriptions": [
+    {
+      "dataType": "anat",
+      "modalityLabel": "T1w",
+      "criteria": {
+        "SeriesDescription": "*MPRAGE*[!_ND]",
+        "ImageType": ["ORIGINAL", "PRIMARY", "M", "NONE"]
+      },
+      "sidecarChanges": {
+        "ProtocolName": "T1"
+      }
+    },
+    {
+      "dataType": "fmap",
+      "modalityLabel": "magnitude1",
+      "IntendedFor": [2,3,4],
+      "criteria": {
+        "SeriesDescription": "*gre_field_mapping*[!_ND]",
+        "EchoTime": 0.00492
+      }
+    },
+    {
+      "dataType": "fmap",
+      "modalityLabel": "phasediff",
+      "IntendedFor": [2,3,4],
+      "criteria": {
+        "SeriesDescription": "*gre_field_mapping*[!_ND]",
+        "ImageType": ["ORIGINAL", "PRIMARY", "P", "NONE", "PHASE"]
+      },
+      "sidecarChanges": {
+        "EchoTime1": 0.00492,
+        "EchoTime2": 0.00738
+      }
+    },
+    {
+      "dataType": "func",
+      "modalityLabel": "bold",
+      "customLabels": "task-rest",
+      "criteria": {
+        "ProtocolName": "*resting*"
+      },
+      "sidecarChanges": {
+        "TaskName": "rest"
+      }
+    },
+    {
+      "dataType": "func",
+      "modalityLabel": "bold",
+      "customLabels": "task-nback1",
+      "criteria": {
+        "SeriesDescription": "*nBack1*"
+      },
+      "sidecarChanges": {
+        "TaskName": "nback1"
+      }
+    },
+    {
+      "dataType": "func",
+      "modalityLabel": "bold",
+      "customLabels": "task-nback2",
+      "criteria": {
+        "SeriesDescription": "*nBack2*"
+      },
+      "sidecarChanges": {
+        "TaskName": "nback2"
+      }
+    }
+  ]
+}
+
