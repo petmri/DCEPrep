@@ -17,7 +17,7 @@ KTRANS_MIN_THRESHOLD = 0.00001
 def analyze(file_dir):
     # load files from script pipeline
     files = ['/T1_wm.nii.gz', '/T1_gm.nii.gz', '/T1_csf.nii.gz', '/Ktrans_wm.nii.gz',
-            '/Ktrans_gm.nii.gz', '/Ktrans_csf.nii.gz', '/T1_wm_dyn.nii.gz', '/T1_gm_dyn.nii.gz']
+            '/Ktrans_gm.nii.gz', '/Ktrans_csf.nii.gz', '/T1_wm_mask_dyn.nii.gz', '/T1_gm_mask_dyn.nii.gz']
     for i, file in enumerate(files):
         files[i] = file_dir + file
 
@@ -274,7 +274,7 @@ def analyze(file_dir):
     
     # Zeros
     # fig2, ((ax4, ax5)) = plt.subplots(2, 1, figsize=(20,6))
-    fig2, ax5 = plt.subplots(1, 1, figsize=(20,6))
+    fig2, ax5 = plt.subplots(1, 1, figsize=(10,6))
 
     ## T1 zeros plot
     # ax4.set_xlabel('Slice #')

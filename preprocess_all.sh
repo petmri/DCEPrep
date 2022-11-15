@@ -1,8 +1,9 @@
 #!/bin/bash
 shopt -s extglob
-# FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, and Python are required
+# FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, ANTS, and Python are required
 # Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
 # control variables
+VERSION="1.0.0"
 EN_Z_NORM=0
 EN_BIAS1=0
 EN_BIAS2=0
@@ -10,9 +11,6 @@ ff=0
 fail=0
 clean=0
 #EN_MOTION_CORR=1
-
-# make this your main data directory or pass it as an option to -d
-#DATA_DIR=/media/network_mriphysics/USC-PPG/data
 
 # options
 while getopts ":d:bBZFhc" options; do
@@ -55,11 +53,12 @@ if [ -z "$DATA_DIR" ]
 		exit 1
 fi
 cd $DATA_DIR
-ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
-SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit)
 	SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit)
+else
+	ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
+	SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
 fi
 
 # Run bias correction on VFA data 
@@ -72,21 +71,19 @@ for dir in */*_timepoint/; do
 
 	if [ ! -f "2.nii" ] || [ ! -f "5.nii" ] || [ ! -f "10.nii" ] || [ ! -f "12.nii" ] || [ ! -f "15.nii" ] || [ ! -f "DCE.nii" ] || [ ! -f "T1.nii" ]
 		then
-		echo Base files missing! Skipping timepoint...
+		echo Base file(s) missing! Expected VFAs 2.nii, 5.nii, 10.nii, 12.nii, 15.nii, DCE.nii, and T1.nii (MP-RAGE). Skipping timepoint...
 		continue
 	fi
 	
 	if [ $clean -eq 1 ]
 		then
+		echo Cleaning folder...
         rm !(2.nii|5.nii|10.nii|12.nii|15.nii|DCE.nii|aif.nii|T1.nii|*.json)
     fi
 	
-	# FSL brain mask extraction from VFA 2 image
-	#bet 2.nii brain.nii -R -m -f 0.45 -g 0 -Z
-	#fslcpgeom 2.nii brain_mask.nii
 	# HD-BET brain extraction & segmentations from MP-RAGE
 	hd-bet -i T1.nii
-	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -g -o segmented_t1 T1_bet.nii.gz 
+	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -g -o segmented_t1 T1_bet.nii.gz
 	rm segmented_t1_seg.nii.gz
 	rm segmented_t1_pve_0.nii.gz
 	rm segmented_t1_pve_1.nii.gz
@@ -94,7 +91,8 @@ for dir in */*_timepoint/; do
 	rm segmented_t1_mixeltype.nii.gz
 	rm segmented_t1_pveseg.nii.gz
 	
-	bash $SCRIPT_PATH/tktregistration.sh 2.nii segmented_t1_seg_2.nii.gz T1_wm.nii.gz
+	bash $SCRIPT_PATH/tktregistration.sh 2.nii segmented_t1_seg_2.nii.gz T1_wm_mask.nii.gz
+	fslmaths T1_wm_mask.nii.gz -thr 0.4 -bin T1_wm_mask.nii.gz
 			
 	# FAST documentation recommends brain masking first
 	#fslmaths 2.nii -mas T1_bet_mask.nii.gz 2_masked.nii 
@@ -166,11 +164,11 @@ for dir in */*_timepoint/; do
 		#fslmaths 15_masked_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
 		
 		# apply wm mask to all VFAs
-		fslmaths 2_bfc.nii -mas T1_wm.nii.gz 2_bfc_wm.nii 
-		fslmaths 5_bfc.nii -mas T1_wm.nii.gz 5_bfc_wm.nii
-		fslmaths 10_bfc.nii -mas T1_wm.nii.gz 10_bfc_wm.nii
-		fslmaths 12_bfc.nii -mas T1_wm.nii.gz 12_bfc_wm.nii
-		fslmaths 15_bfc.nii -mas T1_wm.nii.gz 15_bfc_wm.nii
+		fslmaths 2_bfc.nii -mas T1_wm_mask.nii.gz 2_bfc_wm.nii 
+		fslmaths 5_bfc.nii -mas T1_wm_mask.nii.gz 5_bfc_wm.nii
+		fslmaths 10_bfc.nii -mas T1_wm_mask.nii.gz 10_bfc_wm.nii
+		fslmaths 12_bfc.nii -mas T1_wm_mask.nii.gz 12_bfc_wm.nii
+		fslmaths 15_bfc.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii
 	else
 		# dumb file name management for norm only runs
 		fslmaths 2.nii -mas T1_bet_mask.nii.gz 2_bfc.nii 
@@ -192,18 +190,18 @@ for dir in */*_timepoint/; do
 		#fslmaths 15_bfc_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
 		
 		# apply wm mask to all VFAs
-		fslmaths 2_bfc.nii -mas T1_wm.nii.gz 2_bfc_wm.nii 
-		fslmaths 5_bfc.nii -mas T1_wm.nii.gz 5_bfc_wm.nii
-		fslmaths 10_bfc.nii -mas T1_wm.nii.gz 10_bfc_wm.nii
-		fslmaths 12_bfc.nii -mas T1_wm.nii.gz 12_bfc_wm.nii
-		fslmaths 15_bfc.nii -mas T1_wm.nii.gz 15_bfc_wm.nii
+		fslmaths 2_bfc.nii -mas T1_wm_mask.nii.gz 2_bfc_wm.nii 
+		fslmaths 5_bfc.nii -mas T1_wm_mask.nii.gz 5_bfc_wm.nii
+		fslmaths 10_bfc.nii -mas T1_wm_mask.nii.gz 10_bfc_wm.nii
+		fslmaths 12_bfc.nii -mas T1_wm_mask.nii.gz 12_bfc_wm.nii
+		fslmaths 15_bfc.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii
 		
 		# apply MP-RAGE wm mask
-		fslmaths 2_bfc.nii -mas T1_wm.nii.gz 2_bfc_wm.nii 
-		fslmaths 5_bfc.nii -mas T1_wm.nii.gz 5_bfc_wm.nii
-		fslmaths 10_bfc.nii -mas T1_wm.nii.gz 10_bfc_wm.nii
-		fslmaths 12_bfc.nii -mas T1_wm.nii.gz 12_bfc_wm.nii
-		fslmaths 15_bfc.nii -mas T1_wm.nii.gz 15_bfc_wm.nii
+		fslmaths 2_bfc.nii -mas T1_wm_mask.nii.gz 2_bfc_wm.nii 
+		fslmaths 5_bfc.nii -mas T1_wm_mask.nii.gz 5_bfc_wm.nii
+		fslmaths 10_bfc.nii -mas T1_wm_mask.nii.gz 10_bfc_wm.nii
+		fslmaths 12_bfc.nii -mas T1_wm_mask.nii.gz 12_bfc_wm.nii
+		fslmaths 15_bfc.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii
 	fi
 
 	# Run Z-axis normalization VFA data
@@ -352,7 +350,13 @@ for dir in */*_timepoint/; do
 	# ------------------------------
 	# MC or no?
 	3dTcat -prefix ref_rep.nii DCE_mc.nii'[1]' -overwrite
-	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_map_t1_fa_fit_VFA_mc.nii t1_map_fixed_use_me.nii.gz
+	# FRAUDSURFER doesn't really do anything
+	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_map_t1_fa_fit_VFA_mc.nii t1_map_fixed_use_me.nii.gz
+	antsRegistrationSyN.sh -d 3 -t t -f ref_rep.nii -m T1_map_t1_fa_fit_VFA_mc.nii -o t1_map_fixed_use_me
+	mv t1_map_fixed_use_meWarped.nii.gz t1_map_fixed_use_me.nii.gz
+	rm t1_map_fixed_use_meInverseWarped.nii.gz
+	rm t1_map_fixed_use_me0GenericAffine.mat
+	
 	if [ $ff -eq 1 ]
 		then
 			if [ ! -f "t1_map_fixed_use_me.nii.gz" ]
@@ -363,7 +367,19 @@ for dir in */*_timepoint/; do
 			fi
 	fi
 	# align and apply brain mask
-	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_bet_mask.nii.gz T1_bet_mask_dyn.nii.gz
+	#flirt -in T1.nii -ref ref_rep.nii -dof 12 -omat T1toDCE.mat -o T1_dyn.nii
+	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1.nii T1_dyn.nii.gz
+	antsRegistrationSyN.sh -d 3 -t r -f ref_rep.nii -m T1.nii -o T1_dyn
+	mv T1_dynWarped.nii.gz T1_dyn.nii.gz
+	
+	#flirt -in T1_bet_mask.nii.gz -ref ref_rep.nii -init T1toDCE.mat -applyxfm -o T1_bet_mask_dyn.nii
+	#fslmaths T1_bet_mask_dyn.nii -bin T1_bet_mask_dyn.nii
+	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_bet_mask.nii.gz T1_bet_mask_dyn.nii.gz
+	
+	antsRegistrationSyN.sh -d 3 -t t -f ref_rep.nii -m T1_bet_mask.nii.gz -o T1_bet_mask_dyn
+	mv T1_bet_mask_dynWarped.nii.gz T1_bet_mask_dyn.nii.gz
+	rm T1_bet_mask_dynInverseWarped.nii.gz
+	rm T1_bet_mask_dyn0GenericAffine.mat
 	
 	# ensure AIF is included in mask
 	fslcpgeom 2.nii T1_bet_mask_dyn.nii.gz
@@ -492,12 +508,20 @@ for dir in */*_timepoint/; do
 	fi
 	
 	# align existing white matter mask to dynamic images and re-binarize
-	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_wm.nii.gz T1_wm_dyn.nii.gz
-	bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_bet_mask.nii.gz T1_bet_mask_dyn.nii.gz
+	#flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -init T1toDCE.mat -applyxfm -o T1_wm_mask_dyn.nii
+	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_wm_mask.nii.gz T1_wm_mask_dyn.nii.gz
+	antsRegistrationSyN.sh -d 3 -t r -f ref_rep.nii -m T1_wm_mask.nii.gz -o T1_wm_mask_dyn
+	mv T1_wm_mask_dynWarped.nii.gz T1_wm_mask_dyn.nii.gz
+	fslmaths T1_wm_mask_dyn.nii.gz -thr 0.3 -bin T1_wm_mask_dyn.nii.gz
+	
+	#fslmaths T1_wm_mask_dynWarped.nii -thr 0.7 -bin T1_wm_mask_dyn.nii
+	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_bet_mask.nii.gz T1_bet_mask_dyn.nii.gz
 	#fslmaths 15_wm_mask_dyn.nii.gz -thr 1.7 -bin 15_wm_mask_dyn.nii
+	rm T1_wm_mask_dynInverseWarped.nii.gz
+	rm T1_wm_mask_dyn0GenericAffine.mat
 	
 	# apply wm mask to all DCE images
-	fslmaths DCE_mc_bfc.nii -mas T1_wm_dyn.nii.gz DCE_mc_bfc_wm.nii.gz
+	fslmaths DCE_mc_bfc.nii -mas T1_wm_mask_dyn.nii.gz DCE_mc_bfc_wm.nii.gz
 
 	# normalize dynamic images
 	# ------------------------------
