@@ -2,9 +2,9 @@ name: Bash script
 
 on:
   push:
-    branches: [ "freesurfer", "master" ]
+    branches: [ "freesurfer", "main" ]
   pull_request:
-    branches: [ "freesurfer", "master" ]
+    branches: [ "freesurfer", "main" ]
 
 permissions:
   contents: read
