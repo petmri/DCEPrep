@@ -2,13 +2,19 @@
 # Requires FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, Freesurfer, and Python.
 Used FSL 6.0, AFNI_20.0.09 'Galba', freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0-2beb96c, Python 3.8.10
 ## Pipeline Structure
-### `preprocess_all`:
+### `preprocess_all`
 Inputs: `2.nii` `5.nii` `10.nii` `12.nii` `15.nii` `DCE.nii` `aif.nii`
+
 Outputs: `DCE_mc_bfc_norm.nii`, a bunch of others
+
 Options: `-d: specify main data directory (required)`
+
 `-b: enable first round of bias field correction`
+
 `-B: enable second round of bias field correction`
+
 `-Z: enable z-slice normalization`
+
 `-c: clean timepoint directory prior to preprocessing (rm all except inputs)`
 
 Example call: `./preprocess_all -d /media/network_mriphysics/USC-PPG/data -b -Z -F -c`
@@ -27,8 +33,11 @@ Example call: `./preprocess_all -d /media/network_mriphysics/USC-PPG/data -b -Z 
 
 ### `DCE_all.sh`
 Inputs: `DCE_bfc_norm.nii` `aif.nii` `t1_map_fixed_use_me.nii.gz`
+
 Outputs: Ktrans maps, QC reports (overview being `report.png`)
+
 Options: `-d: specify main data directory (required)`
+
 `-b: enable first round of bias field correction` (do this if you did it before)
 
 Example call: `./DCE_all -d /media/network_mriphysics/USC-PPG/data -b`
