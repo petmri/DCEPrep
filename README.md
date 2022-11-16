@@ -1,4 +1,5 @@
 # in-house_toolbox
+The `main` branch is stable. Checkout a tag if you want something super stable.
 # Requires FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, Freesurfer, and Python.
 Used FSL 6.0, AFNI_20.0.09 'Galba', freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0-2beb96c, Python 3.8.10
 ## Pipeline Structure
