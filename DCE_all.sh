@@ -61,7 +61,7 @@ for dir in */*_timepoint/; do
 	cd $dir
 	SUBJECT_TP_PATH=$(pwd)
 
-	if [ ! -f "DCE_bfc_norm.nii" ]
+	if [ ! -f "DCE_mc_bfc_norm.nii" ]
 		then
 		echo Missing input file. Make sure the data has been preprocessed. Skipping timepoint...
 		continue
@@ -112,10 +112,211 @@ for dir in */*_timepoint/; do
 	fslmaths dce_patlak_fit_Ktrans.nii -mas T1_csf_dyn.nii Ktrans_csf.nii
 	
 	# registration QC
+	high_zeros=$(python3 $SCRIPT_PATH/auto_analysis.py $SUBJECT_TP_PATH)
+	if [ $high_zeros = "True" ]
+		then
+		# re-register
+		#bash $SCRIPT_PATH/preprocess_all.sh
+		echo "High % of zeros found in matter masks. May be due to poor registration. Attempting re-registration with Freesurfer..."
+		bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_map_t1_fa_fit_VFA_mc.nii t1_map_fixed_use_me.nii.gz
+		bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_bet_mask.nii.gz T1_bet_mask_dyn.nii.gz
+		fslcpgeom 2.nii T1_bet_mask_dyn.nii.gz
+		cp aif.nii aif_aligned.nii
+		fslcpgeom T1_bet_mask_dyn.nii.gz aif_aligned.nii
+		fslmaths aif_aligned.nii -thr 0 aif_pos.nii
+		rm aif_aligned.nii
+		fslmaths T1_bet_mask_dyn.nii.gz -add aif_pos.nii -thr 1 -bin T1_bet_mask_dyn_aif.nii
+		fslmaths DCE_mc.nii -mas T1_bet_mask_dyn_aif.nii.gz DCE_mc_masked.nii
+		
+		if [ $EN_BIAS1 -eq 1 ]
+			then
+				# Applying bias field correction on dynamic images
+				# ------------------------------
+				echo Applying BFC to dynamic images...
+				3dTcat -prefix 1st_rep.nii DCE_mc_masked.nii'[0]' -overwrite # extract images from different DCE repetitions
+				3dTcat -prefix 5th_rep.nii DCE_mc_masked.nii'[4]' -overwrite
+				3dTcat -prefix 10th_rep.nii DCE_mc_masked.nii'[9]' -overwrite
+				3dTcat -prefix 20th_rep.nii DCE_mc_masked.nii'[19]' -overwrite
+				3dTcat -prefix 30th_rep.nii DCE_mc_masked.nii'[29]' -overwrite
+				3dTcat -prefix 40th_rep.nii DCE_mc_masked.nii'[39]' -overwrite
+				3dTcat -prefix 50th_rep.nii DCE_mc_masked.nii'[49]' -overwrite
+				3dTcat -prefix 60th_rep.nii DCE_mc_masked.nii'[59]' -overwrite
+		
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 1st_rep.nii
+				rm 1st_rep_mixeltype.nii.gz
+				rm 1st_rep_pve_0.nii.gz
+				rm 1st_rep_pve_1.nii.gz
+				rm 1st_rep_pve_2.nii.gz
+				rm 1st_rep_pveseg.nii.gz
+				rm 1st_rep_seg.nii.gz
+		
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5th_rep.nii
+				rm 5th_rep_mixeltype.nii.gz
+				rm 5th_rep_pve_0.nii.gz
+				rm 5th_rep_pve_1.nii.gz
+				rm 5th_rep_pve_2.nii.gz
+				rm 5th_rep_pveseg.nii.gz
+				rm 5th_rep_seg.nii.gz
+		
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10th_rep.nii
+				rm 10th_rep_mixeltype.nii.gz
+				rm 10th_rep_pve_0.nii.gz
+				rm 10th_rep_pve_1.nii.gz
+				rm 10th_rep_pve_2.nii.gz
+				rm 10th_rep_pveseg.nii.gz
+				rm 10th_rep_seg.nii.gz
+		
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 20th_rep.nii
+				rm 20th_rep_mixeltype.nii.gz
+				rm 20th_rep_pve_0.nii.gz
+				rm 20th_rep_pve_1.nii.gz
+				rm 20th_rep_pve_2.nii.gz
+				rm 20th_rep_pveseg.nii.gz
+				rm 20th_rep_seg.nii.gz
+		
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 30th_rep.nii
+				rm 30th_rep_mixeltype.nii.gz
+				rm 30th_rep_pve_0.nii.gz
+				rm 30th_rep_pve_1.nii.gz
+				rm 30th_rep_pve_2.nii.gz
+				rm 30th_rep_pveseg.nii.gz
+				rm 30th_rep_seg.nii.gz
+		
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 40th_rep.nii
+				rm 40th_rep_mixeltype.nii.gz
+				rm 40th_rep_pve_0.nii.gz
+				rm 40th_rep_pve_1.nii.gz
+				rm 40th_rep_pve_2.nii.gz
+				rm 40th_rep_pveseg.nii.gz
+				rm 40th_rep_seg.nii.gz
+		
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 50th_rep.nii
+				rm 50th_rep_mixeltype.nii.gz
+				rm 50th_rep_pve_0.nii.gz
+				rm 50th_rep_pve_1.nii.gz
+				rm 50th_rep_pve_2.nii.gz
+				rm 50th_rep_pveseg.nii.gz
+				rm 50th_rep_seg.nii.gz
+		
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 60th_rep.nii
+				rm 60th_rep_mixeltype.nii.gz
+				rm 60th_rep_pve_0.nii.gz
+				rm 60th_rep_pve_1.nii.gz
+				rm 60th_rep_pve_2.nii.gz
+				rm 60th_rep_pveseg.nii.gz
+				rm 60th_rep_seg.nii.gz
+		
+				# Concatenation1
+				3dTcat -prefix dyn_bias.nii 1st_rep_bias.nii.gz 5th_rep_bias.nii.gz 10th_rep_bias.nii.gz 20th_rep_bias.nii.gz 30th_rep_bias.nii.gz 40th_rep_bias.nii.gz 50th_rep_bias.nii.gz 60th_rep_bias.nii.gz -overwrite
+		
+				# Computing average across 8 bias field that have been sampled
+				3dTstat -mean -prefix mean_dyn_bias_map.nii dyn_bias.nii'[0..7]' -overwrite
+		
+				# Normalizing motion corrected DCE image with mean bias field 
+				3dcalc -a DCE_mc_masked.nii -b mean_dyn_bias_map.nii -expr a/b -prefix DCE_mc_bfc.nii -overwrite
+		
+				# don't forget to remove all unnecessary images 
+				rm 1st_rep.nii
+				rm 1st_rep_bias.nii.gz
+				rm 5th_rep.nii
+				rm 5th_rep_bias.nii.gz
+				rm 10th_rep.nii
+				rm 10th_rep_bias.nii.gz
+				rm 20th_rep.nii
+				rm 20th_rep_bias.nii.gz
+				rm 30th_rep.nii
+				rm 30th_rep_bias.nii.gz
+				rm 40th_rep.nii
+				rm 40th_rep_bias.nii.gz
+				rm 50th_rep.nii
+				rm 50th_rep_bias.nii.gz
+				rm 60th_rep.nii
+				rm 60th_rep_bias.nii.gz
+		else
+			#echo Motion correcting dynamic set
+			#3dvolreg -heptic -verbose -base 'DCE.nii[1]' -dfile DCE_motion.txt -prefix DCE_mc_bfc.nii DCE.nii
+			#3dTcat -prefix ref_rep.nii dce_mc_bfc'[1]'
+			gunzip -f DCE_mc.nii.gz
+			mv DCE_mc.nii DCE_mc_bfc.nii
+		fi
+		
+		# align existing white matter mask to dynamic images and re-binarize
+		#flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -init T1toDCE.mat -applyxfm -o T1_wm_mask_dyn.nii
+		flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -2D -o T1_wm_mask_dyn.nii
+		#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_wm_mask.nii.gz T1_wm_mask_dyn.nii.gz
+		#antsRegistrationSyN.sh -d 3 -t r -f ref_rep.nii -m T1_wm_mask.nii.gz -o T1_wm_mask_dyn
+		#mv T1_wm_mask_dynWarped.nii.gz T1_wm_mask_dyn.nii.gz
+		fslmaths T1_wm_mask_dyn.nii.gz -thr 0.3 -bin T1_wm_mask_dyn.nii.gz
+		
+		#fslmaths T1_wm_mask_dynWarped.nii -thr 0.7 -bin T1_wm_mask_dyn.nii
+		#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_bet_mask.nii.gz T1_bet_mask_dyn.nii.gz
+		#fslmaths 15_wm_mask_dyn.nii.gz -thr 1.7 -bin 15_wm_mask_dyn.nii
+		rm T1_wm_mask_dynInverseWarped.nii.gz
+		rm T1_wm_mask_dyn0GenericAffine.mat
+		
+		# apply wm mask to all DCE images
+		fslmaths DCE_mc_bfc.nii -mas T1_wm_mask_dyn.nii.gz DCE_mc_bfc_wm.nii.gz
+	
+		# normalize dynamic images
+		# ------------------------------
+		echo Normalizing dynamic images...
+		python3 $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH
+		if [ $ff -eq 1 ]
+			then
+				if [ ! -f "DCE_mc_bfc_norm.nii" ]
+					then
+						echo "Missing normalized DCE file."
+						fail=1
+						continue
+				fi
+		fi
+		echo Begin DCE processing...
+		matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH/matlab'; run_dce_auto('$SUBJECT_TP_PATH/'); exit;"
+
+		if [ $ff -eq 1 ]
+			then
+				if [ ! -f "dce_patlak_fit_Ktrans.nii" ]
+					then
+						echo "Missing Ktrans maps. Check terminal--DCE failed or inputs were not generated."
+						fail=1
+						continue
+				fi
+		fi
+		
+		# Analyze results
+		# ------------------------------
+		# Align then re-binarize gm mask
+		#bad
+		#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii segmented_t1_seg_1.nii.gz T1_gm_dyn.nii.gz
+		#flirt -in segmented_t1_seg_1.nii.gz -ref ref_rep.nii -init T1toDCE.mat -applyxfm -o T1_gm_mask_dyn.nii
+		#fails on 1 subject (180deg rotation)
+		#flirt -in segmented_t1_seg_1.nii.gz -dof 6 -ref ref_rep.nii -o T1_gm_mask_dyn.nii
+		#fslmaths T1_gm_mask_dyn.nii -thr 0.5 -bin T1_gm_mask_dyn.nii
+		#good
+		antsRegistrationSyN.sh -d 3 -t t -f ref_rep.nii -m segmented_t1_seg_1.nii.gz -o T1_gm_mask_dyn
+		fslmaths T1_gm_mask_dynWarped.nii -thr 0.5 -bin T1_gm_mask_dyn.nii	
+		
+		# Align CSF mask
+		#flirt -in 15_csf.nii.gz -ref ref_rep.nii -out 15_csf_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
+		bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii segmented_t1_seg_0.nii.gz T1_csf_dyn.nii.gz
+		#fslmaths 15_csf_mask_dyn.nii.gz -thr 20 -bin 15_csf_mask_dyn.nii
+		
+		# Apply masks to T1 map
+		fslmaths t1_map_fixed_use_me.nii.gz -mas T1_wm_mask_dyn.nii T1_wm.nii
+		fslmaths t1_map_fixed_use_me.nii.gz -mas T1_gm_mask_dyn.nii T1_gm.nii
+		fslmaths t1_map_fixed_use_me.nii.gz -mas T1_csf_dyn.nii T1_csf.nii
+		
+		# Apply masks to Ktrans map
+		fslmaths dce_patlak_fit_Ktrans.nii -mas T1_wm_mask_dyn.nii Ktrans_wm.nii
+		fslmaths dce_patlak_fit_Ktrans.nii -mas T1_gm_mask_dyn.nii Ktrans_gm.nii
+		fslmaths dce_patlak_fit_Ktrans.nii -mas T1_csf_dyn.nii Ktrans_csf.nii
+
+		python3 $SCRIPT_PATH/auto_analysis.py $SUBJECT_TP_PATH
+	fi
+	
 	fslmaths T1_wm_mask_dyn.nii.gz -add 1 bozo2.nii
 	fslmaths bozo2.nii.gz -thr 2 bozo2.nii.gz
 	fslmaths bozo2.nii.gz -add T1_gm_mask_dyn.nii.gz bozo.nii
-	
 	
 	fslmaths ref_rep.nii -add 1 bozo2.nii
 	fslmaths bozo2.nii.gz -thr 2 bozo2.nii.gz
@@ -131,7 +332,6 @@ for dir in */*_timepoint/; do
 	fslmaths ref_rep.nii -sub huh2.nii.gz bozo2.nii
 	fslmaths bozo.nii -thr 0 bozo2.nii
 	
-	python3 $SCRIPT_PATH/auto_analysis.py $SUBJECT_TP_PATH
 	python3 $SCRIPT_PATH/report.py $SUBJECT_TP_PATH
 	cd ../../	
 	echo $dir processing complete!

@@ -313,6 +313,8 @@ def analyze(file_dir):
     ax5.legend()
 
     plt.savefig(file_dir + '/T1_Ktrans_zeros.png', bbox_inches='tight')
+    print(any(np.array(Ktrans_wm_zeros) >= 70) or any(np.array(Ktrans_gm_zeros) >= 70))
+    # print((Ktrans_wm_zero_avg >= 60) or (Ktrans_gm_zero_avg >= 60))
 
 
 dir = Path(sys.argv[1])     # takes timepoint directory as argument

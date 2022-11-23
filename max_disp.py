@@ -12,15 +12,16 @@ from statistics import mean
 dir = sys.argv[1]
 mc_params = np.loadtxt(dir + "/DCE_mc.nii.par", dtype = float)
 mc_params[:,0:3] = mc_params[:,0:3]*50
-max_i = mc_params.argmax()
+max_i = np.abs(mc_params).argmax()
 max_disp_i = unravel_index(max_i, mc_params.shape)
 max_disp = str(mc_params[max_disp_i])
 print("Max displacement of " + max_disp + " mm at time slice " + str(max_disp_i[0] + 1) + "/64, parameter " + str(max_disp_i[1]))
 
 fig, ax = plt.subplots(figsize=(10, 6))
+colors = ['k', 'b', 'g', 'm', 'y', 'c']
 for i in range(len(mc_params[0,:])):
     label = 'param ' + str(i)
-    ax.plot(range(len(mc_params[:,i])), mc_params[:,i], label=label)
+    ax.plot(range(len(mc_params[:,i])), mc_params[:,i], label=label, color=colors[i])
 
 plt.legend()
 plt.grid()

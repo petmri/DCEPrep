@@ -10,10 +10,11 @@ EN_BIAS2=0
 ff=0
 fail=0
 clean=0
+USE_FREESURFER=0
 #EN_MOTION_CORR=1
 
 # options
-while getopts ":d:bBZFhc" options; do
+while getopts ":d:bBZfFhc" options; do
 	case "${options}" in
 		b)
 			EN_BIAS1=1
@@ -26,6 +27,9 @@ while getopts ":d:bBZFhc" options; do
 		d)
 			DATA_DIR=${OPTARG}
 			;;
+		f)
+			USE_FREESURFER=1
+			;;
 		F)
 			ff=1
 			;;
@@ -37,6 +41,7 @@ while getopts ":d:bBZFhc" options; do
 			echo "-c: clean generated files prior to processing"
 			echo "-Z: enable Z-slice normalization"
 			echo "-d: specify main data directory containing all subject folders"
+			echo "-f: use freesurfer for registration (seems to cut off top of cortical region for most subjects, perfect for one site)"
 			echo "-F: fail fast, any command failures will end the script"
 			echo "-h: display this message"
 			exit 0
@@ -71,7 +76,7 @@ for dir in */*_timepoint/; do
 
 	if [ ! -f "2.nii" ] || [ ! -f "5.nii" ] || [ ! -f "10.nii" ] || [ ! -f "12.nii" ] || [ ! -f "15.nii" ] || [ ! -f "DCE.nii" ] || [ ! -f "T1.nii" ]
 		then
-		echo Base file(s) missing! Expected VFAs 2.nii, 5.nii, 10.nii, 12.nii, 15.nii, DCE.nii, and T1.nii (MP-RAGE). Skipping timepoint...
+		echo "Base file(s) missing! Expected VFAs 2.nii, 5.nii, 10.nii, 12.nii, 15.nii, DCE.nii, and T1.nii (MP-RAGE). Skipping timepoint..."
 		continue
 	fi
 	
@@ -369,17 +374,22 @@ for dir in */*_timepoint/; do
 	# align and apply brain mask
 	#flirt -in T1.nii -ref ref_rep.nii -dof 12 -omat T1toDCE.mat -o T1_dyn.nii
 	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1.nii T1_dyn.nii.gz
-	antsRegistrationSyN.sh -d 3 -t r -f ref_rep.nii -m T1.nii -o T1_dyn
+	antsRegistrationSyN.sh -d 3 -t a -f ref_rep.nii -m T1.nii -o T1_dyn
 	mv T1_dynWarped.nii.gz T1_dyn.nii.gz
 	
 	#flirt -in T1_bet_mask.nii.gz -ref ref_rep.nii -init T1toDCE.mat -applyxfm -o T1_bet_mask_dyn.nii
+	#flirt -in T1_bet_mask.nii.gz -ref ref_rep.nii -dof 6 -o T1_bet_mask_dyn.nii
 	#fslmaths T1_bet_mask_dyn.nii -bin T1_bet_mask_dyn.nii
-	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_bet_mask.nii.gz T1_bet_mask_dyn.nii.gz
-	
-	antsRegistrationSyN.sh -d 3 -t t -f ref_rep.nii -m T1_bet_mask.nii.gz -o T1_bet_mask_dyn
-	mv T1_bet_mask_dynWarped.nii.gz T1_bet_mask_dyn.nii.gz
-	rm T1_bet_mask_dynInverseWarped.nii.gz
-	rm T1_bet_mask_dyn0GenericAffine.mat
+	if [ $USE_FREESURFER -eq 1 ]
+		then
+		bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_bet_mask.nii.gz T1_bet_mask_dyn.nii.gz
+	else
+		antsRegistrationSyN.sh -d 3 -t t -f ref_rep.nii -m T1_bet_mask.nii.gz -o T1_bet_mask_dyn
+		mv T1_bet_mask_dynWarped.nii.gz T1_bet_mask_dyn.nii.gz
+		rm T1_bet_mask_dynInverseWarped.nii.gz
+		rm T1_bet_mask_dyn0GenericAffine.mat
+	fi
+		
 	
 	# ensure AIF is included in mask
 	fslcpgeom 2.nii T1_bet_mask_dyn.nii.gz
@@ -509,16 +519,17 @@ for dir in */*_timepoint/; do
 	
 	# align existing white matter mask to dynamic images and re-binarize
 	#flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -init T1toDCE.mat -applyxfm -o T1_wm_mask_dyn.nii
+	flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -2D -o T1_wm_mask_dyn.nii
 	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_wm_mask.nii.gz T1_wm_mask_dyn.nii.gz
-	antsRegistrationSyN.sh -d 3 -t r -f ref_rep.nii -m T1_wm_mask.nii.gz -o T1_wm_mask_dyn
-	mv T1_wm_mask_dynWarped.nii.gz T1_wm_mask_dyn.nii.gz
+	#antsRegistrationSyN.sh -d 3 -t r -f ref_rep.nii -m T1_wm_mask.nii.gz -o T1_wm_mask_dyn
+	#mv T1_wm_mask_dynWarped.nii.gz T1_wm_mask_dyn.nii.gz
 	fslmaths T1_wm_mask_dyn.nii.gz -thr 0.3 -bin T1_wm_mask_dyn.nii.gz
 	
 	#fslmaths T1_wm_mask_dynWarped.nii -thr 0.7 -bin T1_wm_mask_dyn.nii
 	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_bet_mask.nii.gz T1_bet_mask_dyn.nii.gz
 	#fslmaths 15_wm_mask_dyn.nii.gz -thr 1.7 -bin 15_wm_mask_dyn.nii
-	rm T1_wm_mask_dynInverseWarped.nii.gz
-	rm T1_wm_mask_dyn0GenericAffine.mat
+	#rm T1_wm_mask_dynInverseWarped.nii.gz
+	#rm T1_wm_mask_dyn0GenericAffine.mat
 	
 	# apply wm mask to all DCE images
 	fslmaths DCE_mc_bfc.nii -mas T1_wm_mask_dyn.nii.gz DCE_mc_bfc_wm.nii.gz

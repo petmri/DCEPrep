@@ -102,13 +102,13 @@ bozo = fig.colorbar(x, cax=cax, orientation='vertical', label='Ktrans (/min)', p
 bozo.set_label('Ktrans (10^-3/min)', labelpad=-15, fontsize = 'xx-small', color = 'white')
 bozo.ax.set_yticklabels(range(0,10), fontsize = 'xx-small')
 
-# plt.show()
 plt.savefig(str(dir) + '/report.png', bbox_inches='tight')
 
 ## REGISTRATION QC
-
 diff = nib.load(str(dir) + '/bozo.nii.gz')
 diff_data = diff.get_fdata()
+# diff_shape = diff_data.shape
+# diff_data = np.reshape(diff_data, (ktrans_shape[min(dim-set([slice_loc]))], ktrans_shape[max(dim-set([slice_loc]))], slice_num))
 
 fig2, ax2 = plt.subplots(figsize=(20, 6))
 ax2.axis('off')
@@ -124,10 +124,10 @@ for ax in reg_rows.flat:
     # ax.set_xlim(30, 290)
     # ax.set_ylim(20, 310)
     # ax.pcolormesh(slices[i], cmap=cmap, vmin=0, vmax=.009)
-    x=ax.imshow(diff_data[:,:,i], cmap=cmap)
+    x=ax.imshow(diff_data[:,:,i].T, cmap='gray', origin='lower', vmin=0, vmax=500)
     i+=1
-fig2.tight_layout(pad=-2.5)
+fig2.tight_layout(pad=-2)
 # ax.imshow(diff_data[:,:,7], cmap=cmap)
 # ax.axis('off')
 
-plt.savefig(str(dir) + '/wm_gm_reg_QC.png', bbox_inches='tight')
+plt.savefig(str(dir) + '/wm_reg_QC.png', bbox_inches='tight')
