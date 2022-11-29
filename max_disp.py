@@ -15,13 +15,28 @@ mc_params[:,0:3] = mc_params[:,0:3]*50
 max_i = np.abs(mc_params).argmax()
 max_disp_i = unravel_index(max_i, mc_params.shape)
 max_disp = str(mc_params[max_disp_i])
-print("Max displacement of " + max_disp + " mm at time slice " + str(max_disp_i[0] + 1) + "/64, parameter " + str(max_disp_i[1]))
+param_num = max_disp_i[1]
+
+if param_num < 4:
+    param_type = "rot_"
+else:
+    param_type = "trans_"
+    
+if param_num % 3 == 0:
+    param_type = param_type + 'x'
+elif param_num % 3 == 1:
+    param_type = param_type + 'y'
+elif param_num % 3 == 2:
+    param_type = param_type + 'z'
+    
+print("Max displacement of " + max_disp + " mm at time slice " + str(max_disp_i[0] + 1) + "/64, parameter " + str(param_num) + " (" + param_type + ")")
 
 fig, ax = plt.subplots(figsize=(10, 6))
 colors = ['k', 'b', 'g', 'm', 'y', 'c']
+labels = ['rot_x', 'rot_y', 'rot_z', 'trans_x', 'trans_y', 'trans_z']
 for i in range(len(mc_params[0,:])):
-    label = 'param ' + str(i)
-    ax.plot(range(len(mc_params[:,i])), mc_params[:,i], label=label, color=colors[i])
+    # label = 'param ' + str(i)
+    ax.plot(range(len(mc_params[:,i])), mc_params[:,i], label=labels[i], color=colors[i])
 
 plt.legend()
 plt.grid()
@@ -29,7 +44,7 @@ plt.ylabel("Displacement (mm)")
 plt.xlabel("Slice #")
 plt.ylim([-2.5, 2.5])
 plt.text(len(mc_params[:,0])/2, 2, "max displacement: " + max_disp + "mm")
-plt.text(len(mc_params[:,0])/2, 1.8, "param: " + str(max_disp_i[1]))
+plt.text(len(mc_params[:,0])/2, 1.8, "param: " + param_type)
 path = dir + '/displacements.png'
 plt.savefig(path, bbox_inches='tight')
 

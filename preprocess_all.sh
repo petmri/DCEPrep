@@ -382,12 +382,15 @@ for dir in */*_timepoint/; do
 	#fslmaths T1_bet_mask_dyn.nii -bin T1_bet_mask_dyn.nii
 	if [ $USE_FREESURFER -eq 1 ]
 		then
+		echo "Registering brain mask to dynamic space with Freesurfer..."
 		bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_bet_mask.nii.gz T1_bet_mask_dyn.nii.gz
 	else
+		echo "Registering brain mask to dynamic space with ANTs..."
 		antsRegistrationSyN.sh -d 3 -t t -f ref_rep.nii -m T1_bet_mask.nii.gz -o T1_bet_mask_dyn
 		mv T1_bet_mask_dynWarped.nii.gz T1_bet_mask_dyn.nii.gz
 		rm T1_bet_mask_dynInverseWarped.nii.gz
 		rm T1_bet_mask_dyn0GenericAffine.mat
+		fslmaths T1_bet_mask_dyn.nii.gz -thr 1 -bin T1_bet_mask_dyn.nii.gz
 	fi
 		
 	

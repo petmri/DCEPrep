@@ -131,3 +131,30 @@ fig2.tight_layout(pad=-2)
 # ax.axis('off')
 
 plt.savefig(str(dir) + '/wm_reg_QC.png', bbox_inches='tight')
+
+diff = nib.load(str(dir) + '/bozo2.nii.gz')
+diff_data = diff.get_fdata()
+# diff_shape = diff_data.shape
+# diff_data = np.reshape(diff_data, (ktrans_shape[min(dim-set([slice_loc]))], ktrans_shape[max(dim-set([slice_loc]))], slice_num))
+
+fig3, ax3 = plt.subplots(figsize=(20, 6))
+ax3.axis('off')
+gridspec_reg = ax3.get_subplotspec().get_gridspec()
+subfig_reg = fig3.add_subfigure(gridspec_reg[0,:])
+if slice_num > 8:
+    reg_rows = subfig_reg.subplots(2,int(slice_num/2))
+else:
+    reg_rows = subfig_reg.subplots(1,slice_num)
+i=0
+for ax in reg_rows.flat:
+    ax.axis('off')
+    # ax.set_xlim(30, 290)
+    # ax.set_ylim(20, 310)
+    # ax.pcolormesh(slices[i], cmap=cmap, vmin=0, vmax=.009)
+    x=ax.imshow(diff_data[:,:,i].T, cmap='gray', origin='lower', vmin=0, vmax=500)
+    i+=1
+fig3.tight_layout(pad=-2)
+# ax.imshow(diff_data[:,:,7], cmap=cmap)
+# ax.axis('off')
+
+plt.savefig(str(dir) + '/gm_reg_QC.png', bbox_inches='tight')

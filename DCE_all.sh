@@ -314,14 +314,6 @@ for dir in */*_timepoint/; do
 		python3 $SCRIPT_PATH/auto_analysis.py $SUBJECT_TP_PATH
 	fi
 	
-	fslmaths T1_wm_mask_dyn.nii.gz -add 1 bozo2.nii
-	fslmaths bozo2.nii.gz -thr 2 bozo2.nii.gz
-	fslmaths bozo2.nii.gz -add T1_gm_mask_dyn.nii.gz bozo.nii
-	
-	fslmaths ref_rep.nii -add 1 bozo2.nii
-	fslmaths bozo2.nii.gz -thr 2 bozo2.nii.gz
-	fslmaths bozo2.nii.gz -mul T1_wm_mask_dyn.nii.gz bozo.nii
-	
 	fslmaths T1_wm_mask_dyn.nii.gz -add 2000 huh.nii
 	fslmaths huh.nii.gz -thr 2001 huh.nii
 	fslmaths ref_rep.nii -sub huh.nii.gz bozo.nii
@@ -330,7 +322,7 @@ for dir in */*_timepoint/; do
 	fslmaths T1_gm_mask_dyn.nii.gz -add 2000 huh2.nii
 	fslmaths huh2.nii.gz -thr 2001 huh2.nii
 	fslmaths ref_rep.nii -sub huh2.nii.gz bozo2.nii
-	fslmaths bozo.nii -thr 0 bozo2.nii
+	fslmaths bozo2.nii -thr 0 bozo2.nii
 	
 	python3 $SCRIPT_PATH/report.py $SUBJECT_TP_PATH
 	cd ../../	
