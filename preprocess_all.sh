@@ -3,13 +3,16 @@ shopt -s extglob
 # FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, ANTS, and Python are required
 # Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
 # control variables
-VERSION="1.0.0"
+VERSION="1.0.1"
 EN_Z_NORM=0
 EN_BIAS1=0
 EN_BIAS2=0
 ff=0
 fail=0
 clean=0
+count=0
+successes=0
+failures=0
 USE_FREESURFER=0
 #EN_MOTION_CORR=1
 
@@ -26,6 +29,7 @@ while getopts ":d:bBZfFhc" options; do
 			;;
 		d)
 			DATA_DIR=${OPTARG}
+			LOG_FILE=$DATA_DIR/preprocessing_log.txt
 			;;
 		f)
 			USE_FREESURFER=1
@@ -68,15 +72,17 @@ fi
 
 # Run bias correction on VFA data 
 # ------------------------------
+rm preprocessing_log.txt
 for dir in */*_timepoint/; do
-	date
+	date >> preprocessing_log.txt
 	echo Preprocessing ${dir}...
+	let count++
 	cd $dir
 	SUBJECT_TP_PATH=$(pwd)
 
 	if [ ! -f "2.nii" ] || [ ! -f "5.nii" ] || [ ! -f "10.nii" ] || [ ! -f "12.nii" ] || [ ! -f "15.nii" ] || [ ! -f "DCE.nii" ] || [ ! -f "T1.nii" ]
 		then
-		echo "Base file(s) missing! Expected VFAs 2.nii, 5.nii, 10.nii, 12.nii, 15.nii, DCE.nii, and T1.nii (MP-RAGE). Skipping timepoint..."
+		echo $dir "Base file(s) missing! Expected VFAs 2.nii, 5.nii, 10.nii, 12.nii, 15.nii, DCE.nii, and T1.nii (MP-RAGE). Skipping timepoint..." >> $LOG_FILE
 		continue
 	fi
 	
@@ -165,9 +171,7 @@ for dir in */*_timepoint/; do
 		else
 			echo Found BFC VFAs. Skipping BFC...
 		fi
-		# threshold and binarize wm mask
-		#fslmaths 15_masked_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
-		
+
 		# apply wm mask to all VFAs
 		fslmaths 2_bfc.nii -mas T1_wm_mask.nii.gz 2_bfc_wm.nii 
 		fslmaths 5_bfc.nii -mas T1_wm_mask.nii.gz 5_bfc_wm.nii
@@ -221,7 +225,7 @@ for dir in */*_timepoint/; do
 		then
 			if [ ! -f "15_BFC_Z.nii" ]
 				then
-					echo "Missing Z-normalized files. Z-norm likely failed due to non-existent inputs."
+					echo $dir "Missing Z-normalized files. Z-norm likely failed due to non-existent inputs." >> $LOG_FILE
 					fail=1
 					continue
 			fi
@@ -301,7 +305,7 @@ for dir in */*_timepoint/; do
 		then
 			if [ ! -f "VFA.nii" ]
 				then
-					echo "Missing VFA file. Component files may have failed."
+					echo $dir "Missing VFA file. Component files may have failed." >> $LOG_FILE
 					fail=1
 					continue
 			fi
@@ -316,7 +320,7 @@ for dir in */*_timepoint/; do
 		then
 			if [ ! -f "VFA_mc.nii" ]
 				then
-					echo "Missing VFA_mc file. Motion correction may have failed."
+					echo $dir "Missing VFA_mc file. Motion correction may have failed." >> $LOG_FILE
 					fail=1
 					continue
 			fi
@@ -331,7 +335,7 @@ for dir in */*_timepoint/; do
 		then
 			if [ ! -f "T1_map_t1_fa_fit_VFA_mc.nii" ]
 				then
-					echo "Missing T1 map file. T1 mapping may have failed."
+					echo $dir "Missing T1 map file. T1 mapping may have failed." >> $LOG_FILE
 					fail=1
 					continue
 			fi
@@ -346,16 +350,15 @@ for dir in */*_timepoint/; do
 		then
 			if [ ! -f "DCE_mc.nii.gz" ]
 				then
-					echo "Missing motion corrected DCE file."
+					echo $dir "Missing motion corrected DCE file." >> $LOG_FILE
 					fail=1
 					continue
 			fi
 	fi
 	# Align T1 map with Dynamic data
 	# ------------------------------
-	# MC or no?
 	3dTcat -prefix ref_rep.nii DCE_mc.nii'[1]' -overwrite
-	# FRAUDSURFER doesn't really do anything
+	# FRAUDSURFER doesn't really do anything for most subjects
 	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_map_t1_fa_fit_VFA_mc.nii t1_map_fixed_use_me.nii.gz
 	antsRegistrationSyN.sh -d 3 -t t -f ref_rep.nii -m T1_map_t1_fa_fit_VFA_mc.nii -o t1_map_fixed_use_me
 	mv t1_map_fixed_use_meWarped.nii.gz t1_map_fixed_use_me.nii.gz
@@ -366,7 +369,7 @@ for dir in */*_timepoint/; do
 		then
 			if [ ! -f "t1_map_fixed_use_me.nii.gz" ]
 				then
-					echo "Missing registered T1 map."
+					echo "Missing registered T1 map." >> $LOG_FILE
 					fail=1
 					continue
 			fi
@@ -545,7 +548,7 @@ for dir in */*_timepoint/; do
 		then
 			if [ ! -f "DCE_mc_bfc_norm.nii" ]
 				then
-					echo "Missing normalized DCE file."
+					echo $dir "Missing normalized DCE file." >> $LOG_FILE
 					fail=1
 					continue
 			fi
@@ -554,8 +557,14 @@ for dir in */*_timepoint/; do
 	#3dBlurToFWHM -input DCE_mc_bfc_norm.nii -FWHM 4 -prefix DCE_mc_bfc_norm_blurred.nii
 
 	cd ../../
-	echo $dir preprocessing complete!
+	echo $dir preprocessing complete! >> $LOG_FILE
+	let successes++
 done
+
+let failures=count-successes
+echo Completed preprocessing for $count subjects. >> $LOG_FILE
+echo $successes subjects succeeded >> $LOG_FILE
+echo $failures subjects failed >> $LOG_FILE
 
 if [ $fail -eq 1 ]
 	then

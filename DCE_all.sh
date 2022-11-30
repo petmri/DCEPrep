@@ -7,6 +7,9 @@ EN_Z_NORM=0
 EN_BIAS1=1
 EN_BIAS2=0
 ff=0
+fail=0
+count=0
+successes=0
 
 # options
 while getopts ":d:bBZFh" options; do
@@ -18,6 +21,7 @@ while getopts ":d:bBZFh" options; do
 			;;
 		d)
 			DATA_DIR=${OPTARG}
+			LOG_FILE=$DATA_DIR/dce_log.txt
 			;;
 		F)
 			ff=1
@@ -55,15 +59,17 @@ else
 	SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
 fi
 
+rm dce_log.txt
 for dir in */*_timepoint/; do
-	date
+	date >> dce_log.txt
 	echo DCE processing ${dir}...
+	let count++
 	cd $dir
 	SUBJECT_TP_PATH=$(pwd)
 
 	if [ ! -f "DCE_mc_bfc_norm.nii" ]
 		then
-		echo Missing input file. Make sure the data has been preprocessed. Skipping timepoint...
+		echo Missing input file. Make sure the data has been preprocessed. Skipping $dir... >> $LOG_FILE
 		continue
 	fi
 	
@@ -76,7 +82,7 @@ for dir in */*_timepoint/; do
 		then
 			if [ ! -f "dce_patlak_fit_Ktrans.nii" ]
 				then
-					echo "Missing Ktrans maps. Check terminal--DCE failed or inputs were not generated."
+					echo $dir "Missing Ktrans maps. Check terminal--DCE failed or inputs were not generated." >> $LOG_FILE
 					fail=1
 					continue
 			fi
@@ -265,7 +271,7 @@ for dir in */*_timepoint/; do
 			then
 				if [ ! -f "DCE_mc_bfc_norm.nii" ]
 					then
-						echo "Missing normalized DCE file."
+						echo $dir "Missing normalized DCE file." >> $LOG_FILE
 						fail=1
 						continue
 				fi
@@ -277,7 +283,7 @@ for dir in */*_timepoint/; do
 			then
 				if [ ! -f "dce_patlak_fit_Ktrans.nii" ]
 					then
-						echo "Missing Ktrans maps. Check terminal--DCE failed or inputs were not generated."
+						echo $dir "Missing Ktrans maps. Check terminal--DCE failed or inputs were otherwise not generated." >> $LOG_FILE
 						fail=1
 						continue
 				fi
@@ -325,6 +331,17 @@ for dir in */*_timepoint/; do
 	fslmaths bozo2.nii -thr 0 bozo2.nii
 	
 	python3 $SCRIPT_PATH/report.py $SUBJECT_TP_PATH
-	cd ../../	
-	echo $dir processing complete!
+	cd ../../
+	echo $dir processing complete! >> $LOG_FILE
+	let successes++
 done
+
+let failures=count-successes
+echo "Completed DCE processing for $count subjects." >> $LOG_FILE
+echo $successes subjects succeeded >> $LOG_FILE
+echo $failures subjects failed >> $LOG_FILE
+
+if [ $fail -eq 1 ]
+	then
+	exit 1
+fi
