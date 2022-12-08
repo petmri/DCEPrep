@@ -77,12 +77,12 @@ for dir in */*_timepoint/; do
 	# ------------------------------
 	echo Begin DCE processing...
 	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH/matlab'; run_dce_auto('$SUBJECT_TP_PATH/'); exit;"
-
 	if [ $ff -eq 1 ]
 		then
 			if [ ! -f "dce_patlak_fit_Ktrans.nii" ]
 				then
-					echo $dir "Missing Ktrans maps. Check terminal--DCE failed or inputs were not generated." >> $LOG_FILE
+					echo $dir "Missing Ktrans maps. DCE failed or inputs were not generated. Hopefully message below is relevant." >> $LOG_FILE
+					tail -1 A_dceR1info.log >> $LOG_FILE
 					fail=1
 					continue
 			fi
@@ -257,8 +257,8 @@ for dir in */*_timepoint/; do
 		#fslmaths T1_wm_mask_dynWarped.nii -thr 0.7 -bin T1_wm_mask_dyn.nii
 		#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_bet_mask.nii.gz T1_bet_mask_dyn.nii.gz
 		#fslmaths 15_wm_mask_dyn.nii.gz -thr 1.7 -bin 15_wm_mask_dyn.nii
-		rm T1_wm_mask_dynInverseWarped.nii.gz
-		rm T1_wm_mask_dyn0GenericAffine.mat
+		#rm T1_wm_mask_dynInverseWarped.nii.gz
+		#rm T1_wm_mask_dyn0GenericAffine.mat
 		
 		# apply wm mask to all DCE images
 		fslmaths DCE_mc_bfc.nii -mas T1_wm_mask_dyn.nii.gz DCE_mc_bfc_wm.nii.gz
