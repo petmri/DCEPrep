@@ -145,12 +145,6 @@ for dir in */*_timepoint/; do
 			ETA=$(echo "scale=1;  $ETA - $mETA * .06" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "BFC FAST VFA5  [=======>                                          ] $prog% ($current/$count) ~$ETA min remaining \r"
-			rm 2_masked_mixeltype.nii.gz
-			rm 2_masked_pve_0.nii.gz
-			rm 2_masked_pve_1.nii.gz
-			rm 2_masked_pve_2.nii.gz
-			rm 2_masked_pveseg.nii.gz
-			rm 2_masked_seg.nii.gz
 			3dcalc -a 2_masked.nii -b 2_masked_bias.nii.gz -expr a/b -prefix 2_bfc.nii -overwrite &> /dev/null
 
 			SECONDS=0
@@ -158,12 +152,6 @@ for dir in */*_timepoint/; do
 			ETA=$(echo "scale=1;  $ETA - $mETA * .06" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "BFC FAST VFA10 [==========>                                       ] $prog% ($current/$count) ~$ETA min remaining \r"
-			rm 5_masked_mixeltype.nii.gz
-			rm 5_masked_pve_0.nii.gz
-			rm 5_masked_pve_1.nii.gz
-			rm 5_masked_pve_2.nii.gz
-			rm 5_masked_pveseg.nii.gz
-			rm 5_masked_seg.nii.gz
 			3dcalc -a 5_masked.nii -b 5_masked_bias.nii.gz -expr a/b -prefix 5_bfc.nii -overwrite &> /dev/null
 
 			SECONDS=0
@@ -171,12 +159,6 @@ for dir in */*_timepoint/; do
 			ETA=$(echo "scale=1;  $ETA - $mETA * .06" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "BFC FAST VFA12 [=============>                                    ] $prog% ($current/$count) ~$ETA min remaining \r"
-			rm 10_masked_mixeltype.nii.gz
-			rm 10_masked_pve_0.nii.gz
-			rm 10_masked_pve_1.nii.gz
-			rm 10_masked_pve_2.nii.gz
-			rm 10_masked_pveseg.nii.gz
-			rm 10_masked_seg.nii.gz
 			3dcalc -a 10_masked.nii -b 10_masked_bias.nii.gz -expr a/b -prefix 10_bfc.nii -overwrite &> /dev/null
 
 			SECONDS=0
@@ -184,12 +166,6 @@ for dir in */*_timepoint/; do
 			ETA=$(echo "scale=1;  $ETA - $mETA * .06" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "BFC FAST VFA15 [================>                                 ] $prog% ($current/$count) ~$ETA min remaining \r"
-			rm 12_masked_mixeltype.nii.gz
-			rm 12_masked_pve_0.nii.gz
-			rm 12_masked_pve_1.nii.gz
-			rm 12_masked_pve_2.nii.gz
-			rm 12_masked_pveseg.nii.gz
-			rm 12_masked_seg.nii.gz
 			3dcalc -a 12_masked.nii -b 12_masked_bias.nii.gz -expr a/b -prefix 12_bfc.nii -overwrite &> /dev/null
 
 			SECONDS=0
@@ -197,13 +173,9 @@ for dir in */*_timepoint/; do
 			ETA=$(echo "scale=1;  $ETA - $mETA * .06" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "VFA POLY NORM  [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
-			rm 15_masked_mixeltype.nii.gz
-			rm 15_masked_pve_0.nii.gz
-			rm 15_masked_pve_1.nii.gz
-			rm 15_masked_pve_2.nii.gz
-			rm 15_masked_pveseg.nii.gz
-			rm 15_masked_seg.nii.gz
 			3dcalc -a 15_masked.nii -b 15_masked_bias.nii.gz -expr a/b -prefix 15_bfc.nii -overwrite &> /dev/null
+			
+			rm [0-9]*_masked_*
 		else
 			echo Found BFC VFAs. Skipping BFC...
 		fi
@@ -274,52 +246,24 @@ for dir in */*_timepoint/; do
 		# Bias field correction with FAST
 		# don't forget to remove all unnecessary images
 		fast -t 3 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 2_BFC_Z.nii
-		rm 2_BFC_Z_mixeltype.nii.gz
-		rm 2_BFC_Z_pve_0.nii.gz
-		rm 2_BFC_Z_pve_1.nii.gz
-		rm 2_BFC_Z_pve_2.nii.gz
-		rm 2_BFC_Z_pveseg.nii.gz
-		rm 2_BFC_Z_seg.nii.gz
 		3dcalc -a 2_BFC_Z.nii -b 2_BFC_Z_bias.nii.gz -expr a/b -prefix 2_b2corr.nii -overwrite
 		
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5_BFC_Z.nii
-		rm 5_BFC_Z_mixeltype.nii.gz
-		rm 5_BFC_Z_pve_0.nii.gz
-		rm 5_BFC_Z_pve_1.nii.gz
-		rm 5_BFC_Z_pve_2.nii.gz
-		rm 5_BFC_Z_pveseg.nii.gz
-		rm 5_BFC_Z_seg.nii.gz
 		3dcalc -a 5_BFC_Z.nii -b 5_BFC_Z_bias.nii.gz -expr a/b -prefix 5_b2corr.nii -overwrite
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10_BFC_Z.nii
-		rm 10_BFC_Z_mixeltype.nii.gz
-		rm 10_BFC_Z_pve_0.nii.gz
-		rm 10_BFC_Z_pve_1.nii.gz
-		rm 10_BFC_Z_pve_2.nii.gz
-		rm 10_BFC_Z_pveseg.nii.gz
-		rm 10_BFC_Z_seg.nii.gz
 		3dcalc -a 10_BFC_Z.nii -b 10_BFC_Z_bias.nii.gz -expr a/b -prefix 10_b2corr.nii -overwrite
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 12_BFC_Z.nii
-		rm 12_BFC_Z_mixeltype.nii.gz
-		rm 12_BFC_Z_pve_0.nii.gz
-		rm 12_BFC_Z_pve_1.nii.gz
-		rm 12_BFC_Z_pve_2.nii.gz
-		rm 12_BFC_Z_pveseg.nii.gz
-		rm 12_BFC_Z_seg.nii.gz
 		3dcalc -a 12_BFC_Z.nii -b 12_BFC_Z_bias.nii.gz -expr a/b -prefix 12_b2corr.nii -overwrite
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15_BFC_Z.nii
-		rm 15_BFC_Z_mixeltype.nii.gz
-		rm 15_BFC_Z_pve_0.nii.gz
-		rm 15_BFC_Z_pve_1.nii.gz
-		rm 15_BFC_Z_pve_2.nii.gz
-		rm 15_BFC_Z_pveseg.nii.gz
-		rm 15_BFC_Z_seg.nii.gz
 		3dcalc -a 15_BFC_Z.nii -b 15_BFC_Z_bias.nii.gz -expr a/b -prefix 15_b2corr.nii -overwrite
 		
 		# concatenates 5 images in one VFA.nii image  
 		3dTcat -prefix VFA.nii 2_b2corr.nii 5_b2corr.nii 10_b2corr.nii 12_b2corr.nii 15_b2corr.nii -overwrite
+		
+		rm [0-9]*_BFC_Z_*]
 		
 	elif [ $EN_Z_NORM -eq 1 ] 
 		then
@@ -462,96 +406,48 @@ for dir in */*_timepoint/; do
 
 			SECONDS=0	
 			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 1st_rep.nii &> /dev/null
-			rm 1st_rep_mixeltype.nii.gz
-			rm 1st_rep_pve_0.nii.gz
-			rm 1st_rep_pve_1.nii.gz
-			rm 1st_rep_pve_2.nii.gz
-			rm 1st_rep_pveseg.nii.gz
-			rm 1st_rep_seg.nii.gz
 			ETA=$(echo "scale=1;  $ETA - $mETA * .09" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "FAST DCE REP 5 [===========================>                      ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
 			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5th_rep.nii &> /dev/null
-			rm 5th_rep_mixeltype.nii.gz
-			rm 5th_rep_pve_0.nii.gz
-			rm 5th_rep_pve_1.nii.gz
-			rm 5th_rep_pve_2.nii.gz
-			rm 5th_rep_pveseg.nii.gz
-			rm 5th_rep_seg.nii.gz
 			ETA=$(echo "scale=1;  $ETA - $mETA * .06" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "FAST DCE REP 10[==============================>                   ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
 			SECONDS=0
 			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10th_rep.nii &> /dev/null
-			rm 10th_rep_mixeltype.nii.gz
-			rm 10th_rep_pve_0.nii.gz
-			rm 10th_rep_pve_1.nii.gz
-			rm 10th_rep_pve_2.nii.gz
-			rm 10th_rep_pveseg.nii.gz
-			rm 10th_rep_seg.nii.gz
 			ETA=$(echo "scale=1;  $ETA - $mETA * .06" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "FAST DCE REP 20[=================================>                ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
 			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 20th_rep.nii &> /dev/null
-			rm 20th_rep_mixeltype.nii.gz
-			rm 20th_rep_pve_0.nii.gz
-			rm 20th_rep_pve_1.nii.gz
-			rm 20th_rep_pve_2.nii.gz
-			rm 20th_rep_pveseg.nii.gz
-			rm 20th_rep_seg.nii.gz
 			ETA=$(echo "scale=1;  $ETA - $mETA * .06" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "FAST DCE REP 30[====================================>             ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
 			SECONDS=0
 			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 30th_rep.nii &> /dev/null
-			rm 30th_rep_mixeltype.nii.gz
-			rm 30th_rep_pve_0.nii.gz
-			rm 30th_rep_pve_1.nii.gz
-			rm 30th_rep_pve_2.nii.gz
-			rm 30th_rep_pveseg.nii.gz
-			rm 30th_rep_seg.nii.gz
 			ETA=$(echo "scale=1;  $ETA - $mETA * .06" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "FAST DCE REP 40[=======================================>          ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
 			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 40th_rep.nii &> /dev/null
-			rm 40th_rep_mixeltype.nii.gz
-			rm 40th_rep_pve_0.nii.gz
-			rm 40th_rep_pve_1.nii.gz
-			rm 40th_rep_pve_2.nii.gz
-			rm 40th_rep_pveseg.nii.gz
-			rm 40th_rep_seg.nii.gz
 			ETA=$(echo "scale=1;  $ETA - $mETA * .06" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "FAST DCE REP 50[==========================================>       ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
 			SECONDS=0
 			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 50th_rep.nii &> /dev/null
-			rm 50th_rep_mixeltype.nii.gz
-			rm 50th_rep_pve_0.nii.gz
-			rm 50th_rep_pve_1.nii.gz
-			rm 50th_rep_pve_2.nii.gz
-			rm 50th_rep_pveseg.nii.gz
-			rm 50th_rep_seg.nii.gz
 			ETA=$(echo "scale=1;  $ETA - $mETA * .06" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "FAST DCE REP 60[=============================================>    ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
 			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 60th_rep.nii &> /dev/null
-			rm 60th_rep_mixeltype.nii.gz
-			rm 60th_rep_pve_0.nii.gz
-			rm 60th_rep_pve_1.nii.gz
-			rm 60th_rep_pve_2.nii.gz
-			rm 60th_rep_pveseg.nii.gz
-			rm 60th_rep_seg.nii.gz
 			ETA=$(echo "scale=1;  $ETA - $mETA * .06" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "DCE BFC + NORM [================================================> ] $prog% ($current/$count) ~$ETA min remaining \r"
-	
+
 			# Concatenation1
 			3dTcat -prefix dyn_bias.nii *_rep_bias.nii.gz -overwrite &> /dev/null
 	
@@ -561,23 +457,8 @@ for dir in */*_timepoint/; do
 			# Normalizing motion corrected DCE image with mean bias field 
 			3dcalc -a DCE_mc_masked.nii -b mean_dyn_bias_map.nii -expr a/b -prefix DCE_mc_bfc.nii -overwrite &> /dev/null
 	
-			# don't forget to remove all unnecessary images 
-			rm 1st_rep.nii
-			rm 1st_rep_bias.nii.gz
-			rm 5th_rep.nii
-			rm 5th_rep_bias.nii.gz
-			rm 10th_rep.nii
-			rm 10th_rep_bias.nii.gz
-			rm 20th_rep.nii
-			rm 20th_rep_bias.nii.gz
-			rm 30th_rep.nii
-			rm 30th_rep_bias.nii.gz
-			rm 40th_rep.nii
-			rm 40th_rep_bias.nii.gz
-			rm 50th_rep.nii
-			rm 50th_rep_bias.nii.gz
-			rm 60th_rep.nii
-			rm 60th_rep_bias.nii.gz
+			# remove sampled slice files
+			rm [0-9]*_rep*
 		else
 			echo Skipping DCE BFC because it already exists...
 		fi
