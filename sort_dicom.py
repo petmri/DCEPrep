@@ -6,8 +6,8 @@ import os
 import shutil
 import sys
 
-sort_dir = "/media/mrispec/data/fmriprep/dicom/~original_data/"
-output_dir = "/media/mrispec/data/fmriprep/nifti"
+sort_dir = "/media/network_mriphysics/USC-PPG/bids_test/sourcedata/dicom"
+output_dir = "/media/network_mriphysics/USC-PPG/bids_test/derivatives"
 #sort_dir = "/media/network_mriphysics/barnes/peanut/dicom/~original_data/"
 #sort_dir = "/media/network_mriphysics/barnes/peanut/nifti"
 
@@ -42,7 +42,7 @@ for subfolder in subfolders:
     file_list = os.listdir(new_dir)
     #folder should only have a "dicom" folder and a "log" folder
     if not len(file_list)==2:
-        sys.exit("warning folder has wrong structure (doesn't have only 2 subdirectories), exiting")
+        sys.exit("warning: folder has wrong structure (doesn't have only 2 subdirectories), exiting")
     dicom_dir = ""
     log_dir = ""
     if os.path.isdir(os.path.join(new_dir,file_list[0])):
@@ -56,14 +56,14 @@ for subfolder in subfolders:
         if file_list[1].lower()=='log':
             log_dir = os.path.join(new_dir,file_list[1])
     if dicom_dir=="" or log_dir=="":
-        sys.exit("warning cannot find DICOM or LOG folder, exiting")
+        sys.exit("warning: cannot find DICOM or LOG folder, exiting")
 
     
     #DICOM to BIDS conversion
     try:
         
         output = subprocess.check_output(['dcm2bids',
-                                          "-d",dicom_dir,
+                                          "-d", dicom_dir,
                                           "-p", subject_id,
                                           "-s", session_id,
                                           "-c", "config.json",

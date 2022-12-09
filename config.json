@@ -7,66 +7,66 @@
       "modalityLabel": "T1w",
       "criteria": {
         "SeriesDescription": "*MPRAGE*[!_ND]",
-        "ImageType": ["ORIGINAL", "PRIMARY", "M", "NONE"]
+        "ImageType": ["ORIGINAL", "PRIMARY", "M", "NORM", "DIS2D"]
       },
       "sidecarChanges": {
         "ProtocolName": "T1"
       }
     },
     {
-      "dataType": "fmap",
-      "modalityLabel": "magnitude1",
-      "IntendedFor": [2,3,4],
-      "criteria": {
-        "SeriesDescription": "*gre_field_mapping*[!_ND]",
-        "EchoTime": 0.00492
-      }
+    	"dataType": "anat",
+    	"modalityLabel": "DCE",
+    	"criteria": {
+    		"SeriesDescription": "DCE BBB",
+    		"ImageType": ["ORIGINAL", "PRIMARY", "M", "ND"]
+    	},
+    	"sidecarChanges": {
+    		"ProtocolName": "DCE"
+    	}
     },
     {
-      "dataType": "fmap",
-      "modalityLabel": "phasediff",
-      "IntendedFor": [2,3,4],
-      "criteria": {
-        "SeriesDescription": "*gre_field_mapping*[!_ND]",
-        "ImageType": ["ORIGINAL", "PRIMARY", "P", "NONE", "PHASE"]
-      },
-      "sidecarChanges": {
-        "EchoTime1": 0.00492,
-        "EchoTime2": 0.00738
-      }
+    	"dataType": "anat",
+    	"modalityLabel": "VFA4",
+    	"criteria": {
+    		"SeriesDescription": "T1Map_p2_anatomical_FLIP1",
+    		"ImageType": ["ORIGINAL", "PRIMARY", "M", "ND"]
+    	},
+    	"sidecarChanges": {
+    		"ProtocolName": "T1Map_p2_anatomical_FLIP1"
+    	}
     },
     {
-      "dataType": "func",
-      "modalityLabel": "bold",
-      "customLabels": "task-rest",
-      "criteria": {
-        "ProtocolName": "*resting*"
-      },
-      "sidecarChanges": {
-        "TaskName": "rest"
-      }
+    	"dataType": "anat",
+    	"modalityLabel": "VFA11",
+    	"criteria": {
+    		"SeriesDescription": "T1Map_p2_anatomical_FLIP2",
+    		"ImageType": ["ORIGINAL", "PRIMARY", "M", "ND"]
+    	},
+    	"sidecarChanges": {
+    		"ProtocolName": "T1Map_p2_anatomical_FLIP2"
+    	}
     },
     {
-      "dataType": "func",
-      "modalityLabel": "bold",
-      "customLabels": "task-nback1",
-      "criteria": {
-        "SeriesDescription": "*nBack1*"
-      },
-      "sidecarChanges": {
-        "TaskName": "nback1"
-      }
+    	"dataType": "anat",
+    	"modalityLabel": "VFA17",
+    	"criteria": {
+    		"SeriesDescription": "T1Map_p2_anatomical_FLIP3",
+    		"ImageType": ["ORIGINAL", "PRIMARY", "M", "ND"]
+    	},
+    	"sidecarChanges": {
+    		"ProtocolName": "T1Map_p2_anatomical_FLIP3"
+    	}
     },
     {
-      "dataType": "func",
-      "modalityLabel": "bold",
-      "customLabels": "task-nback2",
-      "criteria": {
-        "SeriesDescription": "*nBack2*"
-      },
-      "sidecarChanges": {
-        "TaskName": "nback2"
-      }
+    	"dataType": "anat",
+    	"modalityLabel": "VFA23",
+    	"criteria": {
+    		"SeriesDescription": "T1Map_p2_anatomical_FLIP4",
+    		"ImageType": ["ORIGINAL", "PRIMARY", "M", "ND"]
+    	},
+    	"sidecarChanges": {
+    		"ProtocolName": "T1Map_p2_anatomical_FLIP4"
+    	}
     }
   ]
 }
