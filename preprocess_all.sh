@@ -9,7 +9,6 @@ EN_BIAS1=0
 EN_BIAS2=0
 #EN_MOTION_CORR=1
 USE_FREESURFER=0
-ff=0
 
 # internal vars (don't change)
 fail=0
@@ -23,7 +22,7 @@ prog=0
 successes=0
 
 # options
-while getopts ":d:bBZfFhc" options; do
+while getopts ":d:bBZfhc" options; do
 	case "${options}" in
 		b)
 			EN_BIAS1=1
@@ -40,9 +39,6 @@ while getopts ":d:bBZfFhc" options; do
 		f)
 			USE_FREESURFER=1
 			;;
-		F)
-			ff=1
-			;;
 		h)
 			echo "This script runs through all subject folders of a specified main data directory, preprocessing every folder ending in '_timepoint'."
 			echo "The output is the DCE input, which are the corrected dynamic images, brain mask, T1 maps."
@@ -52,7 +48,6 @@ while getopts ":d:bBZfFhc" options; do
 			echo "-Z: enable Z-slice normalization"
 			echo "-d: specify main data directory containing all subject folders"
 			echo "-f: use freesurfer for registration (seems to cut off top of cortical region for most subjects, perfect for one site)"
-			echo "-F: fail fast, any command failures will end the script"
 			echo "-h: display this message"
 			exit 0
 			;;
@@ -264,14 +259,11 @@ for dir in */*_timepoint/; do
 		echo -ne "VFA MOTIONCORR [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
 	fi
 
-	if [ $ff -eq 1 ]
+	if [ ! -f "15_BFC_Z.nii" ]
 		then
-			if [ ! -f "15_BFC_Z.nii" ]
-				then
-					echo $dir "Missing Z-normalized files. Z-norm likely failed due to non-existent inputs." >> $LOG_FILE
-					fail=1
-					continue
-			fi
+			echo $dir "Missing Z-normalized files. Z-norm likely failed due to non-existent inputs." >> $LOG_FILE
+			fail=1
+			continue
 	fi
 
 	if [ $EN_BIAS2 -eq 1 ]
@@ -344,14 +336,11 @@ for dir in */*_timepoint/; do
 		3dTcat -prefix VFA.nii 2_masked.nii 5_masked.nii 10_masked.nii 12_masked.nii 15_masked.nii -overwrite
 	fi
 	
-	if [ $ff -eq 1 ]
+	if [ ! -f "VFA.nii" ]
 		then
-			if [ ! -f "VFA.nii" ]
-				then
-					echo $dir "Missing VFA file. Component files may have failed." >> $LOG_FILE
-					fail=1
-					continue
-			fi
+			echo $dir "Missing VFA file. Component files may have failed." >> $LOG_FILE
+			fail=1
+			continue
 	fi
 	
 	# motion correction of VFA
@@ -361,15 +350,13 @@ for dir in */*_timepoint/; do
 	echo -ne "MAKE T1 MAPS   [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
 	gunzip -f VFA_mc.nii.gz
 	
-	if [ $ff -eq 1 ]
+	if [ ! -f "VFA_mc.nii" ]
 		then
-			if [ ! -f "VFA_mc.nii" ]
-				then
-					echo $dir "Missing VFA_mc file. Motion correction may have failed." >> $LOG_FILE
-					fail=1
-					continue
-			fi
+			echo $dir "Missing VFA_mc file. Motion correction may have failed." >> $LOG_FILE
+			fail=1
+			continue
 	fi
+	
 	# smooth
 	#3dBlurToFWHM -input VFA_mc.nii -FWHM 5 -prefix VFA_mc_blurred.nii
 	
@@ -378,15 +365,13 @@ for dir in */*_timepoint/; do
 	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts'; T1mapping_fit('$SUBJECT_TP_PATH/'); exit;" &> /dev/null
 	prog=$(echo "scale=2;  $prog + 1.33 / $count" | bc -l)
 	echo -ne "DCE MOTIONCORR [====================>                             ] $prog% ($current/$count) ~$ETA min remaining \r"
-	if [ $ff -eq 1 ]
+	if [ ! -f "T1_map_t1_fa_fit_VFA_mc.nii" ]
 		then
-			if [ ! -f "T1_map_t1_fa_fit_VFA_mc.nii" ]
-				then
-					echo $dir "Missing T1 map file. T1 mapping may have failed." >> $LOG_FILE
-					fail=1
-					continue
-			fi
+			echo $dir "Missing T1 map file. T1 mapping may have failed." >> $LOG_FILE
+			fail=1
+			continue
 	fi
+	
 	# Motion correction of dynamic images using AFNI
 	# ------------------------------
 	#echo Motion correcting dynamic images...
@@ -397,15 +382,13 @@ for dir in */*_timepoint/; do
 	echo -ne "REG T1 MAP->DCE[=======================>                          ] $prog% ($current/$count) ~$ETA min remaining \r"
 	max=$(python3 $SCRIPT_PATH/max_disp.py $SUBJECT_TP_PATH)
 	echo -e "\e[1;33m$max\e[0m" >> $LOG_FILE
-	if [ $ff -eq 1 ]
+	if [ ! -f "DCE_mc.nii.gz" ]
 		then
-			if [ ! -f "DCE_mc.nii.gz" ]
-				then
-					echo $dir "Missing motion corrected DCE file." >> $LOG_FILE
-					fail=1
-					continue
-			fi
+			echo $dir "Missing motion corrected DCE file." >> $LOG_FILE
+			fail=1
+			continue
 	fi
+	
 	# Align T1 map with Dynamic data
 	# ------------------------------
 	3dTcat -prefix ref_rep.nii DCE_mc.nii'[1]' -overwrite &> /dev/null
@@ -417,15 +400,13 @@ for dir in */*_timepoint/; do
 	rm t1_map_fixed_use_me0GenericAffine.mat
 	#prog=$(echo "scale=2;  $prog + .55 / $count" | bc -l)
 	#echo -ne "ANTSREG T1->DCE[=======================>                          ] $prog% ($current/$count) ~$ETA min remaining \r"
-	if [ $ff -eq 1 ]
+	if [ ! -f "t1_map_fixed_use_me.nii.gz" ]
 		then
-			if [ ! -f "t1_map_fixed_use_me.nii.gz" ]
-				then
-					echo "Missing registered T1 map." >> $LOG_FILE
-					fail=1
-					continue
-			fi
+			echo "Missing registered T1 map." >> $LOG_FILE
+			fail=1
+			continue
 	fi
+	
 	# align and apply brain mask
 	#flirt -in T1.nii -ref ref_rep.nii -dof 12 -omat T1toDCE.mat -o T1_dyn.nii
 	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1.nii T1_dyn.nii.gz
@@ -629,14 +610,12 @@ for dir in */*_timepoint/; do
 	# ------------------------------
 	#echo Normalizing dynamic images...
 	python3 $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH &> /dev/null
-	if [ $ff -eq 1 ]
+
+	if [ ! -f "DCE_mc_bfc_norm.nii" ]
 		then
-			if [ ! -f "DCE_mc_bfc_norm.nii" ]
-				then
-					echo $dir "Missing normalized DCE file." >> $LOG_FILE
-					fail=1
-					continue
-			fi
+			echo $dir "Missing normalized DCE file." >> $LOG_FILE
+			fail=1
+			continue
 	fi
 
 	ETA=$(echo "scale=1;  $ETA - $mETA * .06" | bc -l)
