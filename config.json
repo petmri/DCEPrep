@@ -1,73 +1,109 @@
 {
-  "dcm2niixOptions": "-b y -ba n -z y -f '%3s_%f_%p_%t'",
-  "compKeys": ["AcquisitionDateTime","SeriesNumber", "AcquisitionTime", "SidecarFilename"],
-  "descriptions": [
-    {
-      "dataType": "anat",
-      "modalityLabel": "T1w",
-      "criteria": {
-        "SeriesDescription": "*MPRAGE*[!_ND]",
-        "ImageType": ["ORIGINAL", "PRIMARY", "M", "NORM", "DIS2D"]
-      },
-      "sidecarChanges": {
-        "ProtocolName": "T1"
-      }
-    },
-    {
-    	"dataType": "anat",
-    	"modalityLabel": "DCE",
-    	"criteria": {
-    		"SeriesDescription": "DCE BBB",
-    		"ImageType": ["ORIGINAL", "PRIMARY", "M", "ND"]
-    	},
-    	"sidecarChanges": {
-    		"ProtocolName": "DCE"
-    	}
-    },
-    {
-    	"dataType": "anat",
-    	"modalityLabel": "VFA4",
-    	"criteria": {
-    		"SeriesDescription": "T1Map_p2_anatomical_FLIP1",
-    		"ImageType": ["ORIGINAL", "PRIMARY", "M", "ND"]
-    	},
-    	"sidecarChanges": {
-    		"ProtocolName": "T1Map_p2_anatomical_FLIP1"
-    	}
-    },
-    {
-    	"dataType": "anat",
-    	"modalityLabel": "VFA11",
-    	"criteria": {
-    		"SeriesDescription": "T1Map_p2_anatomical_FLIP2",
-    		"ImageType": ["ORIGINAL", "PRIMARY", "M", "ND"]
-    	},
-    	"sidecarChanges": {
-    		"ProtocolName": "T1Map_p2_anatomical_FLIP2"
-    	}
-    },
-    {
-    	"dataType": "anat",
-    	"modalityLabel": "VFA17",
-    	"criteria": {
-    		"SeriesDescription": "T1Map_p2_anatomical_FLIP3",
-    		"ImageType": ["ORIGINAL", "PRIMARY", "M", "ND"]
-    	},
-    	"sidecarChanges": {
-    		"ProtocolName": "T1Map_p2_anatomical_FLIP3"
-    	}
-    },
-    {
-    	"dataType": "anat",
-    	"modalityLabel": "VFA23",
-    	"criteria": {
-    		"SeriesDescription": "T1Map_p2_anatomical_FLIP4",
-    		"ImageType": ["ORIGINAL", "PRIMARY", "M", "ND"]
-    	},
-    	"sidecarChanges": {
-    		"ProtocolName": "T1Map_p2_anatomical_FLIP4"
-    	}
-    }
-  ]
+    "dcm2niixOptions": "-b y -ba n -z y -f '%3s_%f_%p_%t'",
+    "compKeys": [
+        "AcquisitionDateTime",
+        "SeriesNumber",
+        "AcquisitionTime",
+        "SidecarFilename"
+    ],
+    "descriptions": [
+        {
+            "dataType": "anat",
+            "modalityLabel": "T1w",
+            "criteria": {
+                "SeriesDescription": "*MPRAGE*[!_ND]",
+                "ImageType": [
+                    "ORIGINAL",
+                    "PRIMARY",
+                    "M",
+                    "NORM",
+                    "DIS2D"
+                ]
+            },
+            "sidecarChanges": {
+                "ProtocolName": "T1"
+            }
+        },
+        {
+            "dataType": "anat",
+            "modalityLabel": "DCE",
+            "criteria": {
+                "SeriesDescription": "DCE BBB",
+                "ImageType": [
+                    "ORIGINAL",
+                    "PRIMARY",
+                    "M",
+                    "ND"
+                ]
+            },
+            "sidecarChanges": {
+                "ProtocolName": "DCE",
+                "TemporalResolution": "15.290000"
+            }
+        },
+        {
+            "dataType": "anat",
+            "modalityLabel": "VFA4",
+            "criteria": {
+                "SeriesDescription": "T1Map_p2_anatomical_FLIP1",
+                "ImageType": [
+                    "ORIGINAL",
+                    "PRIMARY",
+                    "M",
+                    "ND"
+                ]
+            },
+            "sidecarChanges": {
+                "ProtocolName": "T1Map_p2_anatomical_FLIP1"
+            }
+        },
+        {
+            "dataType": "anat",
+            "modalityLabel": "VFA11",
+            "criteria": {
+                "SeriesDescription": "T1Map_p2_anatomical_FLIP2",
+                "ImageType": [
+                    "ORIGINAL",
+                    "PRIMARY",
+                    "M",
+                    "ND"
+                ]
+            },
+            "sidecarChanges": {
+                "ProtocolName": "T1Map_p2_anatomical_FLIP2"
+            }
+        },
+        {
+            "dataType": "anat",
+            "modalityLabel": "VFA17",
+            "criteria": {
+                "SeriesDescription": "T1Map_p2_anatomical_FLIP3",
+                "ImageType": [
+                    "ORIGINAL",
+                    "PRIMARY",
+                    "M",
+                    "ND"
+                ]
+            },
+            "sidecarChanges": {
+                "ProtocolName": "T1Map_p2_anatomical_FLIP3"
+            }
+        },
+        {
+            "dataType": "anat",
+            "modalityLabel": "VFA23",
+            "criteria": {
+                "SeriesDescription": "T1Map_p2_anatomical_FLIP4",
+                "ImageType": [
+                    "ORIGINAL",
+                    "PRIMARY",
+                    "M",
+                    "ND"
+                ]
+            },
+            "sidecarChanges": {
+                "ProtocolName": "T1Map_p2_anatomical_FLIP4"
+            }
+        }
+    ]
 }
-
