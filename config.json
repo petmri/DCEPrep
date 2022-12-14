@@ -59,6 +59,38 @@
         },
         {
             "dataType": "anat",
+            "modalityLabel": "VFA2",
+            "criteria": {
+                "SeriesDescription": "t1_vibe_cor_dyn_2_waterext",
+                "ImageType": [
+                    "ORIGINAL",
+                    "PRIMARY",
+                    "M",
+                    "ND"
+                ]
+            },
+            "sidecarChanges": {
+                "ProtocolName": "t1_vibe_cor_dyn_2_waterext"
+            }
+        },
+        {
+            "dataType": "anat",
+            "modalityLabel": "VFA2",
+            "criteria": {
+                "SeriesDescription": "T1 Hippo MAP FA02-Chui Law Vasc.",
+                "ImageType": [
+                    "ORIGINAL",
+                    "PRIMARY",
+                    "M",
+                    "ND"
+                ]
+            },
+            "sidecarChanges": {
+                "ProtocolName": "T1 Hippo MAP FA02-Chui Law Vasc."
+            }
+        },
+        {
+            "dataType": "anat",
             "modalityLabel": "VFA11",
             "criteria": {
                 "SeriesDescription": "T1Map_p2_anatomical_FLIP2",

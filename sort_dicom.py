@@ -63,29 +63,29 @@ for subfolder in subfolders:
         sys.exit("warning: cannot find DICOM or LOG folder, exiting")
 
     # Calculate temporal resolution from difference between acquisition times
-    dce_dir = dicom_dir + "/15-DCE BBB/dicom"
+    # dce_dir = dicom_dir + "/I1164341/dicom"
     
-    ac_time = []
-    for i in range(1,2000,40):
-        file = dce_dir + "/15-" + str(i) + ".dcm"
-        dataset = pydicom.dcmread(file, specific_tags=["AcquisitionTime"])
-        formatted_time = dataset.AcquisitionTime
-        formatted_time = formatted_time[0:2] + ':' + formatted_time[2:4] + ':' + formatted_time[4:]
-        struct = time.fromisoformat(formatted_time)
-        bozo = timedelta(hours=struct.hour, minutes=struct.minute, seconds=struct.second, microseconds=struct.microsecond)
-        ac_time.append(datetime.strptime(formatted_time, '%H:%M:%S.%f'))
-    # diff = []
-    # for i in range(1,50):
-    #     diff.append(float(str(ac_time[i] - ac_time[i-1])[5:]))
-    diff = ac_time[1] - ac_time[0]
-    TemporalResolution = str(diff)[5:]
-    
-    with open('config.json', 'r+') as f:
-        data = json.load(f)
-        data['descriptions'][1]['sidecarChanges']['TemporalResolution'] = str(TemporalResolution)
-        f.seek(0)
-        json.dump(data,f,indent=4)
-        f.truncate()
+    # ac_time = []
+    # for i in range(1,2000,40):
+    #     file = dce_dir + "/15-" + str(i) + ".dcm"
+    #     dataset = pydicom.dcmread(file, specific_tags=["AcquisitionTime"])
+    #     formatted_time = dataset.AcquisitionTime
+    #     formatted_time = formatted_time[0:2] + ':' + formatted_time[2:4] + ':' + formatted_time[4:]
+    #     struct = time.fromisoformat(formatted_time)
+    #     bozo = timedelta(hours=struct.hour, minutes=struct.minute, seconds=struct.second, microseconds=struct.microsecond)
+    #     ac_time.append(datetime.strptime(formatted_time, '%H:%M:%S.%f'))
+    # # diff = []
+    # # for i in range(1,50):
+    # #     diff.append(float(str(ac_time[i] - ac_time[i-1])[5:]))
+    # diff = ac_time[1] - ac_time[0]
+    # TemporalResolution = str(diff)[5:]
+    #
+    # with open('config.json', 'r+') as f:
+    #     data = json.load(f)
+    #     data['descriptions'][1]['sidecarChanges']['TemporalResolution'] = str(TemporalResolution)
+    #     f.seek(0)
+    #     json.dump(data,f,indent=4)
+    #     f.truncate()
     
     #DICOM to BIDS conversion
     try:
