@@ -15,9 +15,8 @@ DCE_data = DCE.get_fdata()
 
 AIF_shape = AIF_data.shape
 
-bozo = DCE_data[np.where(AIF_data>0)[0:3]]
-
-aif_mean = bozo.mean(axis=0)
+aif_reps = DCE_data[np.where(AIF_data>0)[0:3]]
+aif_mean = aif_reps.mean(axis=0)
 
 sec = []
 for i in range(len(aif_mean)):
