@@ -41,6 +41,10 @@ while getopts ":d:bBZFh" options; do
 		Z)
 			EN_Z_NORM=1
 			;;
+		*)
+			echo "Invalid option ${OPTARG}. Please use -h for a list of valid options."
+			exit 1
+			;;
 	esac
 done
 
@@ -63,7 +67,7 @@ rm dce_log.txt
 for dir in */*_timepoint/; do
 	date >> dce_log.txt
 	echo DCE processing ${dir}...
-	let count++
+	((count++))
 	cd $dir
 	SUBJECT_TP_PATH=$(pwd)
 
@@ -148,69 +152,14 @@ for dir in */*_timepoint/; do
 				3dTcat -prefix 50th_rep.nii DCE_mc_masked.nii'[49]' -overwrite
 				3dTcat -prefix 60th_rep.nii DCE_mc_masked.nii'[59]' -overwrite
 		
-				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 1st_rep.nii
-				rm 1st_rep_mixeltype.nii.gz
-				rm 1st_rep_pve_0.nii.gz
-				rm 1st_rep_pve_1.nii.gz
-				rm 1st_rep_pve_2.nii.gz
-				rm 1st_rep_pveseg.nii.gz
-				rm 1st_rep_seg.nii.gz
-		
-				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5th_rep.nii
-				rm 5th_rep_mixeltype.nii.gz
-				rm 5th_rep_pve_0.nii.gz
-				rm 5th_rep_pve_1.nii.gz
-				rm 5th_rep_pve_2.nii.gz
-				rm 5th_rep_pveseg.nii.gz
-				rm 5th_rep_seg.nii.gz
-		
-				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10th_rep.nii
-				rm 10th_rep_mixeltype.nii.gz
-				rm 10th_rep_pve_0.nii.gz
-				rm 10th_rep_pve_1.nii.gz
-				rm 10th_rep_pve_2.nii.gz
-				rm 10th_rep_pveseg.nii.gz
-				rm 10th_rep_seg.nii.gz
-		
-				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 20th_rep.nii
-				rm 20th_rep_mixeltype.nii.gz
-				rm 20th_rep_pve_0.nii.gz
-				rm 20th_rep_pve_1.nii.gz
-				rm 20th_rep_pve_2.nii.gz
-				rm 20th_rep_pveseg.nii.gz
-				rm 20th_rep_seg.nii.gz
-		
-				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 30th_rep.nii
-				rm 30th_rep_mixeltype.nii.gz
-				rm 30th_rep_pve_0.nii.gz
-				rm 30th_rep_pve_1.nii.gz
-				rm 30th_rep_pve_2.nii.gz
-				rm 30th_rep_pveseg.nii.gz
-				rm 30th_rep_seg.nii.gz
-		
-				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 40th_rep.nii
-				rm 40th_rep_mixeltype.nii.gz
-				rm 40th_rep_pve_0.nii.gz
-				rm 40th_rep_pve_1.nii.gz
-				rm 40th_rep_pve_2.nii.gz
-				rm 40th_rep_pveseg.nii.gz
-				rm 40th_rep_seg.nii.gz
-		
-				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 50th_rep.nii
-				rm 50th_rep_mixeltype.nii.gz
-				rm 50th_rep_pve_0.nii.gz
-				rm 50th_rep_pve_1.nii.gz
-				rm 50th_rep_pve_2.nii.gz
-				rm 50th_rep_pveseg.nii.gz
-				rm 50th_rep_seg.nii.gz
-		
-				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 60th_rep.nii
-				rm 60th_rep_mixeltype.nii.gz
-				rm 60th_rep_pve_0.nii.gz
-				rm 60th_rep_pve_1.nii.gz
-				rm 60th_rep_pve_2.nii.gz
-				rm 60th_rep_pveseg.nii.gz
-				rm 60th_rep_seg.nii.gz
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 1st_rep.nii &> /dev/null
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 5th_rep.nii &> /dev/null
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 10th_rep.nii &> /dev/null
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 20th_rep.nii &> /dev/null
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 30th_rep.nii &> /dev/null
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 40th_rep.nii &> /dev/null
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 50th_rep.nii &> /dev/null
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 60th_rep.nii &> /dev/null
 		
 				# Concatenation1
 				3dTcat -prefix dyn_bias.nii 1st_rep_bias.nii.gz 5th_rep_bias.nii.gz 10th_rep_bias.nii.gz 20th_rep_bias.nii.gz 30th_rep_bias.nii.gz 40th_rep_bias.nii.gz 50th_rep_bias.nii.gz 60th_rep_bias.nii.gz -overwrite
@@ -222,22 +171,8 @@ for dir in */*_timepoint/; do
 				3dcalc -a DCE_mc_masked.nii -b mean_dyn_bias_map.nii -expr a/b -prefix DCE_mc_bfc.nii -overwrite
 		
 				# don't forget to remove all unnecessary images 
-				rm 1st_rep.nii
-				rm 1st_rep_bias.nii.gz
-				rm 5th_rep.nii
-				rm 5th_rep_bias.nii.gz
-				rm 10th_rep.nii
-				rm 10th_rep_bias.nii.gz
-				rm 20th_rep.nii
-				rm 20th_rep_bias.nii.gz
-				rm 30th_rep.nii
-				rm 30th_rep_bias.nii.gz
-				rm 40th_rep.nii
-				rm 40th_rep_bias.nii.gz
-				rm 50th_rep.nii
-				rm 50th_rep_bias.nii.gz
-				rm 60th_rep.nii
-				rm 60th_rep_bias.nii.gz
+				rm [0-9]*_rep*
+
 		else
 			#echo Motion correcting dynamic set
 			#3dvolreg -heptic -verbose -base 'DCE.nii[1]' -dfile DCE_motion.txt -prefix DCE_mc_bfc.nii DCE.nii
@@ -333,10 +268,10 @@ for dir in */*_timepoint/; do
 	python3 $SCRIPT_PATH/report.py $SUBJECT_TP_PATH
 	cd ../../
 	echo $dir processing complete! >> $LOG_FILE
-	let successes++
+	((successes++))
 done
 
-let failures=count-successes
+((failures=count-successes))
 echo "Completed DCE processing for $count subjects." >> $LOG_FILE
 echo $successes subjects succeeded >> $LOG_FILE
 echo $failures subjects failed >> $LOG_FILE
