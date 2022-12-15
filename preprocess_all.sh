@@ -47,12 +47,16 @@ while getopts ":d:bBZfhc" options; do
 			echo "-c: clean generated files prior to processing"
 			echo "-Z: enable Z-slice normalization"
 			echo "-d: specify main data directory containing all subject folders"
-			echo "-f: use freesurfer for registration (seems to cut off top of cortical region for most subjects, perfect for one site)"
+			echo "-f: use freesurfer for registration (seems to cut off top of cortical region for most subjects, works perfectly for one site)"
 			echo "-h: display this message"
 			exit 0
 			;;
 		Z)
 			EN_Z_NORM=1
+			;;
+		*)
+			echo "Invalid flag ${OPTARG}. Please use -h for a list of valid flags."
+			exit 1
 			;;
 	esac
 done
@@ -62,7 +66,7 @@ if [ -z "$DATA_DIR" ]
 		echo "ERROR: Please use '-d [dir_path]' to pass the path to your main data directory to this script."
 		exit 1
 fi
-cd $DATA_DIR
+cd $DATA_DIR || exit 1
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit)
 	SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit)
@@ -73,21 +77,21 @@ fi
 
 # count timepoints
 for dir in */*_timepoint/; do
-	let count++
+	((count++))
 done
 # Run bias correction on VFA data 
 # ------------------------------
 rm preprocessing_log.txt
 for dir in */*_timepoint/; do
 	date >> preprocessing_log.txt
-	echo Preprocessing ${dir}...
-	let current++
+	echo "Preprocessing ${dir}..."
+	((current++))
 	cd $dir
 	SUBJECT_TP_PATH=$(pwd)
 
 	if [ ! -f "2.nii" ] || [ ! -f "5.nii" ] || [ ! -f "10.nii" ] || [ ! -f "12.nii" ] || [ ! -f "15.nii" ] || [ ! -f "DCE.nii" ] || [ ! -f "T1.nii" ]
 		then
-		echo $dir "Base file(s) missing! Expected VFAs 2.nii, 5.nii, 10.nii, 12.nii, 15.nii, DCE.nii, and T1.nii (MP-RAGE). Skipping timepoint..." >> $LOG_FILE
+		echo "$dir Base file(s) missing! Expected VFAs 2.nii, 5.nii, 10.nii, 12.nii, 15.nii, DCE.nii, and T1.nii (MP-RAGE). Skipping timepoint..." >> $LOG_FILE
 		continue
 	fi
 	
@@ -98,16 +102,14 @@ for dir in */*_timepoint/; do
     fi
 	
 	# HD-BET brain extraction & segmentations from MP-RAGE
-	echo -ne "HD-BET MP-RAGE [                                                  ] $prog% ($current/$count) Calculating runtime...   \r"
 	SECONDS=0
+	echo -ne "HD-BET MP-RAGE [                                                  ] $prog% ($current/$count) Calculating runtime...   \r"
 	hd-bet -i T1.nii &> /dev/null
 	mETA=$(echo "scale=0;  $SECONDS * 36 * ($count - $current + 1) / 60" | bc -l)
 	prog=$(echo "scale=2;  $prog + 3.33 / $count" | bc -l)
+
 	echo -ne "T1 SEG w/ FAST [=>                                                ] $prog% ($current/$count) ~$mETA min remaining \r"
-	SECONDS=0
-	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -g -o segmented_t1 T1_bet.nii.gz &> /dev/null
-	#cd ../../
-	#continue
+	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -g -o segmented_t1 T1_bet.nii.gz &> /dev/null
 	ETA=$(echo "scale=0;  $mETA - ($SECONDS/60)" | bc -l)
 	#ETA=$(echo "scale=0;  $mETA - $mETA * .0667" | bc -l)
 	prog=$(echo "scale=2;  $prog + 6.67 / $count" | bc -l)
@@ -140,52 +142,47 @@ for dir in */*_timepoint/; do
 		then
 			#echo "Bias field correction with FAST"
 			# don't forget to remove all unnecessary images
-			SECONDS=0
-			fast -t 3 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 2_masked.nii &> /dev/null
-			ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+			fast -t 3 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o 2_masked.nii &> /dev/null
+			ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "BFC FAST VFA5  [=======>                                          ] $prog% ($current/$count) ~$ETA min remaining \r"
-			3dcalc -a 2_masked.nii -b 2_masked_bias.nii.gz -expr a/b -prefix 2_bfc.nii -overwrite &> /dev/null
+			mv 2_masked_restore* 2_bfc.nii.gz
 
-			SECONDS=0
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5_masked.nii &> /dev/null
-			ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o 5_masked.nii &> /dev/null
+			ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "BFC FAST VFA10 [==========>                                       ] $prog% ($current/$count) ~$ETA min remaining \r"
-			3dcalc -a 5_masked.nii -b 5_masked_bias.nii.gz -expr a/b -prefix 5_bfc.nii -overwrite &> /dev/null
+			mv 5_masked_restore* 5_bfc.nii.gz
 
-			SECONDS=0
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10_masked.nii &> /dev/null
-			ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o 10_masked.nii &> /dev/null
+			ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "BFC FAST VFA12 [=============>                                    ] $prog% ($current/$count) ~$ETA min remaining \r"
-			3dcalc -a 10_masked.nii -b 10_masked_bias.nii.gz -expr a/b -prefix 10_bfc.nii -overwrite &> /dev/null
+			mv 10_masked_restore* 10_bfc.nii.gz
 
-			SECONDS=0
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 12_masked.nii &> /dev/null
-			ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o 12_masked.nii &> /dev/null
+			ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "BFC FAST VFA15 [================>                                 ] $prog% ($current/$count) ~$ETA min remaining \r"
-			3dcalc -a 12_masked.nii -b 12_masked_bias.nii.gz -expr a/b -prefix 12_bfc.nii -overwrite &> /dev/null
+			mv 12_masked_restore* 12_bfc.nii.gz
 
-			SECONDS=0
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15_masked.nii &> /dev/null
-			ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o 15_masked.nii &> /dev/null
+			ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "VFA POLY NORM  [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
-			3dcalc -a 15_masked.nii -b 15_masked_bias.nii.gz -expr a/b -prefix 15_bfc.nii -overwrite &> /dev/null
+			mv 15_masked_restore* 15_bfc.nii.gz
 			
-			rm [0-9]*_masked_*
+			rm [0-9]*_masked_[mps]*
 		else
 			echo Found BFC VFAs. Skipping BFC...
 		fi
 
 		# apply wm mask to all VFAs
-		fslmaths 2_bfc.nii -mas T1_wm_mask.nii.gz 2_bfc_wm.nii &> /dev/null
-		fslmaths 5_bfc.nii -mas T1_wm_mask.nii.gz 5_bfc_wm.nii &> /dev/null
-		fslmaths 10_bfc.nii -mas T1_wm_mask.nii.gz 10_bfc_wm.nii &> /dev/null
-		fslmaths 12_bfc.nii -mas T1_wm_mask.nii.gz 12_bfc_wm.nii &> /dev/null
-		fslmaths 15_bfc.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii &> /dev/null
+		fslmaths 2_bfc.nii.gz -mas T1_wm_mask.nii.gz 2_bfc_wm.nii.gz &> /dev/null
+		fslmaths 5_bfc.nii.gz -mas T1_wm_mask.nii.gz 5_bfc_wm.nii.gz &> /dev/null
+		fslmaths 10_bfc.nii -mas T1_wm_mask.nii.gz 10_bfc_wm.nii.gz &> /dev/null
+		fslmaths 12_bfc.nii -mas T1_wm_mask.nii.gz 12_bfc_wm.nii.gz &> /dev/null
+		fslmaths 15_bfc.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii.gz &> /dev/null
 	else
 		# dumb file name management for norm only runs
 		fslmaths 2.nii -mas T1_bet_mask.nii.gz 2_bfc.nii &> /dev/null
@@ -195,7 +192,7 @@ for dir in */*_timepoint/; do
 		fslmaths 15.nii -mas T1_bet_mask.nii.gz 15_bfc.nii &> /dev/null
 		
 		echo Skipping BFC... but still segmenting one VFA for matter masks
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15_bfc.nii &> /dev/null
+		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 15_bfc.nii &> /dev/null
 		rm 15_bfc_mixeltype.nii.gz &> /dev/null
 		rm 15_bfc_pve_0.nii.gz &> /dev/null
 		rm 15_bfc_pve_1.nii.gz &> /dev/null
@@ -245,25 +242,25 @@ for dir in */*_timepoint/; do
 		echo Begin second round of BFC
 		# Bias field correction with FAST
 		# don't forget to remove all unnecessary images
-		fast -t 3 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 2_BFC_Z.nii
+		fast -t 3 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 2_BFC_Z.nii
 		3dcalc -a 2_BFC_Z.nii -b 2_BFC_Z_bias.nii.gz -expr a/b -prefix 2_b2corr.nii -overwrite
 		
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5_BFC_Z.nii
+		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 5_BFC_Z.nii
 		3dcalc -a 5_BFC_Z.nii -b 5_BFC_Z_bias.nii.gz -expr a/b -prefix 5_b2corr.nii -overwrite
 
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10_BFC_Z.nii
+		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 10_BFC_Z.nii
 		3dcalc -a 10_BFC_Z.nii -b 10_BFC_Z_bias.nii.gz -expr a/b -prefix 10_b2corr.nii -overwrite
 
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 12_BFC_Z.nii
+		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 12_BFC_Z.nii
 		3dcalc -a 12_BFC_Z.nii -b 12_BFC_Z_bias.nii.gz -expr a/b -prefix 12_b2corr.nii -overwrite
 
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 15_BFC_Z.nii
+		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 15_BFC_Z.nii
 		3dcalc -a 15_BFC_Z.nii -b 15_BFC_Z_bias.nii.gz -expr a/b -prefix 15_b2corr.nii -overwrite
 		
 		# concatenates 5 images in one VFA.nii image  
 		3dTcat -prefix VFA.nii 2_b2corr.nii 5_b2corr.nii 10_b2corr.nii 12_b2corr.nii 15_b2corr.nii -overwrite
 		
-		rm [0-9]*_BFC_Z_*]
+		rm [0-9]*_BFC_Z_*
 		
 	elif [ $EN_Z_NORM -eq 1 ] 
 		then
@@ -306,9 +303,11 @@ for dir in */*_timepoint/; do
 	
 	# T1 mapping where the input image is 'VFA.motioncorrected.nii'
 	# ------------------------------
-	SECONDS=0
+	diff=$SECONDS
 	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts'; T1mapping_fit('$SUBJECT_TP_PATH/'); exit;" &> /dev/null
-	ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+	((diff = SECONDS - diff))
+	mETA=$(echo "scale=0;  $diff * " | bc -l)
+	# ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 	prog=$(echo "scale=2;  $prog + 1.33 / $count" | bc -l)
 	echo -ne "DCE MOTIONCORR [====================>                             ] $prog% ($current/$count) ~$ETA min remaining \r"
 	if [ ! -f "T1_map_t1_fa_fit_VFA_mc.nii" ]
@@ -321,9 +320,8 @@ for dir in */*_timepoint/; do
 	# Motion correction of dynamic images using AFNI
 	# ------------------------------
 	#echo Motion correcting dynamic images...
-	SECONDS=0
 	mcflirt -in DCE.nii -refvol 'DCE.nii[1]' -cost mutualinfo -report -plots -o DCE_mc.nii &> /dev/null
-	ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+	ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 	prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 	echo -ne "REG T1 MAP->DCE[=======================>                          ] $prog% ($current/$count) ~$ETA min remaining \r"
 	max=$(python3 $SCRIPT_PATH/max_disp.py $SUBJECT_TP_PATH)
@@ -340,7 +338,6 @@ for dir in */*_timepoint/; do
 	3dTcat -prefix ref_rep.nii DCE_mc.nii'[1]' -overwrite &> /dev/null
 	# FRAUDSURFER doesn't really do anything for most subjects
 	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_map_t1_fa_fit_VFA_mc.nii t1_map_fixed_use_me.nii.gz
-	SECONDS=0
 	antsRegistrationSyN.sh -d 3 -t t -f ref_rep.nii -m T1_map_t1_fa_fit_VFA_mc.nii -o t1_map_fixed_use_me &> /dev/null
 	mv t1_map_fixed_use_meWarped.nii.gz t1_map_fixed_use_me.nii.gz
 	rm t1_map_fixed_use_meInverseWarped.nii.gz
@@ -379,7 +376,7 @@ for dir in */*_timepoint/; do
 		rm T1_bet_mask_dyn0GenericAffine.mat
 		fslmaths T1_bet_mask_dyn.nii.gz -thr 1 -bin T1_bet_mask_dyn.nii.gz &> /dev/null
 		prog=$(echo "scale=2;  $prog + 0.55 / $count" | bc -l)
-		ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+		ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 		echo -ne "FAST DCE REP 1 [========================>                         ] $prog% ($current/$count) ~$ETA min remaining \r"
 	fi
 	
@@ -408,47 +405,43 @@ for dir in */*_timepoint/; do
 			3dTcat -prefix 50th_rep.nii DCE_mc_masked.nii'[49]' -overwrite &> /dev/null
 			3dTcat -prefix 60th_rep.nii DCE_mc_masked.nii'[59]' -overwrite &> /dev/null
 
-			SECONDS=0	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 1st_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 1st_rep.nii &> /dev/null
+			ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "FAST DCE REP 5 [===========================>                      ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 5th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 5th_rep.nii &> /dev/null
+			ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "FAST DCE REP 10[==============================>                   ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
-			SECONDS=0
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 10th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 10th_rep.nii &> /dev/null
+			ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "FAST DCE REP 20[=================================>                ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 20th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 20th_rep.nii &> /dev/null
+			ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "FAST DCE REP 30[====================================>             ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
-			SECONDS=0
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 30th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 30th_rep.nii &> /dev/null
+			ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "FAST DCE REP 40[=======================================>          ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 40th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 40th_rep.nii &> /dev/null
+			ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "FAST DCE REP 50[==========================================>       ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
-			SECONDS=0
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 50th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 50th_rep.nii &> /dev/null
+			ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "FAST DCE REP 60[=============================================>    ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b -o 60th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 60th_rep.nii &> /dev/null
+			ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "DCE BFC + NORM [================================================> ] $prog% ($current/$count) ~$ETA min remaining \r"
 
@@ -503,7 +496,7 @@ for dir in */*_timepoint/; do
 			continue
 	fi
 
-	ETA=$(echo "scale=0;  $ETA - ($SECONDS+10)/60" | bc -l)
+	ETA=$(echo "scale=0;  $mETA - ($SECONDS+10)/60" | bc -l)
 	prog=$(echo "scale=2;  $prog + .6 / $count" | bc -l)
 	echo -ne "SUBJ COMPLETED [==================================================] $prog% ($current/$count) ~$ETA min remaining \r"
 	
