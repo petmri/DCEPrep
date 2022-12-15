@@ -6,13 +6,12 @@
 EN_Z_NORM=0
 EN_BIAS1=1
 EN_BIAS2=0
-ff=0
 fail=0
 count=0
 successes=0
 
 # options
-while getopts ":d:bBZFh" options; do
+while getopts ":d:bBZh" options; do
 	case "${options}" in
 		b)
 			EN_BIAS1=1
@@ -22,9 +21,6 @@ while getopts ":d:bBZFh" options; do
 		d)
 			DATA_DIR=${OPTARG}
 			LOG_FILE=$DATA_DIR/dce_log.txt
-			;;
-		F)
-			ff=1
 			;;
 		h)
 			echo "This script runs through all subject folders of a specified main data directory, processing every folder ending in '_timepoint'."
@@ -81,15 +77,12 @@ for dir in */*_timepoint/; do
 	# ------------------------------
 	echo Begin DCE processing...
 	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH/matlab'; run_dce_auto('$SUBJECT_TP_PATH/'); exit;"
-	if [ $ff -eq 1 ]
+	if [ ! -f "dce_patlak_fit_Ktrans.nii" ]
 		then
-			if [ ! -f "dce_patlak_fit_Ktrans.nii" ]
-				then
-					echo $dir "Missing Ktrans maps. DCE failed or inputs were not generated. Hopefully message below is relevant." >> $LOG_FILE
-					tail -1 A_dceR1info.log >> $LOG_FILE
-					fail=1
-					continue
-			fi
+			echo $dir "Missing Ktrans maps. DCE failed or inputs were not generated. Hopefully message below is relevant." >> $LOG_FILE
+			tail -1 A_dceR1info.log >> $LOG_FILE
+			fail=1
+			continue
 	fi
 	
 	# Analyze results
@@ -202,26 +195,20 @@ for dir in */*_timepoint/; do
 		# ------------------------------
 		echo Normalizing dynamic images...
 		python3 $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH
-		if [ $ff -eq 1 ]
+		if [ ! -f "DCE_mc_bfc_norm.nii" ]
 			then
-				if [ ! -f "DCE_mc_bfc_norm.nii" ]
-					then
-						echo $dir "Missing normalized DCE file." >> $LOG_FILE
-						fail=1
-						continue
-				fi
+				echo $dir "Missing normalized DCE file." >> $LOG_FILE
+				fail=1
+				continue
 		fi
 		echo Begin DCE processing...
 		matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH/matlab'; run_dce_auto('$SUBJECT_TP_PATH/'); exit;"
 
-		if [ $ff -eq 1 ]
+		if [ ! -f "dce_patlak_fit_Ktrans.nii" ]
 			then
-				if [ ! -f "dce_patlak_fit_Ktrans.nii" ]
-					then
-						echo $dir "Missing Ktrans maps. Check terminal--DCE failed or inputs were otherwise not generated." >> $LOG_FILE
-						fail=1
-						continue
-				fi
+				echo $dir "Missing Ktrans maps. Check terminal--DCE failed or inputs were otherwise not generated." >> $LOG_FILE
+				fail=1
+				continue
 		fi
 		
 		# Analyze results
