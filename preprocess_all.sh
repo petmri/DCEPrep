@@ -1,9 +1,8 @@
 #!/bin/bash
 shopt -s extglob
-# FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, ANTS, and Python are required
+# FSL, Matlab, ROCKETSHIP + parametric_scripts, ANTS, and Python are required
 # Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
 # variables
-VERSION="1.0.2"
 EN_Z_NORM=0
 EN_BIAS1=0
 EN_BIAS2=0
@@ -87,7 +86,7 @@ for dir in */*_timepoint/; do
 	date >> preprocessing_log.txt
 	echo "Preprocessing ${dir}..."
 	((current++))
-	cd $dir
+	cd $dir || exit
 	SUBJECT_TP_PATH=$(pwd)
 
 	if [ ! -f "2.nii" ] || [ ! -f "5.nii" ] || [ ! -f "10.nii" ] || [ ! -f "12.nii" ] || [ ! -f "15.nii" ] || [ ! -f "DCE.nii" ] || [ ! -f "T1.nii" ]
@@ -243,50 +242,50 @@ for dir in */*_timepoint/; do
 		# Bias field correction with FAST
 		# don't forget to remove all unnecessary images
 		fast -t 3 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 2_BFC_Z.nii
-		3dcalc -a 2_BFC_Z.nii -b 2_BFC_Z_bias.nii.gz -expr a/b -prefix 2_b2corr.nii -overwrite
+		fslmaths 2_BFC_Z.nii -div 2_BFC_Z_bias.nii.gz 2_b2corr.nii
 		
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 5_BFC_Z.nii
-		3dcalc -a 5_BFC_Z.nii -b 5_BFC_Z_bias.nii.gz -expr a/b -prefix 5_b2corr.nii -overwrite
+		fslmaths 5_BFC_Z.nii -div 5_BFC_Z_bias.nii.gz 5_b2corr.nii
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 10_BFC_Z.nii
-		3dcalc -a 10_BFC_Z.nii -b 10_BFC_Z_bias.nii.gz -expr a/b -prefix 10_b2corr.nii -overwrite
+		fslmaths 10_BFC_Z.nii -div 2_BFC_Z_bias.nii.gz 10_b2corr.nii
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 12_BFC_Z.nii
-		3dcalc -a 12_BFC_Z.nii -b 12_BFC_Z_bias.nii.gz -expr a/b -prefix 12_b2corr.nii -overwrite
+		fslmaths 12_BFC_Z.nii -div 2_BFC_Z_bias.nii.gz 12_b2corr.nii
 
 		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 15_BFC_Z.nii
-		3dcalc -a 15_BFC_Z.nii -b 15_BFC_Z_bias.nii.gz -expr a/b -prefix 15_b2corr.nii -overwrite
-		
-		# concatenates 5 images in one VFA.nii image  
-		3dTcat -prefix VFA.nii 2_b2corr.nii 5_b2corr.nii 10_b2corr.nii 12_b2corr.nii 15_b2corr.nii -overwrite
+		fslmaths 15_BFC_Z.nii -div 2_BFC_Z_bias.nii.gz 15_b2corr.nii
+
+		# concatenates 5 images in one VFA.nii.gz image  
+		fslmerge -t VFA.nii.gz 2_b2corr.nii 5_b2corr.nii 10_b2corr.nii 12_b2corr.nii 15_b2corr.nii
 		
 		rm [0-9]*_BFC_Z_*
 		
 	elif [ $EN_Z_NORM -eq 1 ] 
 		then
 		#echo Concatenating Z-norm\'d images
-		# concatenates 5 images in one VFA.nii image
-		3dTcat -prefix VFA.nii 2_BFC_Z.nii 5_BFC_Z.nii 10_BFC_Z.nii 12_BFC_Z.nii 15_BFC_Z.nii -overwrite &> /dev/null
+		# concatenates 5 images in one VFA.nii.gz image
+		fslmerge -t VFA.nii.gz 2_BFC_Z.nii 5_BFC_Z.nii 10_BFC_Z.nii 12_BFC_Z.nii 15_BFC_Z.nii &> /dev/null
 
 	elif [ $EN_BIAS1 -eq 1 ]
 		then
 		echo Concatenating non Z\'d images
-		3dTcat -prefix VFA.nii 2_bfc.nii 5_bfc.nii 10_bfc.nii 12_bfc.nii 15_bfc.nii -overwrite &> /dev/null
+		fslmerge -t VFA.nii 2_bfc.nii 5_bfc.nii 10_bfc.nii 12_bfc.nii 15_bfc.nii  &> /dev/null
 	else
 		echo Concatenating raw images
-		3dTcat -prefix VFA.nii 2_masked.nii 5_masked.nii 10_masked.nii 12_masked.nii 15_masked.nii -overwrite
+		fslmerge -t VFA.nii 2_masked.nii 5_masked.nii 10_masked.nii 12_masked.nii 15_masked.nii &> /dev/null
 	fi
 	
-	if [ ! -f "VFA.nii" ]
+	if [ ! -f "VFA.nii.gz" ]
 		then
-			echo $dir "Missing VFA file. Component files may have failed." >> $LOG_FILE
+			echo "$dir missing VFA file. Component files may have failed." >> $LOG_FILE
 			fail=1
 			continue
 	fi
 	
 	# motion correction of VFA
 	# ------------------------------
-	mcflirt -in VFA.nii -refvol 'VFA.nii[0]' -cost mutualinfo -report -verbose -plots -o VFA_mc.nii &> /dev/null
+	mcflirt -in VFA.nii.gz -refvol 'VFA.nii.gz[0]' -cost mutualinfo -report -verbose -plots -o VFA_mc.nii &> /dev/null
 	prog=$(echo "scale=2;  $prog + .5 / $count" | bc -l)
 	echo -ne "MAKE T1 MAPS   [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
 	gunzip -f VFA_mc.nii.gz
@@ -297,10 +296,7 @@ for dir in */*_timepoint/; do
 			fail=1
 			continue
 	fi
-	
-	# smooth
-	#3dBlurToFWHM -input VFA_mc.nii -FWHM 5 -prefix VFA_mc_blurred.nii
-	
+
 	# T1 mapping where the input image is 'VFA.motioncorrected.nii'
 	# ------------------------------
 	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts'; T1mapping_fit('$SUBJECT_TP_PATH/'); exit;" &> /dev/null
@@ -315,7 +311,7 @@ for dir in */*_timepoint/; do
 			continue
 	fi
 	
-	# Motion correction of dynamic images using AFNI
+	# Motion correction of dynamic images using FSL
 	# ------------------------------
 	#echo Motion correcting dynamic images...
 	mcflirt -in DCE.nii -refvol 'DCE.nii[1]' -cost mutualinfo -report -plots -o DCE_mc.nii &> /dev/null
@@ -333,7 +329,8 @@ for dir in */*_timepoint/; do
 	
 	# Align T1 map with Dynamic data
 	# ------------------------------
-	3dTcat -prefix ref_rep.nii DCE_mc.nii'[1]' -overwrite &> /dev/null
+	fslmerge -n 1 ref_rep.nii DCE_mc.nii &> /dev/null
+	gunzip -f ref_rep.nii.gz
 	# FRAUDSURFER doesn't really do anything for most subjects
 	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_map_t1_fa_fit_VFA_mc.nii t1_map_fixed_use_me.nii.gz
 	antsRegistrationSyN.sh -d 3 -t t -f ref_rep.nii -m T1_map_t1_fa_fit_VFA_mc.nii -o t1_map_fixed_use_me &> /dev/null
@@ -394,14 +391,15 @@ for dir in */*_timepoint/; do
 			# Applying bias field correction on dynamic images
 			# ------------------------------
 			#echo Applying BFC to dynamic images...
-			3dTcat -prefix 1st_rep.nii DCE_mc_masked.nii'[0]' -overwrite &> /dev/null # extract images from different DCE repetitions
-			3dTcat -prefix 5th_rep.nii DCE_mc_masked.nii'[4]' -overwrite &> /dev/null
-			3dTcat -prefix 10th_rep.nii DCE_mc_masked.nii'[9]' -overwrite &> /dev/null
-			3dTcat -prefix 20th_rep.nii DCE_mc_masked.nii'[19]' -overwrite &> /dev/null
-			3dTcat -prefix 30th_rep.nii DCE_mc_masked.nii'[29]' -overwrite &> /dev/null
-			3dTcat -prefix 40th_rep.nii DCE_mc_masked.nii'[39]' -overwrite &> /dev/null
-			3dTcat -prefix 50th_rep.nii DCE_mc_masked.nii'[49]' -overwrite &> /dev/null
-			3dTcat -prefix 60th_rep.nii DCE_mc_masked.nii'[59]' -overwrite &> /dev/null
+			fslmerge -n 0 1st_rep.nii DCE_mc_masked.nii		# extract images from different DCE repetitions
+			fslmerge -n 4 5th_rep.nii DCE_mc_masked.nii
+			fslmerge -n 9 10th_rep.nii DCE_mc_masked.nii
+			fslmerge -n 19 20th_rep.nii DCE_mc_masked.nii
+			fslmerge -n 29 30th_rep.nii DCE_mc_masked.nii
+			fslmerge -n 39 40th_rep.nii DCE_mc_masked.nii
+			fslmerge -n 49 50th_rep.nii DCE_mc_masked.nii
+			fslmerge -n 59 60th_rep.nii DCE_mc_masked.nii
+
 
 			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 1st_rep.nii &> /dev/null
 			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
@@ -444,13 +442,13 @@ for dir in */*_timepoint/; do
 			echo -ne "DCE BFC + NORM [================================================> ] $prog% ($current/$count) ~$ETA min remaining \r"
 
 			# Concatenation1
-			3dTcat -prefix dyn_bias.nii *_rep_bias.nii.gz -overwrite &> /dev/null
+			fslmerge -t dyn_bias.nii.gz *_rep_bias.nii.gz
 	
 			# Computing average across 8 bias field that have been sampled
-			3dTstat -mean -prefix mean_dyn_bias_map.nii dyn_bias.nii -overwrite &> /dev/null
+			fslmaths dyn_bias.nii.gz -Tmean mean_dyn_bias_map.nii.gz
 	
 			# Normalizing motion corrected DCE image with mean bias field 
-			3dcalc -a DCE_mc_masked.nii -b mean_dyn_bias_map.nii -expr a/b -prefix DCE_mc_bfc.nii -overwrite &> /dev/null
+			fslmaths DCE_mc_masked.nii.gz -div mean_dyn_bias_map.nii.gz DCE_mc_bfc.nii
 	
 			# remove sampled slice files
 			rm [0-9]*_rep*
@@ -459,8 +457,6 @@ for dir in */*_timepoint/; do
 		fi
 	else
 		#echo Motion correcting dynamic set
-		#3dvolreg -heptic -verbose -base 'DCE.nii[1]' -dfile DCE_motion.txt -prefix DCE_mc_bfc.nii DCE.nii
-		#3dTcat -prefix ref_rep.nii dce_mc_bfc'[1]'
 		gunzip -f DCE_mc.nii.gz
 		mv DCE_mc.nii DCE_mc_bfc.nii
 	fi
@@ -497,9 +493,6 @@ for dir in */*_timepoint/; do
 	ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 	prog=$(echo "scale=2;  $prog + .6 / $count" | bc -l)
 	echo -ne "SUBJ COMPLETED [==================================================] $prog% ($current/$count) ~$ETA min remaining \r"
-	
-	# smooth dynamic set
-	#3dBlurToFWHM -input DCE_mc_bfc_norm.nii -FWHM 4 -prefix DCE_mc_bfc_norm_blurred.nii
 
 	cd ../../
 	echo $dir preprocessing complete! >> $LOG_FILE

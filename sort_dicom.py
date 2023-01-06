@@ -12,8 +12,6 @@ import sys
 
 sort_dir = "/media/network_mriphysics/USC-PPG/bids_test/sourcedata/dicom"
 output_dir = "/media/network_mriphysics/USC-PPG/bids_test/derivatives"
-#sort_dir = "/media/network_mriphysics/barnes/peanut/dicom/~original_data/"
-#sort_dir = "/media/network_mriphysics/barnes/peanut/nifti"
 
 print(sort_dir)
 directory = os.fsencode(sort_dir)
