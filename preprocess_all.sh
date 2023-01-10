@@ -107,9 +107,9 @@ for dir in */*_timepoint/; do
 	hd-bet -i T1.nii &> /dev/null
 	if [ -z "$GPUFIT_PATH" ]
 		then
-		mETA=$(echo "scale=0;  $SECONDS * 27 * ($count - $current + 1) / 60" | bc -l)
+		mETA=$(echo "scale=0;  $SECONDS * 34 * ($count - $current + 1) / 60" | bc -l)
 	else
-		mETA=$(echo "scale=0;  $SECONDS * 72 * ($count - $current + 1) / 60" | bc -l)
+		mETA=$(echo "scale=0;  $SECONDS * 90 * ($count - $current + 1) / 60" | bc -l)
 	fi
 	prog=$(echo "scale=2;  $prog + 3.33 / $count" | bc -l)
 
