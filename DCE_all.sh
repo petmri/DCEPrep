@@ -3,20 +3,16 @@
 # FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, ANTS, and Python are required
 # Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
 # control variables
-EN_Z_NORM=0
-EN_BIAS1=1
-EN_BIAS2=0
+EN_BIAS1=0
 fail=0
 count=0
 successes=0
 
 # options
-while getopts ":d:bBZh" options; do
+while getopts ":d:bh" options; do
 	case "${options}" in
 		b)
 			EN_BIAS1=1
-			;;
-		B)	EN_BIAS2=1
 			;;
 		d)
 			DATA_DIR=${OPTARG}
@@ -24,18 +20,12 @@ while getopts ":d:bBZh" options; do
 			;;
 		h)
 			echo "This script runs through all subject folders of a specified main data directory, processing every folder ending in '_timepoint'."
-			echo "The data must be preprocessed with `preprocess_all.sh` before running this script."
-			echo "The input is `DCE_bfc_norm.nii`. The output is mainly the DCE outputs (Ktrans maps) and QC graphs."
+			echo "The data must be preprocessed with \`preprocess_all.sh\` before running this script."
+			echo "The input is \`DCE_bfc_norm.nii\`. The output is mainly the DCE outputs (Ktrans maps) and QC graphs."
 			echo "-b: enable first round of bias field corrections"
-			echo "-B: enable second round of bias field corrections, post-Z-norm if enabled"
-			echo "-Z: enable Z-slice normalization"
 			echo "-d: specify main data directory containing all subject folders"
-			echo "-F: fail fast, any major command failures will skip the failing timepoint"
 			echo "-h: display this message"
 			exit 0
-			;;
-		Z)
-			EN_Z_NORM=1
 			;;
 		*)
 			echo "Invalid option ${OPTARG}. Please use -h for a list of valid options."
@@ -49,14 +39,15 @@ if [ -z "$DATA_DIR" ]
 		echo "ERROR: Please use '-d [dir_path]' to pass the path to your main data directory to this script."
 		exit 1
 fi
-cd $DATA_DIR
-GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
+cd $DATA_DIR || exit
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit)
 	SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit)
+	GPUFIT_PATH=$(find $HOME -name 'pyGpufit' -printf '%h\n' -quit)
 else
 	ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 	SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
+	GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
 fi
 
 rm dce_log.txt
