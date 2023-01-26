@@ -105,12 +105,16 @@ for dir in */*_timepoint/; do
 	# HD-BET brain extraction & segmentations from MP-RAGE
 	SECONDS=0
 	echo -ne "HD-BET MP-RAGE [                                                  ] $prog% ($current/$count) Calculating runtime...   \r"
-	hd-bet -i T1.nii &> /dev/null
+	
 	if [ -z "$GPUFIT_PATH" ]
 		then
+		# about 15 min
+		hd-bet -i T1.nii &> /dev/null
 		mETA=$(echo "scale=0;  $SECONDS * 34 * ($count - $current + 1) / 60" | bc -l)
 	else
-		mETA=$(echo "scale=0;  $SECONDS * 90 * ($count - $current + 1) / 60" | bc -l)
+		# 2-3 hours
+		hd-bet -i T1.nii -device cpu &> /dev/null
+		mETA=$(echo "scale=0;  $SECONDS * 2 * ($count - $current + 1) / 60" | bc -l)
 	fi
 	prog=$(echo "scale=2;  $prog + 3.33 / $count" | bc -l)
 
