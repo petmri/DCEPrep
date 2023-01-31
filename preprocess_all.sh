@@ -106,7 +106,7 @@ for dir in */*_timepoint/; do
 	SECONDS=0
 	echo -ne "HD-BET MP-RAGE [                                                  ] $prog% ($current/$count) Calculating runtime...   \r"
 	
-	if [ -z "$GPUFIT_PATH" ]
+	if [ -n "$GPUFIT_PATH" ]
 		then
 		# about 15 min
 		hd-bet -i T1.nii &> /dev/null
@@ -304,7 +304,7 @@ for dir in */*_timepoint/; do
 
 	# T1 mapping where the input image is 'VFA.motioncorrected.nii'
 	# ------------------------------
-	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts'; addpath '$GPUFIT_PATH; T1mapping_fit('$SUBJECT_TP_PATH/'); exit;" &> /dev/null
+	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts'; addpath '$GPUFIT_PATH'; T1mapping_fit('$SUBJECT_TP_PATH/'); exit;" &> /dev/null
 	((diff = SECONDS - diff))
 	ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 	prog=$(echo "scale=2;  $prog + 1.33 / $count" | bc -l)
