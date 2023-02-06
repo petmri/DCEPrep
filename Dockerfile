@@ -22,6 +22,7 @@ RUN apt-get update && \
                     netbase \
                     pkg-config \
                     unzip \
+                    python3-pip \
                     xvfb && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -95,34 +96,36 @@ RUN apt-get update -qq \
     --exclude "fsl/etc/matlab" \
     --exclude "fsl/extras" \
     --exclude "fsl/include" \
+    --exclude "fsl/lib/libgfor*" \
+    --exclude "fsl/lib/openblas*" \
     --exclude "fsl/python" \
     --exclude "fsl/refdoc" \
     # --exclude "fsl/src" \
     --exclude "fsl/tcl" \
     --exclude "fsl/bin/FSLeyes" \
     && find /opt/fsl-6.0.5.2/bin -type f -not \( \
-        -name "applywarp" -or \
-        -name "bet" -or \
-        -name "bet2" -or \
-        -name "convert_xfm" -or \
+        # -name "applywarp" -or \
+        # -name "bet" -or \
+        # -name "bet2" -or \
+        # -name "convert_xfm" -or \
         -name "fast" -or \
         -name "flirt" -or \
-        -name "fsl_regfilt" -or \
+        # -name "fsl_regfilt" -or \
         -name "fslhd" -or \
         -name "fslinfo" -or \
         -name "fslmaths" -or \
         -name "fslmerge" -or \
-        -name "fslroi" -or \
+        # -name "fslroi" -or \
         -name "fslsplit" -or \
         -name "fslstats" -or \
-        -name "imtest" -or \
-        -name "mcflirt" -or \
-        -name "melodic" -or \
-        -name "prelude" -or \
-        -name "remove_ext" -or \
-        -name "susan" -or \
-        -name "topup" -or \
-        -name "zeropad" \) -delete \
+        # -name "imtest" -or \
+        -name "mcflirt" \) -delete \
+        # -name "melodic" -or \
+        # -name "prelude" -or \
+        # -name "remove_ext" -or \
+        # -name "susan" -or \
+        # -name "topup" -or \
+        # -name "zeropad" \)
     && find /opt/fsl-6.0.5.2/data/standard -type f -not -name "MNI152_T1_2mm_brain.nii.gz" -delete
 ENV FSLDIR="/opt/fsl-6.0.5.2" \
     PATH="/opt/fsl-6.0.5.2/bin:$PATH" \
@@ -140,11 +143,39 @@ ENV ANTSPATH="/opt/ants" \
     PATH="/opt/ants:$PATH"
 WORKDIR $ANTSPATH
 RUN curl -sSL "https://dl.dropbox.com/s/gwf51ykkk5bifyj/ants-Linux-centos6_x86_64-v2.3.4.tar.gz" \
-    | tar -xzC $ANTSPATH --strip-components 1
-
+    | tar -xzC $ANTSPATH --strip-components 1 \
+        --exclude "A*" \
+        --exclude "C*" \
+        --exclude "D*" \
+        --exclude "E*" \
+        --exclude "F*" \
+        --exclude "G*" \
+        --exclude "I*" \
+        --exclude "K*" \
+        --exclude "L*" \
+        --exclude "M*" \
+        --exclude "N*" \
+        --exclude "P*" \
+        --exclude "R*" \
+        --exclude "S*" \
+        --exclude "T*" \
+        --exclude "W*" \
+        --exclude "w*" \
+        --exclude "antsA*" \
+        --exclude "antsB*" \
+        --exclude "antsC*" \
+        --exclude "antsI*" \
+        --exclude "antsJ*" \
+        --exclude "antsL*" \
+        --exclude "antsM*" \
+        --exclude "antsN*" \
+        --exclude "antsS*" \
+        --exclude "antsT*" \
+        --exclude "antsU*" 
 # GPUFIT
 RUN curl -sSLO "https://github.com/ironictoo/Gpufit/releases/download/1.3/ubuntu-22.04-x64-cuda-11.7.0.zip" \
     && unzip -d /opt/Gpufit *11.7.0.zip
+ENV GPUFIT_PATH="/opt/Gpufit"
 # ADD /Downloads/ubuntu-22.04-x64-cuda-11.7.0.zip /opt/Gpufit
 
 # ROCKETSHIP
@@ -154,10 +185,15 @@ RUN curl -sSLO "https://github.com/petmri/ROCKETSHIP/archive/77b086ed24f15a3097a
 # this
 # RUN curl -sSLO "https://github.com/petmri/in-house_toolbox/archive/55b2182dbd5042db3e363f54cbace5a29974ad0b.zip" \
 #     | unzip *29974ad0b.zip
+
+# HD-BET
+RUN curl -sSLO "https://github.com/MIC-DKFZ/HD-BET/archive/refs/heads/master.zip" \
+    && unzip -d /opt/HD-BET *master.zip && cd /opt/HD-BET/HD-BET-master && pip install --no-cache-dir -e . && cd /
+
 WORKDIR /
 ADD . . 
-#/opt/in-house_toolbox
 
-RUN python3 -m pip install -r requirements.txt
+RUN python3 -m pip install --no-cache-dir -r requirements.txt
+RUN python3 -m pip cache purge 
 
 # MATLAB
