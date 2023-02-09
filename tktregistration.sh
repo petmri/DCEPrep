@@ -1,7 +1,5 @@
 #!/bin/bash
 
-3dAFNItoNIFTI -prefix TempDataset1.nii.gz $1
-3dAFNItoNIFTI -prefix TempDataset2.nii.gz $2
 
 #if [[ $1 = "rat" ]]
 #then
@@ -13,14 +11,11 @@
 FOV='256'
 #fi
 
-tkregister2 --targ TempDataset1.nii.gz --mov TempDataset2.nii.gz --reg Register.dat --regheader --noedit --fov $FOV
+tkregister2 --targ $1 --mov $2 --reg Register.dat --regheader --noedit --fov $FOV
 
-mri_vol2vol --mov TempDataset2.nii.gz --targ TempDataset1.nii.gz --reg Register.dat --o OutputDataset.nii.gz
+mri_vol2vol --mov $2 --targ $1 --reg Register.dat --o OutputDataset.nii.gz
 
-3dcalc -a OutputDataset.nii.gz -expr 'a' -prefix $3 -overwrite
-
-rm TempDataset*
-rm OutputDataset*
+fslmaths OutputDataset.nii.gz $3
 
 echo ' '
 echo '*** Registration Done ***'

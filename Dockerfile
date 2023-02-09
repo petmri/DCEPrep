@@ -3,8 +3,6 @@
 FROM nvidia/cuda:12.0.0-base-ubuntu22.04
 CMD nvidia-smi
 
-FROM ubuntu:22.04
-
 
 # # From fmriprep (https://github.com/nipreps/fmriprep/blob/master/Dockerfile)
 # # Prepare environment
@@ -21,8 +19,8 @@ RUN apt-get update && \
                     lsb-release \
                     netbase \
                     pkg-config \
-                    unzip \
                     python3-pip \
+                    unzip \
                     xvfb && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -34,6 +32,7 @@ ENV DEBIAN_FRONTEND="noninteractive" \
 COPY docker/files/freesurfer7.3-exclude.txt /usr/local/etc/freesurfer7.3-exclude.txt
 RUN curl -sSL https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.3.2/freesurfer-linux-ubuntu22_amd64-7.3.2.tar.gz \
     | tar zxv --no-same-owner -C /opt --exclude-from=/usr/local/etc/freesurfer7.3-exclude.txt
+COPY /docker/files/license.txt /opt/freesurfer
 
 # # Simulate SetUpFreeSurfer.sh
 ENV FSL_DIR="/opt/fsl-6.0.5.2" \
@@ -96,8 +95,8 @@ RUN apt-get update -qq \
     --exclude "fsl/etc/matlab" \
     --exclude "fsl/extras" \
     --exclude "fsl/include" \
-    --exclude "fsl/lib/libgfor*" \
-    --exclude "fsl/lib/openblas*" \
+    # --exclude "fsl/lib/libgfor*" \
+    # --exclude "fsl/lib/openblas*" \
     --exclude "fsl/python" \
     --exclude "fsl/refdoc" \
     # --exclude "fsl/src" \
@@ -111,6 +110,7 @@ RUN apt-get update -qq \
         -name "fast" -or \
         -name "flirt" -or \
         # -name "fsl_regfilt" -or \
+        -name "fslcpgeom" -or \
         -name "fslhd" -or \
         -name "fslinfo" -or \
         -name "fslmaths" -or \
@@ -125,7 +125,7 @@ RUN apt-get update -qq \
         # -name "remove_ext" -or \
         # -name "susan" -or \
         # -name "topup" -or \
-        # -name "zeropad" \)
+        # -name "zeropad" \
     && find /opt/fsl-6.0.5.2/data/standard -type f -not -name "MNI152_T1_2mm_brain.nii.gz" -delete
 ENV FSLDIR="/opt/fsl-6.0.5.2" \
     PATH="/opt/fsl-6.0.5.2/bin:$PATH" \
@@ -172,28 +172,26 @@ RUN curl -sSL "https://dl.dropbox.com/s/gwf51ykkk5bifyj/ants-Linux-centos6_x86_6
         --exclude "antsS*" \
         --exclude "antsT*" \
         --exclude "antsU*" 
+
+WORKDIR /
 # GPUFIT
 RUN curl -sSLO "https://github.com/ironictoo/Gpufit/releases/download/1.3/ubuntu-22.04-x64-cuda-11.7.0.zip" \
     && unzip -d /opt/Gpufit *11.7.0.zip
 ENV GPUFIT_PATH="/opt/Gpufit"
-# ADD /Downloads/ubuntu-22.04-x64-cuda-11.7.0.zip /opt/Gpufit
 
 # ROCKETSHIP
 RUN curl -sSLO "https://github.com/petmri/ROCKETSHIP/archive/77b086ed24f15a3097aa6ef0c572c59ce20061e8.zip" \
     && unzip -d /opt/ROCKETSHIP *20061e8.zip
 
-# this
-# RUN curl -sSLO "https://github.com/petmri/in-house_toolbox/archive/55b2182dbd5042db3e363f54cbace5a29974ad0b.zip" \
-#     | unzip *29974ad0b.zip
-
 # HD-BET
 RUN curl -sSLO "https://github.com/MIC-DKFZ/HD-BET/archive/refs/heads/master.zip" \
-    && unzip -d /opt/HD-BET *master.zip && cd /opt/HD-BET/HD-BET-master && pip install --no-cache-dir -e . && cd /
+    && unzip -d /opt/HD-BET *master.zip && cd /opt/HD-BET/HD-BET-master && pip install --no-cache-dir -e . && cd / \
+    && cp -r /docker/hd-bet_params ~
 
-WORKDIR /
-ADD . . 
+# THIS
+COPY . .
 
-RUN python3 -m pip install --no-cache-dir -r requirements.txt
-RUN python3 -m pip cache purge 
+RUN python3 -m pip install --no-cache-dir -r requirements.txt && python3 -m pip cache purge && \
+    rm -f *.zip
 
 # MATLAB

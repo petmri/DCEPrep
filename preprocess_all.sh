@@ -106,7 +106,7 @@ for dir in */*_timepoint/; do
 	SECONDS=0
 	echo -ne "HD-BET MP-RAGE [                                                  ] $prog% ($current/$count) Calculating runtime...   \r"
 	
-	if [ -n "$GPUFIT_PATH" ]
+	if [ nvidia-smi ]
 		then
 		# about 15 min
 		hd-bet -i T1.nii &> /dev/null
