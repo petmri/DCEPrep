@@ -32,7 +32,6 @@ ENV DEBIAN_FRONTEND="noninteractive" \
 COPY docker/files/freesurfer7.3-exclude.txt /usr/local/etc/freesurfer7.3-exclude.txt
 RUN curl -sSL https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.3.2/freesurfer-linux-ubuntu22_amd64-7.3.2.tar.gz \
     | tar zxv --no-same-owner -C /opt --exclude-from=/usr/local/etc/freesurfer7.3-exclude.txt
-COPY docker/files/license.txt /opt/freesurfer
 
 # # Simulate SetUpFreeSurfer.sh
 ENV FSL_DIR="/opt/fsl-6.0.5.2" \
@@ -185,11 +184,12 @@ RUN curl -sSLO "https://github.com/petmri/ROCKETSHIP/archive/77b086ed24f15a3097a
 
 # HD-BET
 RUN curl -sSLO "https://github.com/MIC-DKFZ/HD-BET/archive/refs/heads/master.zip" \
-    && unzip -d /opt/HD-BET *master.zip && cd /opt/HD-BET/HD-BET-master && pip install --no-cache-dir -e . && cd /
+    && unzip -d /opt/HD-BET *master.zip && cd /opt/HD-BET/HD-BET-master && pip install --no-cache-dir -e . \
+    && mkdir ~/hd-bet_params && cd ~/hd-bet_params && curl -sSLo '#1.model' \
+    https://zenodo.org/record/2540695/files/[0-4].model?download=1
 
 # THIS
 COPY . .
-RUN cp -r /docker/hd-bet_params/ ~
 
 RUN python3 -m pip install --no-cache-dir -r requirements.txt && python3 -m pip cache purge && \
     rm -f *.zip
