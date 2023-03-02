@@ -48,7 +48,7 @@ for i in range(slice_num):
     slices.append(ktrans_data[:,:,i].T)
 
 fig, axs = plt.subplots(4, 1, figsize=(8.5,11))
-subject = str(dir).split('/')[5]
+subject = str(dir).split('/')[-2]
 axs[0].set_title(subject + ' (' + site + ')', y=1.02)
 plt.suptitle(str(dir), fontsize='small', y=1)
 axs[0].axis('off')

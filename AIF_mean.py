@@ -7,8 +7,14 @@ from statistics import mean
 # dir = "/media/network_mriphysics/USC-PPG/data/203491_cbf/1st_timepoint"
 dir = sys.argv[1]
 
-AIF = nib.load(dir + '/aif.nii')
-DCE = nib.load(dir + '/DCE_mc.nii.gz')
+try:
+    AIF = nib.load(dir + '/aif.nii')
+except:
+    AIF = nib.load(dir + '/aif.nii.gz')
+try:
+    DCE = nib.load(dir + '/DCE_mc.nii')
+except:
+    DCE = nib.load(dir + '/DCE_mc.nii.gz')
 
 AIF_data = AIF.get_fdata()
 DCE_data = DCE.get_fdata()

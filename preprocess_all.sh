@@ -67,9 +67,9 @@ if [ -z "$DATA_DIR" ]
 fi
 cd $DATA_DIR || exit 1
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit)
-	SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit)
-	GPUFIT_PATH=$(find $HOME -name 'pyGpufit' -printf '%h\n' -quit)
+	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit || find / -name '*run_dce_auto.m' -printf '%h\n' -quit) &> /dev/null
+	SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit || find / -name '*auto_analysis.py' -printf '%h\n' -quit) &> /dev/null
+	GPUFIT_PATH=$(find $HOME -name 'gpufit_constrained.m' -printf '%h\n' -quit || find / -name 'gpufit_constrained.m' -printf '%h\n' -quit) &> /dev/null
 else
 	ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 	SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
@@ -202,7 +202,7 @@ for dir in */*_timepoint/; do
 		rm 15_bfc_pve_1.nii.gz &> /dev/null
 		rm 15_bfc_pve_2.nii.gz &> /dev/null
 		rm 15_bfc_pveseg.nii.gz &> /dev/null
-		rm 15_bfc_seg.nii.gz
+		rm 15_bfc_seg.nii.gz &> /dev/null
 		
 		# threshold and binarize wm mask
 		#fslmaths 15_bfc_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
@@ -275,7 +275,7 @@ for dir in */*_timepoint/; do
 	elif [ $EN_BIAS1 -eq 1 ]
 		then
 		echo Concatenating non Z\'d images
-		fslmerge -t VFA.nii 2_bfc.nii 5_bfc.nii 10_bfc.nii 12_bfc.nii 15_bfc.nii  &> /dev/null
+		fslmerge -t VFA.nii 2_bfc.nii 5_bfc.nii 10_bfc.nii 12_bfc.nii 15_bfc.nii &> /dev/null
 	else
 		echo Concatenating raw images
 		fslmerge -t VFA.nii 2_masked.nii 5_masked.nii 10_masked.nii 12_masked.nii 15_masked.nii &> /dev/null

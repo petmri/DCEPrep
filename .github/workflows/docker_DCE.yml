@@ -1,0 +1,21 @@
+name: Docker build
+
+on:
+  push:
+    branches: [ "dev", "main" ]
+  pull_request:
+    branches: [ "dev", "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: self-hosted
+
+    steps:
+    - name: Build Dockerfile
+      run: |
+        docker build . -t runner
+
