@@ -69,7 +69,7 @@ cd $DATA_DIR || exit 1
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit || find / -name '*run_dce_auto.m' -printf '%h\n' -quit) &> /dev/null
 	SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit || find / -name '*auto_analysis.py' -printf '%h\n' -quit) &> /dev/null
-	GPUFIT_PATH=$(find $HOME -name 'gpufit_constrained.m' -printf '%h\n' -quit || find / -name 'gpufit_constrained.m' -printf '%h\n' -quit) &> /dev/null
+	GPUFIT_PATH=$(find $HOME -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit || find / -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit) &> /dev/null
 else
 	ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 	SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
