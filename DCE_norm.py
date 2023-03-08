@@ -66,7 +66,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
         # calc stats of all slices
         data_mean = mean(wm_mean[0:slice_num-1])
         std_dev = pstdev(wm_mean[0:slice_num-1])
-        err = 1*std_dev
+        err = .5*std_dev
         # find slices out of range
         min_val = data_mean - err
         max_val = data_mean + err

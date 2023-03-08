@@ -11,11 +11,28 @@ permissions:
 
 jobs:
   build:
+    strategy:
+      fail-fast: false
+      matrix:
+        # release: [R2020a, R2020b, R2021a, R2021b, R2022a, R2022b]
+          release: [R2020a]
 
     runs-on: self-hosted
 
     steps:
+    - name: Update Dockerfile
+      run: |
+        git pull
+
     - name: Build Dockerfile
       run: |
-        docker build . -t runner
+        docker build --build-arg MATLAB_RELEASE=${{ matrix.release }} . -t lsaca05/dce:${{ matrix.release }}
 
+    - name: Run Docker
+      if: ${{ matrix.release }} == "R2020a"
+      run: |
+        ./run_docker.sh
+
+    # - name: Push to Docker Hub
+    #   run: |
+    #     docker push lsaca05/dce:${{ matrix.release }}

@@ -7,9 +7,10 @@ EN_BIAS1=0
 fail=0
 count=0
 successes=0
+USE_FREESURFER=0
 
 # options
-while getopts ":d:bh" options; do
+while getopts ":d:bfh" options; do
 	case "${options}" in
 		b)
 			EN_BIAS1=1
@@ -17,6 +18,9 @@ while getopts ":d:bh" options; do
 		d)
 			DATA_DIR=${OPTARG}
 			LOG_FILE=$DATA_DIR/dce_log.txt
+			;;
+		f)
+			USE_FREESURFER=1
 			;;
 		h)
 			echo "This script runs through all subject folders of a specified main data directory, processing every folder ending in '_timepoint'."
@@ -53,14 +57,16 @@ fi
 rm dce_log.txt
 for dir in */*_timepoint/; do
 	date >> dce_log.txt
-	echo DCE processing ${dir}...
+	echo "DCE processing ${dir}..."
 	((count++))
-	cd $dir
+	cd $dir || exit 1
 	SUBJECT_TP_PATH=$(pwd)
 
 	if [ ! -f "DCE_mc_bfc_norm.nii" ]
 		then
 		echo Missing input file. Make sure the data has been preprocessed. Skipping $dir... >> $LOG_FILE
+		cd ..
+		fail=1
 		continue
 	fi
 	
@@ -72,6 +78,7 @@ for dir in */*_timepoint/; do
 		then
 			echo $dir "Missing Ktrans maps. DCE failed or inputs were not generated. Hopefully message below is relevant." >> $LOG_FILE
 			tail -1 A_dceR1info.log >> $LOG_FILE
+			cd ..
 			fail=1
 			continue
 	fi
@@ -189,6 +196,7 @@ for dir in */*_timepoint/; do
 		if [ ! -f "DCE_mc_bfc_norm.nii" ]
 			then
 				echo $dir "Missing normalized DCE file." >> $LOG_FILE
+				cd ..
 				fail=1
 				continue
 		fi
@@ -198,6 +206,7 @@ for dir in */*_timepoint/; do
 		if [ ! -f "dce_patlak_fit_Ktrans.nii" ]
 			then
 				echo $dir "Missing Ktrans maps. Check terminal--DCE failed or inputs were otherwise not generated." >> $LOG_FILE
+				cd ..
 				fail=1
 				continue
 		fi
@@ -206,13 +215,18 @@ for dir in */*_timepoint/; do
 		# ------------------------------
 		# Align then re-binarize gm mask
 		#bad
-		#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii segmented_t1_seg_1.nii.gz T1_gm_dyn.nii.gz
 		#flirt -in segmented_t1_seg_1.nii.gz -ref ref_rep.nii -init T1toDCE.mat -applyxfm -o T1_gm_mask_dyn.nii
 		#fails on 1 subject (180deg rotation)
 		#flirt -in segmented_t1_seg_1.nii.gz -dof 6 -ref ref_rep.nii -o T1_gm_mask_dyn.nii
 		#fslmaths T1_gm_mask_dyn.nii -thr 0.5 -bin T1_gm_mask_dyn.nii
 		#good
-		antsRegistrationSyN.sh -d 3 -t t -f ref_rep.nii -m segmented_t1_seg_1.nii.gz -o T1_gm_mask_dyn
+		if [ $USE_FREESURFER -eq 1 ] || [ $dir == "203450/1st_timepoint/" ]
+			then
+			bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii segmented_t1_seg_1.nii.gz T1_gm_dyn.nii.gz
+		else
+			antsApplyTransforms -i T1_wm_mask.nii.gz -r ref_rep.nii -t T1_bet_mask_dyn0GenericAffine.mat -o T1_wm_mask_dyn.nii
+		fi
+		# antsRegistrationSyN.sh -d 3 -t t -f ref_rep.nii -m segmented_t1_seg_1.nii.gz -o T1_gm_mask_dyn
 		fslmaths T1_gm_mask_dynWarped.nii -thr 0.5 -bin T1_gm_mask_dyn.nii	
 		
 		# Align CSF mask
@@ -223,12 +237,12 @@ for dir in */*_timepoint/; do
 		# Apply masks to T1 map
 		fslmaths t1_map_fixed_use_me.nii.gz -mas T1_wm_mask_dyn.nii T1_wm.nii
 		fslmaths t1_map_fixed_use_me.nii.gz -mas T1_gm_mask_dyn.nii T1_gm.nii
-		fslmaths t1_map_fixed_use_me.nii.gz -mas T1_csf_dyn.nii T1_csf.nii
+		# fslmaths t1_map_fixed_use_me.nii.gz -mas T1_csf_dyn.nii T1_csf.nii
 		
 		# Apply masks to Ktrans map
 		fslmaths dce_patlak_fit_Ktrans.nii -mas T1_wm_mask_dyn.nii Ktrans_wm.nii
 		fslmaths dce_patlak_fit_Ktrans.nii -mas T1_gm_mask_dyn.nii Ktrans_gm.nii
-		fslmaths dce_patlak_fit_Ktrans.nii -mas T1_csf_dyn.nii Ktrans_csf.nii
+		# fslmaths dce_patlak_fit_Ktrans.nii -mas T1_csf_dyn.nii Ktrans_csf.nii
 
 		python3 $SCRIPT_PATH/auto_analysis.py $SUBJECT_TP_PATH
 	fi

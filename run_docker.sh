@@ -3,7 +3,7 @@
 
 # MAKE SURE MATLAB & FREESURFER LICENSE FILES, DATA DIRECTORY, AND /etc/ ARE SHARED TO DOCKER
 
-bozo=$(cat /usr/local/MATLAB/*/licenses/*lic* | grep _HOSTID)
+bozo=$(cat /home/*/.matlab/R*_licenses/*lic* || cat /usr/local/MATLAB/*/licenses/*lic* | grep _HOSTID)
 
 MAC=${bozo#*MATLAB_HOSTID=}
 MAC=${MAC%%:*}
@@ -12,6 +12,7 @@ MAC=${MAC:0:2}:${MAC:2:2}:${MAC:4:2}:${MAC:6:2}:${MAC:8:2}:${MAC:10:2}
 
 MATLAB_PATH=/usr/local/MATLAB/$(ls /usr/local/MATLAB/)
 # echo $MATLAB_PATH
+MATLAB_VERSION=$(ls /usr/local/MATLAB/)
 
 LICENSE=$(ls $MATLAB_PATH/licenses)
 # echo $LICENSE
@@ -27,4 +28,4 @@ sudo docker run --rm -it -e MLM_LICENSE_FILE=/opt/matlab/licenses/$LICENSE \
     --shm-size=512M --mac-address $MAC \
     --user $UID:$GID \
     --gpus all \
-    lsaca05/dce
+    lsaca05/dce:$MATLAB_VERSION

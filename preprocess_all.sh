@@ -93,6 +93,7 @@ for dir in */*_timepoint/; do
 	if [ ! -f "2.nii" ] || [ ! -f "5.nii" ] || [ ! -f "10.nii" ] || [ ! -f "12.nii" ] || [ ! -f "15.nii" ] || [ ! -f "DCE.nii" ] || [ ! -f "T1.nii" ]
 		then
 		echo "$dir Base file(s) missing! Expected VFAs 2.nii, 5.nii, 10.nii, 12.nii, 15.nii, DCE.nii, and T1.nii (MP-RAGE). Skipping timepoint..." >> $LOG_FILE
+		cd ..
 		continue
 	fi
 	
@@ -235,6 +236,7 @@ for dir in */*_timepoint/; do
 	if [ ! -f "15_BFC_Z.nii" ]
 		then
 			echo $dir "Missing Z-normalized files. Z-norm likely failed due to non-existent inputs." >> $LOG_FILE
+			cd ..
 			fail=1
 			continue
 	fi
@@ -284,6 +286,7 @@ for dir in */*_timepoint/; do
 	if [ ! -f "VFA.nii.gz" ]
 		then
 			echo "$dir missing VFA file. Component files may have failed." >> $LOG_FILE
+			cd ..
 			fail=1
 			continue
 	fi
@@ -298,6 +301,7 @@ for dir in */*_timepoint/; do
 	if [ ! -f "VFA_mc.nii" ]
 		then
 			echo $dir "Missing VFA_mc file. Motion correction may have failed." >> $LOG_FILE
+			cd ..
 			fail=1
 			continue
 	fi
@@ -312,6 +316,7 @@ for dir in */*_timepoint/; do
 	if [ ! -f "T1_map_t1_fa_fit_VFA_mc.nii" ]
 		then
 			echo $dir "Missing T1 map file. T1 mapping may have failed." >> $LOG_FILE
+			cd ..
 			fail=1
 			continue
 	fi
@@ -328,6 +333,7 @@ for dir in */*_timepoint/; do
 	if [ ! -f "DCE_mc.nii.gz" ]
 		then
 			echo $dir "Missing motion corrected DCE file." >> $LOG_FILE
+			cd ..
 			fail=1
 			continue
 	fi
@@ -347,6 +353,7 @@ for dir in */*_timepoint/; do
 	if [ ! -f "t1_map_fixed_use_me.nii.gz" ]
 		then
 			echo "Missing registered T1 map." >> $LOG_FILE
+			cd ..
 			fail=1
 			continue
 	fi
@@ -364,24 +371,24 @@ for dir in */*_timepoint/; do
 	#flirt -in T1_bet_mask.nii.gz -ref ref_rep.nii -init T1toDCE.mat -applyxfm -o T1_bet_mask_dyn.nii
 	#flirt -in T1_bet_mask.nii.gz -ref ref_rep.nii -dof 6 -o T1_bet_mask_dyn.nii
 	#fslmaths T1_bet_mask_dyn.nii -bin T1_bet_mask_dyn.nii
-	if [ $USE_FREESURFER -eq 1 ]
+	if [ $USE_FREESURFER -eq 1 ] || [ $dir == "203450/1st_timepoint/" ]
 		then
 		echo "Registering brain mask to dynamic space with Freesurfer..."
 		bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_bet_mask.nii.gz T1_bet_mask_dyn.nii.gz
 	else
 		#echo "Registering brain mask to dynamic space with ANTs..."
 		antsRegistrationSyN.sh -d 3 -t t -f ref_rep.nii -m T1_bet_mask.nii.gz -o T1_bet_mask_dyn &> /dev/null
-		mv T1_bet_mask_dynWarped.nii.gz T1_bet_mask_dyn.nii.gz
+		# mv T1_bet_mask_dynWarped.nii.gz T1_bet_mask_dyn.nii.gz
+		fslmaths T1_bet_mask_dynWarped.nii.gz -thr 1 -bin T1_bet_mask_dyn.nii.gz &> /dev/null
 		rm T1_bet_mask_dynInverseWarped.nii.gz
-		rm T1_bet_mask_dyn0GenericAffine.mat
-		fslmaths T1_bet_mask_dyn.nii.gz -thr 1 -bin T1_bet_mask_dyn.nii.gz &> /dev/null
+		# rm T1_bet_mask_dyn0GenericAffine.mat
 		prog=$(echo "scale=2;  $prog + 0.55 / $count" | bc -l)
 		ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 		echo -ne "FAST DCE REP 1 [========================>                         ] $prog% ($current/$count) ~$ETA min remaining \r"
 	fi
 	
 	# ensure AIF is included in mask
-	fslcpgeom 2.nii T1_bet_mask_dyn.nii.gz
+	# fslcpgeom 2.nii T1_bet_mask_dyn.nii.gz
 	cp aif.nii aif_aligned.nii
 	fslcpgeom T1_bet_mask_dyn.nii.gz aif_aligned.nii
 	fslmaths aif_aligned.nii -thr 0 aif_pos.nii &> /dev/null
@@ -468,11 +475,17 @@ for dir in */*_timepoint/; do
 	
 	# align existing white matter mask to dynamic images and re-binarize
 	#flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -init T1toDCE.mat -applyxfm -o T1_wm_mask_dyn.nii
-	flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -2D -o T1_wm_mask_dyn.nii &> /dev/null
+	# flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -2D -o T1_wm_mask_dyn.nii &> /dev/null
 	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_wm_mask.nii.gz T1_wm_mask_dyn.nii.gz
 	#antsRegistrationSyN.sh -d 3 -t r -f ref_rep.nii -m T1_wm_mask.nii.gz -o T1_wm_mask_dyn
+	if [ $USE_FREESURFER -eq 1 ] || [ $dir == "203450/1st_timepoint/" ]
+		then
+		flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -2D -o T1_wm_mask_dyn.nii &> /dev/null
+	else
+		antsApplyTransforms -i T1_wm_mask.nii.gz -r ref_rep.nii -t T1_bet_mask_dyn0GenericAffine.mat -o T1_wm_mask_dyn.nii
+	fi
 	#mv T1_wm_mask_dynWarped.nii.gz T1_wm_mask_dyn.nii.gz
-	fslmaths T1_wm_mask_dyn.nii.gz -thr 0.3 -bin T1_wm_mask_dyn.nii.gz &> /dev/null
+	fslmaths T1_wm_mask_dyn.nii -thr 0.8 -bin T1_wm_mask_dyn.nii.gz &> /dev/null
 	
 	#fslmaths T1_wm_mask_dynWarped.nii -thr 0.7 -bin T1_wm_mask_dyn.nii
 	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_bet_mask.nii.gz T1_bet_mask_dyn.nii.gz
@@ -491,6 +504,7 @@ for dir in */*_timepoint/; do
 	if [ ! -f "DCE_mc_bfc_norm.nii" ]
 		then
 			echo $dir "Missing normalized DCE file." >> $LOG_FILE
+			cd ..
 			fail=1
 			continue
 	fi
@@ -505,7 +519,7 @@ for dir in */*_timepoint/; do
 done
 
 	prog=$(echo "scale=2;  100.00" | bc -l)
-	echo -ne "PREP COMPLETED [==================================================] $prog% ($current/$count)\r"
+	echo -ne "PREP COMPLETED [==================================================] $prog% ($current/$count)"
 
 ((failures=count-successes))
 echo Completed preprocessing for $count subjects. >> $LOG_FILE
