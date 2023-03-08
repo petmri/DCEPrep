@@ -20,18 +20,22 @@ jobs:
     runs-on: self-hosted
 
     steps:
-    - name: Update Dockerfile
-      run: |
-        git pull
-
+    - uses: actions/checkout@v3
+    
+    - name: Extract branch name
+      shell: bash
+      run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+      id: extract_branch
+    
     - name: Build Dockerfile
       run: |
-        docker build --build-arg MATLAB_RELEASE=${{ matrix.release }} . -t lsaca05/dce:${{ matrix.release }}
+        docker build --build-arg MATLAB_RELEASE=${{ matrix.release }} . -t lsaca05/dce:${{ steps.extract_branch.outputs.branch }}-${{ matrix.release }}
 
     - name: Run Docker
       if: ${{ matrix.release }} == "R2020a"
       run: |
         ./run_docker.sh
+        exit
 
     # - name: Push to Docker Hub
     #   run: |
