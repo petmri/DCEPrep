@@ -1,4 +1,4 @@
-name: Bash script
+name: Run & build docker
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  run:
 
     runs-on: self-hosted
 
@@ -66,3 +66,34 @@ jobs:
         retention-days: 5
         if-no-files-found: error
 
+  docker:
+    needs: run
+    strategy:
+      fail-fast: false
+      matrix:
+        # release: [R2020a, R2020b, R2021a, R2021b, R2022a, R2022b]
+          release: [R2020a]
+
+    runs-on: self-hosted
+
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Extract branch name
+      shell: bash
+      run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+      id: extract_branch
+    
+    - name: Build Dockerfile
+      run: |
+        docker build --build-arg MATLAB_RELEASE=${{ matrix.release }} . -t lsaca05/dce:${{ matrix.release }}-${{ steps.extract_branch.outputs.branch }}
+
+    # - name: Run Docker
+    #   if: ${{ matrix.release }} == "R2020a"
+    #   run: |
+    #     ./run_docker.sh
+    #     exit
+
+    # - name: Push to Docker Hub
+    #   run: |
+    #     docker push lsaca05/dce:${{ matrix.release }}
