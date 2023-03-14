@@ -1,4 +1,4 @@
-name: Run & build docker
+name: Run DCE then build docker
 
 on:
   push:
@@ -71,8 +71,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # release: [R2020a, R2020b, R2021a, R2021b, R2022a, R2022b]
-          release: [R2020a]
+        release: [R2020a, R2020b, R2021a, R2021b, R2022a, R2022b]
 
     runs-on: self-hosted
 
