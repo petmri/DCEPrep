@@ -21,9 +21,11 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     mri_shape = mri_data.shape
     wm_shape = wm_data.shape
     slice_num = min(mri_shape[0], mri_shape[1], mri_shape[2], mri_shape[3])
-    slice_loc = mri_shape.index(slice_num)
-    mri_data = np.reshape(mri_data, (mri_shape[min(dim-set([slice_loc]))], mri_shape[max(dim-set([slice_loc]))], slice_num, mri_shape[3]))
-    wm_data = np.reshape(wm_data, (wm_shape[min(dim-set([slice_loc]))], wm_shape[max(dim-set([slice_loc]))], slice_num, mri_shape[3]))
+    z_index = mri_shape.index(slice_num)
+    x_index = mri_shape.index(max(mri_shape[0], mri_shape[1], mri_shape[2]))
+    y_index = mri_shape[1:3].index(max(0, mri_shape[1], mri_shape[2])) + 1
+    mri_data = np.transpose(mri_data, (x_index, y_index, z_index))
+    wm_data = np.transpose(wm_data, (x_index, y_index, z_index))
     wm_mean = []
     orig_img = []
 
@@ -110,8 +112,8 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
 
     path2 = file_dir +'/DCE_mc_bfc_norm.png'   #THE STRING IN THE END CONTAINS THE FILE NAME OF THE GRAPHS GENERATED
     plt.savefig(path2)
-    # print(file_dir)
-    mri_final = np.reshape(mri_final, mri_shape)
+
+    mri_final = np.transpose(mri_final, (x_index, y_index, z_index))
     final_img = nib.Nifti1Image(mri_final, mri.affine)
     path3 = file_dir + '/DCE_mc_bfc_norm.nii'  #THE STRING IN THE END CONTAINS THE FILE NAME OF THE NORMALIZED NIFTI IMAGE GENERATED
     nib.save(final_img, path3)

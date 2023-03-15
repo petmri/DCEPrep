@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 import re
-from statistics import mean, pstdev
+from statistics import mean, pstdev, median
 import numpy as np
 # import numpy.polynomial.polynomial as poly
 import matplotlib
@@ -24,9 +24,11 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     mri_shape = mri_data.shape
     wm_shape = wm_data.shape
     slice_num = min(mri_shape[0], mri_shape[1], mri_shape[2])
-    slice_loc = mri_shape.index(slice_num)
-    mri_data = np.reshape(mri_data, (mri_shape[min(dim-set([slice_loc]))], mri_shape[max(dim-set([slice_loc]))], slice_num))
-    wm_data = np.reshape(wm_data, (wm_shape[min(dim-set([slice_loc]))], wm_shape[max(dim-set([slice_loc]))], slice_num))
+    x_index = mri_shape.index(max(mri_shape[0], mri_shape[1], mri_shape[2]))
+    y_index = mri_shape[1:3].index(max(0, mri_shape[1], mri_shape[2])) + 1
+    z_index = mri_shape.index(slice_num)
+    mri_data = np.transpose(mri_data, (x_index, y_index, z_index))
+    wm_data = np.transpose(wm_data, (x_index, y_index, z_index))
     wm_mean = []
     orig_img = []
 
@@ -111,7 +113,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     path2 = file_dir + '/' + str(num) +'_BFC_Z.png'
     plt.savefig(path2)
 
-    mri_final = np.reshape(mri_final, mri_shape)
+    mri_final = np.transpose(mri_final, (x_index, y_index, z_index))
     final_img = nib.Nifti1Image(mri_final, mri.affine)
     path3 = file_dir + '/' + str(num) + '_BFC_Z.nii'
     nib.save(final_img, path3)
@@ -124,7 +126,6 @@ for file in files_in_dir:
         file1 = str(file)
         mask_file = file1.split('.', 1)
         mask_file = mask_file[0] + '_wm.nii'
-
         try:
             normalize(file1, mask_file, str(dir))   #CALLING THE 'normalize()' FUNCTION TO PERFORM THE NORMALIZATION
         except FileNotFoundError:
