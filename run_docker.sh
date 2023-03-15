@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-# MAKE SURE MATLAB & FREESURFER LICENSE FILES, DATA DIRECTORY, AND /etc/ ARE SHARED TO DOCKER
+# MAKE SURE MATLAB & FREESURFER LICENSE FILES, DATA DIRECTORY, SCRIPT PREFERENCE FOLDER (docker/files/) AND /etc/ ARE SHARED WITH DOCKER
 
 bozo=$(cat /home/*/.matlab/R*_licenses/*lic* || cat /usr/local/MATLAB/*/licenses/*lic* | grep _HOSTID)
 
@@ -12,7 +12,7 @@ MAC=${MAC:0:2}:${MAC:2:2}:${MAC:4:2}:${MAC:6:2}:${MAC:8:2}:${MAC:10:2}
 
 MATLAB_PATH=/usr/local/MATLAB/$(ls /usr/local/MATLAB/)
 # echo $MATLAB_PATH
-MATLAB_VERSION=$(ls /usr/local/MATLAB/)
+MATLAB_VERSION=$(ls /usr/local/MATLAB/)-dev
 
 LICENSE=$(ls $MATLAB_PATH/licenses)
 # echo $LICENSE
@@ -25,6 +25,7 @@ sudo docker run --rm -it -e MLM_LICENSE_FILE=/opt/matlab/licenses/$LICENSE \
     -v $FREESURFER_HOME/license.txt:/opt/freesurfer/license.txt \
     -v $MATLAB_PATH/licenses:/opt/matlab/licenses \
     -v /etc/passwd:/etc/passwd:ro \
+    -v $PWD/docker/files/script_preferences.txt:/opt/ROCKETSHIP/ROCKETSHIP-dev/script_preferences.txt \
     --shm-size=512M --mac-address $MAC \
     --user $UID:$GID \
     --gpus all \
