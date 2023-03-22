@@ -306,7 +306,7 @@ for dir in */*_timepoint/; do
 	
 	# T1 mapping where the input image is 'VFA.motioncorrected.nii'
 	# ------------------------------
-	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts'; addpath '$GPUFIT_PATH'; T1mapping_fit('$SUBJECT_TP_PATH/'); exit;" &> /dev/null
+	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts'; addpath '$GPUFIT_PATH'; T1mapping_fit('$SUBJECT_TP_PATH/'); exit;"
 	if [ $ff -eq 1 ]
 		then
 			if [ ! -f "T1_map_t1_fa_fit_VFA_mc.nii" ]
