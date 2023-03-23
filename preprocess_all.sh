@@ -55,12 +55,14 @@ if [ -z "$DATA_DIR" ]
 		exit 1
 fi
 cd $DATA_DIR
-ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
-SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit)
 	SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit)
 	GPUFIT_PATH=$(find $HOME -name 'CpufitMex.mexa64' -printf '%h\n' -quit || find / -name 'CpufitMex.mexa64' -printf '%h\n' -quit)
+else
+	ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
+	SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
+	GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)/matlab
 fi
 
 # Run bias correction on VFA data 
