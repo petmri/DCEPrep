@@ -60,7 +60,7 @@ SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit)
 	SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit)
-	GPUFIT_PATH=$(find $HOME -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit || find / -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit) &> /dev/null
+	GPUFIT_PATH=$(find $HOME -name 'CpufitMex.mexa64' -printf '%h\n' -quit || find / -name 'CpufitMex.mexa64' -printf '%h\n' -quit)
 fi
 
 # Run bias correction on VFA data 
@@ -97,7 +97,7 @@ for dir in */*_timepoint/; do
 	cp 10.nii 10_masked.nii
 	cp 12.nii 12_masked.nii
 	cp 15.nii 15_masked.nii
-	gzip *_masked.nii
+	gzip -f *_masked.nii
 	
 	if [ $EN_BIAS1 -eq 1 ]
 		then
