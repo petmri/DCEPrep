@@ -19,7 +19,7 @@ jobs:
     - uses: actions/checkout@v3
       with:
         repository: petmri/ROCKETSHIP
-        ref: llu-usc-script
+        ref: dev
         path: ROCKETSHIP
     #- name: Set up Python 3.10
     #  uses: actions/setup-python@v3
