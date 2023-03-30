@@ -46,6 +46,10 @@ while getopts ":d:bBZFhc" options; do
 		Z)
 			EN_Z_NORM=1
 			;;
+		*)
+			echo "Invalid flag ${OPTARG}. Please use -h for a list of valid flags."
+			exit 1
+			;;
 	esac
 done
 
@@ -77,6 +81,7 @@ for dir in */*_timepoint/; do
 	if [ ! -f "2.nii" ] || [ ! -f "5.nii" ] || [ ! -f "10.nii" ] || [ ! -f "12.nii" ] || [ ! -f "15.nii" ] || [ ! -f "DCE.nii" ]
 		then
 		echo Base files missing! Skipping timepoint...
+		cd ..
 		continue
 	fi
 	
@@ -206,6 +211,7 @@ for dir in */*_timepoint/; do
 				then
 					echo "Missing Z-normalized files. Z-norm likely failed due to non-existent inputs."
 					fail=1
+					cd ..
 					continue
 			fi
 	fi
@@ -286,6 +292,7 @@ for dir in */*_timepoint/; do
 				then
 					echo "Missing VFA file. Component files may have failed."
 					fail=1
+					cd ..
 					continue
 			fi
 	fi
@@ -301,6 +308,7 @@ for dir in */*_timepoint/; do
 				then
 					echo "Missing VFA_mc file. Motion correction may have failed."
 					fail=1
+					cd ..
 					continue
 			fi
 	fi
@@ -316,6 +324,7 @@ for dir in */*_timepoint/; do
 				then
 					echo "Missing T1 map file. T1 mapping may have failed."
 					fail=1
+					cd ..
 					continue
 			fi
 	fi
@@ -331,6 +340,7 @@ for dir in */*_timepoint/; do
 				then
 					echo "Missing motion corrected DCE file."
 					fail=1
+					cd ..
 					continue
 			fi
 	fi
@@ -345,6 +355,7 @@ for dir in */*_timepoint/; do
 				then
 					echo "Missing registered T1 map."
 					fail=1
+					cd ..
 					continue
 			fi
 	fi
@@ -494,6 +505,7 @@ for dir in */*_timepoint/; do
 				then
 					echo "Missing normalized DCE file."
 					fail=1
+					cd ..
 					continue
 			fi
 	fi
