@@ -403,58 +403,35 @@ for dir in */*_timepoint/; do
 			# Applying bias field correction on dynamic images
 			# ------------------------------
 			#echo Applying BFC to dynamic images...
-			fslmerge -n 0 1st_rep.nii DCE_mc_masked.nii		# extract images from different DCE repetitions
-			fslmerge -n 4 5th_rep.nii DCE_mc_masked.nii
-			fslmerge -n 9 10th_rep.nii DCE_mc_masked.nii
-			fslmerge -n 19 20th_rep.nii DCE_mc_masked.nii
-			fslmerge -n 29 30th_rep.nii DCE_mc_masked.nii
-			fslmerge -n 39 40th_rep.nii DCE_mc_masked.nii
-			fslmerge -n 49 50th_rep.nii DCE_mc_masked.nii
-			fslmerge -n 59 60th_rep.nii DCE_mc_masked.nii
+			reps=$(fslnvols DCE_mc_masked.nii)
+			rep_interval=$((reps / 8))
+			# round rep_interval up
+			rep_interval=$(echo "scale=0; ($rep_interval + 0.5) / 1" | bc -l)
 
+			# take 9 repetitions with rep_interval from DCE_mc_masked.nii
+			fslmerge -n 0 rep_0.nii DCE_mc_masked.nii &> /dev/null
+			for i in {1..8}
+			do
+				# name file with rep_interval*i
+				fslmerge -n $((rep_interval*i-1)) rep_$((rep_interval*i-1)).nii DCE_mc_masked.nii &> /dev/null
+			done
 
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 1st_rep.nii &> /dev/null
+			# BFC each repetition
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o rep_0.nii &> /dev/null
 			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "FAST DCE REP 5 [===========================>                      ] $prog% ($current/$count) ~$ETA min remaining \r"
-	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 5th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "FAST DCE REP 10[==============================>                   ] $prog% ($current/$count) ~$ETA min remaining \r"
-	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 10th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "FAST DCE REP 20[=================================>                ] $prog% ($current/$count) ~$ETA min remaining \r"
-	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 20th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "FAST DCE REP 30[====================================>             ] $prog% ($current/$count) ~$ETA min remaining \r"
-	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 30th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "FAST DCE REP 40[=======================================>          ] $prog% ($current/$count) ~$ETA min remaining \r"
-	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 40th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "FAST DCE REP 50[==========================================>       ] $prog% ($current/$count) ~$ETA min remaining \r"
-	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 50th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "FAST DCE REP 60[=============================================>    ] $prog% ($current/$count) ~$ETA min remaining \r"
-	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 60th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
+			echo -ne "FAST DCE REP 0 [===========================>                      ] $prog% ($current/$count) ~$ETA min remaining \r"
+			for i in {1..8}
+			do
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o rep_$((rep_interval*i-1)).nii &> /dev/null
+				ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
+				prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
+				echo -ne "FAST DCE REP $((rep_interval*i-1)) [====================================>             ] $prog% ($current/$count) ~$ETA min remaining \r"
+			done
 			echo -ne "DCE BFC + NORM [================================================> ] $prog% ($current/$count) ~$ETA min remaining \r"
-
+			
 			# Concatenation1
-			fslmerge -t dyn_bias.nii.gz *_rep_bias.nii.gz
+			fslmerge -t dyn_bias.nii.gz rep_*_bias.nii.gz
 	
 			# Computing average across 8 bias field that have been sampled
 			fslmaths dyn_bias.nii.gz -Tmean mean_dyn_bias_map.nii.gz
@@ -462,8 +439,8 @@ for dir in */*_timepoint/; do
 			# Normalizing motion corrected DCE image with mean bias field 
 			fslmaths DCE_mc_masked.nii.gz -div mean_dyn_bias_map.nii.gz DCE_mc_bfc.nii
 	
-			# remove sampled slice files
-			rm [0-9]*_rep*
+			# remove sampled files
+			rm rep_*.nii.gz
 		else
 			echo Skipping DCE BFC because it already exists...
 		fi
