@@ -1,0 +1,65 @@
+<html>
+<head>
+    <title>{{ title }}</title>
+    <style>
+        #image-container {
+            position: relative;
+            width: 50%;
+            height: 50%;
+        }
+
+        #image1,
+        #image2 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50%;
+            height: 50%;
+            object-fit: cover;
+            transition: opacity 1s ease-in-out;
+        }
+
+        #image2.fade:hover {
+            opacity: 1;
+            transition: opacity 1s ease-in-out;
+        }
+
+        #image2 {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ heading }}</h1>
+    <!-- <p>{{ body }}</p> -->
+    <ul>
+        <li>{{ Subject }}</li>
+        <li>{{ Date }}</li>
+        <li>{{ Commit }}</li>
+        <li>{{ Institute }}</li>
+        <li>{{ Machine }}</li>
+    </ul>
+    <h2>Ktrans</h2>
+    <img src="{{ ktrans }}" alt="{{ ELYOUEL }}" width="1600"></img>
+    <h1>Preprocessing</h1>
+    <h2>Anatomical Info</h2>
+    <li>{{ Dimensions }}</li>
+    <li>{{ Voxel_Size }}</li>
+    <h2>T1w Segmentation and Brain Mask</h2>
+    <img>{{ T1w_Segmentation }}</img>
+    <div id="image-container">
+        <img id="image1" src="{{ image_path1 }}" alt="{{ image_alt1 }}">
+        <img id="image2" src="{{ image_path2 }}" alt="{{ image_alt2 }}">
+    </div>
+    <script>
+        var images = document.querySelectorAll('#image-container img');
+        var currentIndex = 0;
+
+        setInterval(function() {
+            images[currentIndex].className = '';
+            currentIndex = (currentIndex + 1) % images.length;
+            images[currentIndex].className = 'fade';
+        }, 1500);
+    </script>
+</body>
+</html>
