@@ -1,0 +1,82 @@
+<html>
+<head>
+    <title>{{ title }}</title>
+    <style>
+        #image-container {
+            position: relative;
+            width: 50%;
+            height: 50%;
+        }
+
+        #image1, #image2 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50%;
+            height: 50%;
+            object-fit: cover;
+            transition: opacity 1s ease-in-out;
+        }
+
+        #image2.fade:hover {
+            opacity: 1;
+        }
+
+        #image2 {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar fixed-top navbar-expand-lg navbar-light bg-light">
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav">
+                <li class="nav-item"><a class="nav-link" href="#Summary">Summary</a></li>
+                </li>
+            </ul>
+        </div>
+        </nav>
+    <h1 class="Summary">Summary</h1>
+    <li>Item1</li>
+    <li>Item1</li>
+    <li>Item1</li>
+    <li>Item1</li>
+    <p></p>
+    <h1>Preprocessing</h1>
+    <li>bozo</li>
+    <h2>Brain mask and tissue segmentation of T1w</h2>
+    <p>segmentation & mask image overlays for each slice</p>
+    <div id="image-container">
+        <img id="image1" src="{{ image_path1 }}" alt="{{ image_alt1 }}">
+        <img id="image2" src="{{ image_path2 }}" alt="{{ image_alt2 }}">
+    </div>
+    <script>
+        var images = document.querySelectorAll('#image-container img');
+        var currentIndex = 0;
+
+        setInterval(function() {
+            images[currentIndex].className = '';
+            currentIndex = (currentIndex + 1) % images.length;
+            images[currentIndex].className = 'fade';
+        }, 2000);
+    </script>
+    <p>image</p>
+    <h2>VFA Z-Normalization</h2>
+    <h2>T1 Maps</h2>
+    <p>check for T1 ROCKETSHIP params</p>
+    <p>T1 wm/gm graphs</p>
+    <h2>Auto AIF predicted mask and curve</h2>
+    <p>image</p>
+    <h2>Registrations to Dynamic Space</h2>
+    <p>image</p>
+    <h2>DCE Z-Normalization</h2>
+
+    <h1>DCE Outputs</h1>
+    <li>GPU used, relaxivity, hematocrit, etc.</li>
+    <h2>AIF Fitting and Time Curves</h2>
+    <h2>Ktrans maps</h2>
+    <p>maybe Ktrans with segmentation overlay</p>
+    <p>zero graphs</p>
+
+</body>
+</html>
