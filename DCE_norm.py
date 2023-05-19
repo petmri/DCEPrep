@@ -1,15 +1,18 @@
 import sys
 from pathlib import Path
-from statistics import mean, pstdev
+from statistics import mean, pstdev, median
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 from numpy.polynomial import Polynomial
 from numpy.polynomial.polynomial import polyval
 import nibabel as nib
+from lmfit import Model
+
 matplotlib.use('Agg')
 
 # add as arg? add mask arg?
+GAUSSFIT = True
 POLYFIT = True
 
 def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE NORMALIZATION
@@ -20,7 +23,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     wm_data = wm_mask.get_fdata()
     mri_shape = mri_data.shape
     wm_shape = wm_data.shape
-    slice_num = min(mri_shape[0], mri_shape[1], mri_shape[2], mri_shape[3])
+    slice_num = min(mri_shape[0], mri_shape[1], mri_shape[2])
     z_index = mri_shape.index(slice_num)
     x_index = mri_shape.index(max(mri_shape[0], mri_shape[1], mri_shape[2]))
     y_index = mri_shape[1:3].index(max(0, mri_shape[1], mri_shape[2])) + 1
@@ -51,8 +54,102 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     mri_final = mri_data
     wm_final = wm_data
 
+    gaussian_params = []
+    # get histogram of each wm slice
+    for i in range(slice_num):
+        # print("SLICE: " + str(i + 1))
+        a = np.where(wm_data[:, :, i] > 0)
+        hist, bins = np.histogram(wm_data[:,:,i][a].flatten(), bins=100)
+
+        def double_gaussian(x, A1, mu1, sigma1, A2, mu2, sigma2):
+            return (
+                A1 * np.exp(-0.5 * ((x - mu1) / sigma1) ** 2) +
+                A2 * np.exp(-0.5 * ((x - mu2) / sigma2) ** 2)
+            )
+
+        # Initial guess for the parameters
+        # count voxels within 1 std of mean
+        area = np.count_nonzero(wm_data[:,:,i][a])
+        # get bin width
+        bin_width = bins[1] - bins[0]
+        # print("bin: " + str(bin_width))
+        amp_guess = area / pstdev(wm_data[:,:,i][a]) * 0.3989 * bin_width
+        
+        # print("voxels: " + str(area))
+        # print("stdev: " + str(pstdev(wm_data[:,:,i][a])))
+        # print("amp_guess: " + str(amp_guess))
+        # initial_params = [100, wm_mean[i], 20, amp_guess, median(wm_data[:,:,i][a]), 20]
+        
+        model = Model(double_gaussian)
+        params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i], sigma1=pstdev(wm_data[:,:,i][a]), A2=amp_guess, mu2=median(wm_data[:,:,i][a]), sigma2=pstdev(wm_data[:,:,i][a]))
+        result = model.fit(hist, params, x=bins[:-1])
+        # print(result.fit_report())
+        # print(result.best_values)
+        gaussian_params.append(result.best_values)
+
+        # Perform the fitting
+        # optimized_params, _ = curve_fit(double_gaussian, bins[:-1], hist, p0=initial_params, maxfev=100000)
+        # gaussian_params.append(optimized_params)
+        
+        # Generate x values for plotting the fitted curve
+        # x_values = np.linspace(bins[0], bins[-1], 1000)
+
+        # Compute the fitted curve using the fitted parameters
+        # fitted_curve = double_gaussian(x_values, *optimized_params)
+
+        # Plot the histogram
+        plt.figure()
+        plt.bar(bins[:-1], hist, width=np.diff(bins), align='edge', alpha=0.5)
+
+        # Plot the fitted curve
+        plt.plot(bins[:-1], result.best_fit, color='red', linewidth=2)
+
+        # Add labels and title
+        plt.title(f"Histogram and Fitted Curve - Slice {i+1}")
+        plt.xlabel("Pixel Value")
+        plt.ylabel("Frequency")
+
+        # make hist directory if it doesn't exist
+        hist_dir = file_dir + '/hist'
+        Path(hist_dir).mkdir(parents=True, exist_ok=True)
+
+        # Save the figure
+        path1 = file_dir + '/hist/DCE_' + str(i+1) + '_hist.png'
+        plt.savefig(path1)
+        plt.close()
+
+    # print(gaussian_params[2])
+
     # apply normalizations
-    if POLYFIT is True:
+    if GAUSSFIT:
+        print("Using Gaussian fitting to normalize DCE")
+        mu = []
+        for i in range(slice_num):
+            # max(gaussian_params[i][0], gaussian_params[i][3])
+            # if gaussian_params[i][0] > gaussian_params[i][3] and gaussian_params[i][1] > 0 and gaussian_params[i][1] < 1000:# and abs(gaussian_params[i][1] - wm_mean[i]) < abs(gaussian_params[i][4] - wm_mean[i]):
+            #     mu.append(gaussian_params[i][1])
+            # else:
+            #     mu.append(gaussian_params[i][4])
+            
+            if gaussian_params[i]['A1'] > gaussian_params[i]['A2']:
+                mu.append(gaussian_params[i]['mu1'])
+            else:
+                mu.append(gaussian_params[i]['mu2'])
+
+            # print("mu " + str(mu[i]))
+            # print("SLICE: " + str(i + 1))
+            # print("mu: " + str(gaussian_params[i]['mu1']) + " " + str(gaussian_params[i]['mu2']))
+            # print("A: " + str(gaussian_params[i]['A1']) + " " + str(gaussian_params[i]['A2']))
+            # print("sigma: " + str(gaussian_params[i]['sigma1']) + " " + str(gaussian_params[i]['sigma2']))
+
+        mean_mu = mean(mu)
+        # print("mean_mu: " + str(mean_mu))
+        for i in range(slice_num):
+            scale_factor = mean_mu / mu[i]
+            mri_final[:, :, i] *= scale_factor
+            wm_final[:, :, i] *= scale_factor
+
+    elif POLYFIT is True:
         print("Using Polynomial fitting to normalize " + mri_file1)
         poly_norm_curve = Polynomial.fit(list(range(slice_num)), wm_mean, 4, w=polyfit_slice_weights)
         norm_slices = polyval(list(range(slice_num)), poly_norm_curve.convert().coef)
@@ -102,15 +199,18 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
 
     fig, ax = plt.subplots(figsize=(20, 6))
     ax.plot(range(slice_num), wm_mean, '-ok', label='original')
-    if POLYFIT is True:
+    if POLYFIT is True and GAUSSFIT is False:
         ax.plot(range(slice_num), norm_slices, ':ob', label='fit')
-    ax.plot(range(slice_num), norm_wm, '--og', label='corrected')
+    if GAUSSFIT:
+        ax.plot(range(slice_num), mu, 'o', label='mu', color='grey')
+        ax.plot(range(slice_num), np.ones(slice_num)*mean_mu, ':x', label='mean_mu', color='lightgreen')
+    ax.plot(range(slice_num), norm_wm, '--xg', label='corrected')
     ax.set_xlabel('Slice #')
     ax.set_ylabel('White Matter Mean')
     ax.set_title("DCE Slice Normalization")
     ax.legend()
 
-    path2 = file_dir +'/DCE_mc_bfc_norm.png'   #THE STRING IN THE END CONTAINS THE FILE NAME OF THE GRAPHS GENERATED
+    path2 = file_dir +'/DCE_mc_bfc_norm.svg'   #THE STRING IN THE END CONTAINS THE FILE NAME OF THE GRAPHS GENERATED
     plt.savefig(path2)
 
     mri_final = np.transpose(mri_final, (x_index, y_index, z_index, 3))
