@@ -265,7 +265,7 @@ data = {
     't1w_bet_dyn' : dir + '/t1bet_to_dyn.svg',
     't1w_wm_dyn' : dir + '/t1wm_to_dyn.svg',
     't1w_gm_dyn' : dir + '/t1gm_to_dyn.svg',
-    'Z_DCE' : dir + '/DCE_mc_bfc_norm.png',
+    'Z_DCE' : dir + '/DCE_mc_bfc_norm.svg',
     'TR' : 'Repetition Time: ' + str(tr) + 's',
     'FA' : 'Flip Angle: ' + str(fa) + '°',
     'Hematocrit' : 'Hematocrit: ' + str(hematocrit),
