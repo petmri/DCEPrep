@@ -260,6 +260,7 @@ data = {
     'T1_FAs': 'FAs: ' + FA_str,
     'T1_GPU': str(GPU_T1),
     'T1_map': dir + '/t1_map.svg',
+    'displacements' : dir + '/displacements.svg',
     'AIF_mask': dir + '/AIF_mask.svg',
     'AIF_curve': dir + '/AIF_curve.svg',
     't1w_bet_dyn' : dir + '/t1bet_to_dyn.svg',
