@@ -16,13 +16,11 @@ for file in files_to_reorient:
     command = ['c3d', file, '-orient', 'RAS', '-o', file_no_extension + '_RAS.nii']
     try:
         subprocess.run(command, check=True)
-        reorient_success = True
     except:
         print("Error running c3d command: " + ' '.join(command))
-        print("Check if c3d is installed and in your path.")
-        reorient_success = False
+        print("Check if c3d is installed and in your path, or if the target file exists.")
 
-if reorient_success:
+try:
     ktrans = nib.load(str(dir) + '/dce_patlak_fit_Ktrans_RAS.nii')
     ktrans_data = ktrans.get_fdata()
     ktrans_flipped = np.flip(ktrans_data, axis=1)
@@ -36,7 +34,7 @@ if reorient_success:
     plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-124, -159, -5), axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
     plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-159, -194, -5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
     plt.savefig(str(dir) + '/ktrans.svg', bbox_inches='tight', pad_inches = 0)
-else:
+except:
     print("Error plotting Ktrans")
     dimensions = 'ktrans failed to load'
     voxel_size = 'ktrans failed to load'
@@ -52,6 +50,10 @@ commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('asci
 
 # get subject id
 subject_id = dir.split('/')[-2]
+
+# get timepoint
+timepoint = dir.split('/')[-1]
+
 # get institute from DCE.json
 try:
     with open(str(dir) + '/DCE.json') as f:
@@ -78,7 +80,7 @@ try:
 except:
     print("Error plotting T1w segmentation")
 
-if reorient_success:
+try:
     # T1w to VFA
     plotting.plot_anat(str(dir) + '/T1_wm_mask_RAS.nii', cmap='gray', output_file=str(dir)+'/t1w_to_vfa.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w to VFA')
 
@@ -86,6 +88,8 @@ if reorient_success:
     plotting.plot_anat(str(dir) + '/T1_bet_mask_dyn_RAS.nii', cmap='gray', output_file=str(dir)+'/t1bet_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w brain mask to dyn')
     plotting.plot_anat(str(dir) + '/T1_wm_mask_dyn_RAS.nii', cmap='gray', output_file=str(dir)+'/t1wm_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w wm to dyn')
     plotting.plot_anat(str(dir) + '/T1_gm_mask_dyn_RAS.nii', cmap='gray', output_file=str(dir)+'/t1gm_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w gm to dyn')
+except:
+    print("Error plotting T1w to dyn")
 
 try:
     # T1 map
@@ -176,8 +180,8 @@ snr_threshold_pattern = r"User selected SNR threshold for AIF:\s+(\d+)"
 relaxivity_pattern = r"User selected contrast agent R1 relaxivity \(/mM/sec\):\s+(\d+\.\d+)"
 steady_state_pattern = r"User selected end of steady state time \(image number\):\s+(-?\d+)"
 
-tr = extract_value(tr_pattern, log_text)
-fa = extract_value(fa_pattern, log_text)
+DCE_tr = extract_value(tr_pattern, log_text)
+DCE_fa = extract_value(fa_pattern, log_text)
 hematocrit = extract_value(hematocrit_pattern, log_text)
 snr_threshold = extract_value(snr_threshold_pattern, log_text)
 relaxivity = extract_value(relaxivity_pattern, log_text)
@@ -227,7 +231,7 @@ except:
 
 if RUNB_log:
     def extract_r2_values(log_text):
-        r2_pattern = r"R\^2 of AIF fit = (\d+\.\d+)"
+        r2_pattern = r"R\^2 of AIF fit = (-*\d+\.\d+)"
         r2_values = re.findall(r2_pattern, log_text)
         return r2_values
 
@@ -286,16 +290,17 @@ else:
 # Ktrans
 
 data = {
-    'title': subject_id + ' Report',
+    'title': subject_id + ' ' + timepoint + ' Report',
     'heading': 'Summary',
     'Subject': 'Subject ID: ' + subject_id,
+    'Timepoint': 'Timepoint: ' + timepoint,
     'Date': 'Date: ' + date,
     'Commit': 'Commit: ' + commit_hash,
     'Institute': 'Institute: ' + institute,
-    'Machine': 'Machine: ' + manufacturer + ' ' + MR_machine_model + ' ' + field_strength + 'T',
+    'Machine': 'Machine: ' + manufacturer + ' ' + MR_machine_model + ' ' + str(field_strength) + 'T',
     'ktrans': dir + '/ktrans.svg',
     'image_path1': dir + '/dceAIF_fitting.png',
-    'image_alt1': 'My image',
+    'image_alt1': 'Missing image',
     'image_path2': dir + '/dce_timecurves.png',
     'image_alt2': 'My image2',
     'Dimensions': 'Dimensions: ' + str(dimensions),
@@ -327,8 +332,8 @@ data = {
     't1w_wm_dyn' : dir + '/t1wm_to_dyn.svg',
     't1w_gm_dyn' : dir + '/t1gm_to_dyn.svg',
     'Z_DCE' : dir + '/DCE_mc_bfc_norm.svg',
-    'TR' : 'Repetition Time: ' + str(tr) + 's',
-    'FA' : 'Flip Angle: ' + str(fa) + '°',
+    'DCE_TR' : 'Repetition Time: ' + str(DCE_tr) + 's',
+    'DCE_FA' : 'Flip Angle: ' + str(DCE_fa) + '°',
     'Hematocrit' : 'Hematocrit: ' + str(hematocrit),
     'SNR_Threshold' : 'SNR Threshold: ' + str(snr_threshold),
     'Relaxivity' : 'Relaxivity: ' + str(relaxivity) + '/mM/sec',
@@ -349,5 +354,5 @@ data = {
 output = template.render(data)
 
 # write html to file
-with open('output.html', 'w') as f:
+with open(dir + '/giga_report.html', 'w') as f:
     f.write(output)

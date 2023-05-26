@@ -91,13 +91,14 @@
     <h1 id="Summary">Summary</h1>
     <ul>
         <li>{{ Subject }}</li>
+        <li>{{ Timepoint }}</li>
         <li>{{ Date }}</li>
         <li>{{ Commit }}</li>
         <li>{{ Institute }}</li>
         <li>{{ Machine }}</li>
     </ul>
     <h2>Ktrans (/min)</h2>
-    <img src="{{ ktrans }}" alt="{{ ELYOUEL }}" width="1600"></img>
+    <img src="{{ ktrans }}" alt="{{ ELYOUEL }}" width="1600" alt="{{ image_alt1 }}"></img>
     <h1 id="Preprocessing">Preprocessing</h1>
     <h2>Anatomical Info</h2>
     <li>{{ Dimensions }}</li>
@@ -163,8 +164,8 @@
     <h1 id="DCE">DCE Outputs</h1>
     <h2>RUN A</h2>
     <ul>
-        <li>{{ TR }}</li>
-        <li>{{ FA }}</li>
+        <li>{{ DCE_TR }}</li>
+        <li>{{ DCE_FA }}</li>
         <li>{{ Hematocrit }}</li>
         <li>{{ SNR_Threshold }}</li>
         <li>{{ Relaxivity }}</li>

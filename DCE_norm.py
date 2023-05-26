@@ -211,7 +211,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     ax.legend()
 
     path2 = file_dir +'/DCE_mc_bfc_norm.svg'   #THE STRING IN THE END CONTAINS THE FILE NAME OF THE GRAPHS GENERATED
-    plt.savefig(path2)
+    plt.savefig(path2, bbox_inches='tight')
 
     mri_final = np.transpose(mri_final, (x_index, y_index, z_index, 3))
     final_img = nib.Nifti1Image(mri_final, mri.affine)
