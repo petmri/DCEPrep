@@ -199,7 +199,11 @@ RUN curl -sSLO "https://github.com/MIC-DKFZ/HD-BET/archive/refs/heads/master.zip
     && curl -sSLo '#1.model' https://zenodo.org/record/2540695/files/[0-4].model?download=1 \
     && rm /master.zip
 
-# THIS
+# AUTO AIF
+RUN curl -sSLO "https://github.com/petmri/vascular_function/archive/refs/heads/optimize_input.zip" \
+    && unzip -d /opt/vascular_function *optimize_input.zip && rm /optimize_input.zip
+
+# pip requirements for this
 COPY requirements.txt .
 
 RUN python3 -m pip install --no-cache-dir -r requirements.txt && python3 -m pip cache purge && \
