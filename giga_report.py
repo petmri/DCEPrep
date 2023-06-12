@@ -4,6 +4,7 @@ import jinja2
 import json
 import nibabel as nib
 import numpy as np
+import os
 import subprocess
 from nilearn import plotting
 import matplotlib.pyplot as plt
@@ -289,6 +290,13 @@ else:
 
 # Ktrans
 
+# MNI space registration
+fsl_dir = os.environ['FSLDIR']
+print(fsl_dir)
+plotting.plot_anat(fsl_dir + '/data/standard/MNI152_T1_1mm_brain.nii.gz', title='MNI152_T1_1mm_brain', output_file=dir + '/MNI152_T1_1mm_brain.svg', annotate=False, colorbar=False, draw_cross=False)
+plotting.plot_anat(dir + '/t1w_MNI.nii.gz', title='t1w_MNI', output_file=dir + '/t1w_MNI.svg', annotate=False, colorbar=False, draw_cross=False)
+plotting.plot_anat(dir + '/ktrans_2_MNI.nii.gz', title='ktrans_MNI', vmin=0, vmax=0.009, output_file=dir + '/Ktrans_MNI.svg', annotate=False, colorbar=False, draw_cross=False)
+
 data = {
     'title': subject_id + ' ' + timepoint + ' Report',
     'heading': 'Summary',
@@ -349,6 +357,9 @@ data = {
     'DCE_elapsed_time' : 'Elapsed time: ' + str(dce_elapsed_time) + 's',
     'ktrans_zeros' : dir + '/T1_Ktrans_zeros.png',
     'ktrans_analysis' : dir + '/T1_Ktrans_analysis.png',
+    'MNI_img' : dir + '/MNI152_T1_1mm_brain.svg',
+    'MNI_T1w' : dir + '/t1w_MNI.svg',
+    'MNI_Ktrans' : dir + '/ktrans_MNI.svg',
 }
 
 output = template.render(data)

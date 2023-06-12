@@ -114,7 +114,8 @@ for dir in */*_timepoint/; do
 	fslmaths dce_patlak_fit_Ktrans.nii -mas T1_csf_dyn.nii Ktrans_csf.nii
 	
 	# registration QC
-	high_zeros="False" # $(python3 $SCRIPT_PATH/auto_analysis.py $SUBJECT_TP_PATH)
+	python3 $SCRIPT_PATH/auto_analysis.py $SUBJECT_TP_PATH
+	high_zeros="False"
 	if [ $high_zeros = "True" ]
 		then
 		# re-register
@@ -258,6 +259,10 @@ for dir in */*_timepoint/; do
 	fslmaths ref_rep.nii -sub huh2.nii.gz bozo2.nii
 	fslmaths bozo2.nii -thr 0 bozo2.nii
 	
+	flirt -in DCE_mc.nii.gz -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -omat DCE2MNI.mat -out DCE_MNI_FSL.nii.gz
+	flirt -in T1.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out t1w_MNI.nii.gz -bins 256 -cost mutualinfo -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear
+	flirt -in dce_patlak_fit_Ktrans.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out ktrans_2_MNI.nii.gz -init DCE2MNI.mat -applyxfm
+
 	python3 $SCRIPT_PATH/report.py $SUBJECT_TP_PATH
 	python3 $SCRIPT_PATH/giga_report.py $SUBJECT_TP_PATH
 	cd ../../

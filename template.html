@@ -116,20 +116,6 @@
         <img id="image1gm" src="{{ T1w }}" alt="{{ image_alt1 }}">
         <img id="image2gm" src="{{ T1w_gm }}" alt="{{ image_alt2 }}">
     </div>
-    <script>
-        var containers = document.querySelectorAll('.image-container');
-        containers.forEach(function(container) {
-            container.addEventListener('mouseenter', function() {
-                var images = container.querySelectorAll('img');
-                images[0].style.opacity = 0.5;
-            });
-
-            container.addEventListener('mouseleave', function() {
-                var images = container.querySelectorAll('img');
-                images[0].style.opacity = 0;
-            });
-        });
-    </script>
     <h2>Registration to VFA Space</h2>
     <img src="{{ T1w_to_VFA }}" alt="{{ image_alt1 }}"></img>
     <h2>VFA Z-Normalization</h2>
@@ -198,5 +184,28 @@
         <img src="{{ ktrans_zeros }}" alt="{{ image_alt1 }}" width="800"></img>
         <img src="{{ ktrans_analysis }}" alt="{{ image_alt1 }}" width="800"></img>
     </div>
+    <h2>MNI Registration</h2>
+    <div id="image-container-3" class="image-container">
+        <img id="MNI_std" src="{{ MNI_img }}" alt="{{ image_alt1 }}" width="800"></img>
+        <img id="T1w_MNI" src="{{ MNI_T1w }}" alt="{{ image_alt1 }}" width="800"></img>
+    </div>
+    <div id="image-container-3" class="image-container">
+        <img id="MNI_std" src="{{ MNI_img }}" alt="{{ image_alt1 }}" width="800"></img>
+        <img id="Ktrans_MNI" src="{{ MNI_Ktrans }}" alt="{{ image_alt1 }}" width="800"></img>
+    </div>
+    <script>
+        var containers = document.querySelectorAll('.image-container');
+        containers.forEach(function(container) {
+            container.addEventListener('mouseenter', function() {
+                var images = container.querySelectorAll('img');
+                images[0].style.opacity = 0.5;
+            });
+
+            container.addEventListener('mouseleave', function() {
+                var images = container.querySelectorAll('img');
+                images[0].style.opacity = 0;
+            });
+        });
+    </script>
 </body>
 </html>
