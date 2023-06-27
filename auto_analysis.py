@@ -269,7 +269,7 @@ def analyze(file_dir):
     ax3.legend()
 
     # Save graphs
-    path2 = file_dir + '/T1_Ktrans_analysis.png'
+    path2 = file_dir + '/figures/T1_Ktrans_analysis.png'
     plt.savefig(path2, bbox_inches='tight')
     
     # Zeros
@@ -312,7 +312,7 @@ def analyze(file_dir):
     ax5.grid()
     ax5.legend()
 
-    plt.savefig(file_dir + '/T1_Ktrans_zeros.png', bbox_inches='tight')
+    plt.savefig(file_dir + '/figures/T1_Ktrans_zeros.png', bbox_inches='tight')
     # print(any(np.array(Ktrans_wm_zeros) >= 70) or any(np.array(Ktrans_gm_zeros) >= 70))
     print((Ktrans_wm_zero_avg >= 55) or (Ktrans_gm_zero_avg >= 55))
 

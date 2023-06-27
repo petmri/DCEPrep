@@ -84,7 +84,7 @@ for dir in */*_timepoint/; do
 done
 # Run bias correction on VFA data 
 # ------------------------------
-rm preprocessing_log.txt
+rm -f preprocessing_log.txt
 for dir in */*_timepoint/; do
 	date >> preprocessing_log.txt
 	echo "Preprocessing ${dir}..."

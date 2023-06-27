@@ -34,20 +34,20 @@ try:
     expected_ktrans_vmax = 0.005
     plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-124, -159, -5), axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
     plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-159, -194, -5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
-    plt.savefig(str(dir) + '/ktrans.svg', bbox_inches='tight', pad_inches = 0)
+    plt.savefig(str(dir) + '/figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
 except:
     print("Error plotting Ktrans")
     dimensions = 'ktrans failed to load'
     voxel_size = 'ktrans failed to load'
 
 # use jinja2 to generate html
-env = jinja2.Environment(loader=jinja2.FileSystemLoader('.'))
+env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))))
 template = env.get_template('template.html')
 
 # get date
 date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 # get commit hash
-commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=os.path.dirname(os.path.realpath(__file__))).decode('ascii').strip()
 
 # get subject id
 subject_id = dir.split('/')[-2]
@@ -72,23 +72,23 @@ except:
 
 try:
     # brain mask
-    plotting.plot_roi(str(dir) + '/T1_bet_mask.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, cmap='gray', output_file=str(dir)+'/t1w_mask.svg', annotate=False, colorbar=False, draw_cross=False, title='mask')
+    plotting.plot_roi(str(dir) + '/T1_bet_mask.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, cmap='gray', output_file=str(dir)+'/figures/t1w_mask.svg', annotate=False, colorbar=False, draw_cross=False, title='mask')
 
     # T1w segmentation
-    plotting.plot_anat(str(dir) + '/T1.nii', cmap='gray', output_file=str(dir)+'/t1w.svg', annotate=False, colorbar=False, draw_cross=False)
-    plotting.plot_roi(str(dir) + '/segmented_t1_seg_2.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, cmap='gray', output_file=str(dir)+'/t1w_wm.svg', annotate=False, colorbar=False, draw_cross=False, title='wm')
-    plotting.plot_roi(str(dir) + '/segmented_t1_seg_1.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, cmap='gray', output_file=str(dir)+'/t1w_gm.svg', annotate=False, colorbar=False, draw_cross=False, title='gm')
+    plotting.plot_anat(str(dir) + '/T1.nii', cmap='gray', output_file=str(dir)+'/figures/t1w.svg', annotate=False, colorbar=False, draw_cross=False)
+    plotting.plot_roi(str(dir) + '/segmented_t1_seg_2.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, cmap='gray', output_file=str(dir)+'/figures/t1w_wm.svg', annotate=False, colorbar=False, draw_cross=False, title='wm')
+    plotting.plot_roi(str(dir) + '/segmented_t1_seg_1.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, cmap='gray', output_file=str(dir)+'/figures/t1w_gm.svg', annotate=False, colorbar=False, draw_cross=False, title='gm')
 except:
     print("Error plotting T1w segmentation")
 
 try:
     # T1w to VFA
-    plotting.plot_anat(str(dir) + '/T1_wm_mask_RAS.nii', cmap='gray', output_file=str(dir)+'/t1w_to_vfa.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w to VFA')
+    plotting.plot_anat(str(dir) + '/T1_wm_mask_RAS.nii', cmap='gray', output_file=str(dir)+'/figures/t1w_to_vfa.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w to VFA')
 
     # T1w to dyn
-    plotting.plot_anat(str(dir) + '/T1_bet_mask_dyn_RAS.nii', cmap='gray', output_file=str(dir)+'/t1bet_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w brain mask to dyn')
-    plotting.plot_anat(str(dir) + '/T1_wm_mask_dyn_RAS.nii', cmap='gray', output_file=str(dir)+'/t1wm_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w wm to dyn')
-    plotting.plot_anat(str(dir) + '/T1_gm_mask_dyn_RAS.nii', cmap='gray', output_file=str(dir)+'/t1gm_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w gm to dyn')
+    plotting.plot_anat(str(dir) + '/T1_bet_mask_dyn_RAS.nii', cmap='gray', output_file=str(dir)+'/figures/t1bet_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w brain mask to dyn')
+    plotting.plot_anat(str(dir) + '/T1_wm_mask_dyn_RAS.nii', cmap='gray', output_file=str(dir)+'/figures/t1wm_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w wm to dyn')
+    plotting.plot_anat(str(dir) + '/T1_gm_mask_dyn_RAS.nii', cmap='gray', output_file=str(dir)+'/figures/t1gm_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w gm to dyn')
 except:
     print("Error plotting T1w to dyn")
 
@@ -147,13 +147,13 @@ except:
 
 try:
     # T1 map
-    plotting.plot_anat(str(dir) + '/t1_map_fixed_use_me.nii.gz', cmap='gray', output_file=str(dir)+'/t1_map.svg', annotate=False, colorbar=False, draw_cross=False, title='T1 map')
+    plotting.plot_anat(str(dir) + '/t1_map_fixed_use_me.nii.gz', cmap='gray', output_file=str(dir)+'/figures/t1_map.svg', annotate=False, colorbar=False, draw_cross=False, title='T1 map')
 except:
     print("Error plotting T1 map")
 
 try:
     # AIF
-    plotting.plot_roi(str(dir) + '/aif.nii', bg_img=str(dir)+'/15.nii', vmin=0, vmax=1, cmap='gray', output_file=str(dir)+'/AIF.svg', annotate=False, colorbar=False, draw_cross=False, title='AIF')
+    plotting.plot_roi(str(dir) + '/aif.nii', bg_img=str(dir)+'/15.nii', vmin=0, vmax=1, cmap='gray', output_file=str(dir)+'/figures/AIF.svg', annotate=False, colorbar=False, draw_cross=False, title='AIF')
 except:
     print("Error plotting AIF")
 
@@ -292,10 +292,10 @@ else:
 
 # MNI space registration
 fsl_dir = os.environ['FSLDIR']
-print(fsl_dir)
-plotting.plot_anat(fsl_dir + '/data/standard/MNI152_T1_1mm_brain.nii.gz', title='MNI152_T1_1mm_brain', output_file=dir + '/MNI152_T1_1mm_brain.svg', annotate=False, colorbar=False, draw_cross=False)
-plotting.plot_anat(dir + '/t1w_MNI.nii.gz', title='t1w_MNI', output_file=dir + '/t1w_MNI.svg', annotate=False, colorbar=False, draw_cross=False)
-plotting.plot_anat(dir + '/ktrans_2_MNI.nii.gz', title='ktrans_MNI', vmin=0, vmax=0.009, output_file=dir + '/Ktrans_MNI.svg', annotate=False, colorbar=False, draw_cross=False)
+# print(fsl_dir)
+plotting.plot_anat(fsl_dir + '/data/standard/MNI152_T1_1mm_brain.nii.gz', title='MNI152_T1_1mm_brain', output_file=dir + '/figures/MNI152_T1_1mm_brain.svg', annotate=False, colorbar=False, draw_cross=False)
+plotting.plot_anat(dir + '/t1w_MNI.nii.gz', title='t1w_MNI', output_file=dir + '/figures/t1w_MNI.svg', annotate=False, colorbar=False, draw_cross=False)
+plotting.plot_anat(dir + '/ktrans_2_MNI.nii.gz', title='ktrans_MNI', vmin=0, vmax=0.009, output_file=dir + '/figures/Ktrans_MNI.svg', annotate=False, colorbar=False, draw_cross=False)
 
 data = {
     'title': subject_id + ' ' + timepoint + ' Report',
@@ -306,40 +306,40 @@ data = {
     'Commit': 'Commit: ' + commit_hash,
     'Institute': 'Institute: ' + institute,
     'Machine': 'Machine: ' + manufacturer + ' ' + MR_machine_model + ' ' + str(field_strength) + 'T',
-    'ktrans': dir + '/ktrans.svg',
+    'ktrans': dir + '/figures/ktrans.svg',
     'image_path1': dir + '/dceAIF_fitting.png',
     'image_alt1': 'Missing image',
     'image_path2': dir + '/dce_timecurves.png',
     'image_alt2': 'My image2',
     'Dimensions': 'Dimensions: ' + str(dimensions),
     'Voxel_Size': 'Voxel Size: ' + str(voxel_size),
-    'Overlay': dir + '/overlay.svg',
-    'T1w': dir + '/t1w.svg',
-    'T1w_mask': dir + '/t1w_mask.svg',
-    'T1w_gm': dir + '/t1w_gm.svg',
-    'T1w_wm': dir + '/t1w_wm.svg',
-    'T1w_to_VFA': dir + '/t1w_to_vfa.svg',
+    'Overlay': dir + '/figures/overlay.svg',
+    'T1w': dir + '/figures/t1w.svg',
+    'T1w_mask': dir + '/figures/t1w_mask.svg',
+    'T1w_gm': dir + '/figures/t1w_gm.svg',
+    'T1w_wm': dir + '/figures/t1w_wm.svg',
+    'T1w_to_VFA': dir + '/figures/t1w_to_vfa.svg',
     'FA_1' : 'FA ' + str(FAs[0]),
     'FA_2' : 'FA ' + str(FAs[1]),
     'FA_3' : 'FA ' + str(FAs[2]),
     'FA_4' : 'FA ' + str(FAs[3]),
     'FA_5' : 'FA ' + str(FAs[4]),
-    'Z_1' : dir + '/2_BFC_Z.svg',
-    'Z_2' : dir + '/5_BFC_Z.svg',
-    'Z_3' : dir + '/10_BFC_Z.svg',
-    'Z_4' : dir + '/12_BFC_Z.svg',
-    'Z_5' : dir + '/15_BFC_Z.svg',
+    'Z_1' : dir + '/figures/2_BFC_Z.svg',
+    'Z_2' : dir + '/figures/5_BFC_Z.svg',
+    'Z_3' : dir + '/figures/10_BFC_Z.svg',
+    'Z_4' : dir + '/figures/12_BFC_Z.svg',
+    'Z_5' : dir + '/figures/15_BFC_Z.svg',
     'T1_TR': 'TR: ' + str(TR) + 'ms',
     'T1_FAs': 'FAs: ' + FA_str,
     'T1_GPU': str(GPU_T1),
-    'T1_map': dir + '/t1_map.svg',
-    'displacements' : dir + '/displacements.svg',
-    'AIF_mask': dir + '/AIF_mask.svg',
-    'AIF_curve': dir + '/AIF_curve.svg',
-    't1w_bet_dyn' : dir + '/t1bet_to_dyn.svg',
-    't1w_wm_dyn' : dir + '/t1wm_to_dyn.svg',
-    't1w_gm_dyn' : dir + '/t1gm_to_dyn.svg',
-    'Z_DCE' : dir + '/DCE_mc_bfc_norm.svg',
+    'T1_map': dir + '/figures/t1_map.svg',
+    'displacements' : dir + '/figures/displacements.svg',
+    'AIF_mask': dir + '/figures/AIF_mask.svg',
+    'AIF_curve': dir + '/figures/AIF_curve.svg',
+    't1w_bet_dyn' : dir + '/figures/t1bet_to_dyn.svg',
+    't1w_wm_dyn' : dir + '/figures/t1wm_to_dyn.svg',
+    't1w_gm_dyn' : dir + '/figures/t1gm_to_dyn.svg',
+    'Z_DCE' : dir + '/figures/DCE_mc_bfc_norm.svg',
     'DCE_TR' : 'Repetition Time: ' + str(DCE_tr) + 's',
     'DCE_FA' : 'Flip Angle: ' + str(DCE_fa) + '°',
     'Hematocrit' : 'Hematocrit: ' + str(hematocrit),
@@ -355,11 +355,11 @@ data = {
     'DCE_model' : 'Model: Patlak',
     'GPU_DCE' : str(GPU_DCE),
     'DCE_elapsed_time' : 'Elapsed time: ' + str(dce_elapsed_time) + 's',
-    'ktrans_zeros' : dir + '/T1_Ktrans_zeros.png',
-    'ktrans_analysis' : dir + '/T1_Ktrans_analysis.png',
-    'MNI_img' : dir + '/MNI152_T1_1mm_brain.svg',
-    'MNI_T1w' : dir + '/t1w_MNI.svg',
-    'MNI_Ktrans' : dir + '/ktrans_MNI.svg',
+    'ktrans_zeros' : dir + '/figures/T1_Ktrans_zeros.png',
+    'ktrans_analysis' : dir + '/figures/T1_Ktrans_analysis.png',
+    'MNI_img' : dir + '/figures/MNI152_T1_1mm_brain.svg',
+    'MNI_T1w' : dir + '/figures/t1w_MNI.svg',
+    'MNI_Ktrans' : dir + '/figures/ktrans_MNI.svg',
 }
 
 output = template.render(data)

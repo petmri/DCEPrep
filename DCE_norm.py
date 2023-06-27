@@ -110,11 +110,11 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
         plt.ylabel("Frequency")
 
         # make hist directory if it doesn't exist
-        hist_dir = file_dir + '/hist'
+        hist_dir = file_dir + '/figures/hist'
         Path(hist_dir).mkdir(parents=True, exist_ok=True)
 
         # Save the figure
-        path1 = file_dir + '/hist/DCE_' + str(i+1) + '_hist.png'
+        path1 = file_dir + '/figures/hist/DCE_' + str(i+1) + '_hist.png'
         plt.savefig(path1)
         plt.close()
 
@@ -210,7 +210,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     ax.set_title("DCE Slice Normalization")
     ax.legend()
 
-    path2 = file_dir +'/DCE_mc_bfc_norm.svg'   #THE STRING IN THE END CONTAINS THE FILE NAME OF THE GRAPHS GENERATED
+    path2 = file_dir +'/figures/DCE_mc_bfc_norm.svg'   #THE STRING IN THE END CONTAINS THE FILE NAME OF THE GRAPHS GENERATED
     plt.savefig(path2, bbox_inches='tight')
 
     mri_final = np.transpose(mri_final, (x_index, y_index, z_index, 3))
