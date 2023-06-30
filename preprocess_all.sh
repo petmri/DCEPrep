@@ -6,7 +6,7 @@ shopt -s extglob
 EN_Z_NORM=0
 EN_BIAS1=0
 EN_BIAS2=0
-#EN_MOTION_CORR=1
+EN_MOTION_CORR=0
 USE_FREESURFER=0
 
 # internal vars (don't change)
@@ -50,6 +50,9 @@ while getopts ":d:bBZfhc" options; do
 			echo "-f: use freesurfer for registration (seems to cut off top of cortical region for most subjects, works perfectly for one site)"
 			echo "-h: display this message"
 			exit 0
+			;;
+		m)
+			EN_MOTION_CORR=1
 			;;
 		Z)
 			EN_Z_NORM=1
@@ -192,37 +195,38 @@ for dir in */*_timepoint/; do
 		fslmaths 15_bfc.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii.gz &> /dev/null
 	else
 		# dumb file name management for norm only runs
-		fslmaths 2.nii -mas T1_bet_mask.nii.gz 2_bfc.nii &> /dev/null
-		fslmaths 5.nii -mas T1_bet_mask.nii.gz 5_bfc.nii &> /dev/null
-		fslmaths 10.nii -mas T1_bet_mask.nii.gz 10_bfc.nii &> /dev/null
-		fslmaths 12.nii -mas T1_bet_mask.nii.gz 12_bfc.nii &> /dev/null
-		fslmaths 15.nii -mas T1_bet_mask.nii.gz 15_bfc.nii &> /dev/null
+		# fslmaths 2.nii -mas T1_bet_mask.nii.gz 2_bfc.nii &> /dev/null
+		# fslmaths 5.nii -mas T1_bet_mask.nii.gz 5_bfc.nii &> /dev/null
+		# fslmaths 10.nii -mas T1_bet_mask.nii.gz 10_bfc.nii &> /dev/null
+		# fslmaths 12.nii -mas T1_bet_mask.nii.gz 12_bfc.nii &> /dev/null
+		# fslmaths 15.nii -mas T1_bet_mask.nii.gz 15_bfc.nii &> /dev/null
+
 		
-		echo "Skipping BFC... but still segmenting one VFA for matter masks"
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 15_bfc.nii &> /dev/null
-		rm 15_bfc_mixeltype.nii.gz &> /dev/null
-		rm 15_bfc_pve_0.nii.gz &> /dev/null
-		rm 15_bfc_pve_1.nii.gz &> /dev/null
-		rm 15_bfc_pve_2.nii.gz &> /dev/null
-		rm 15_bfc_pveseg.nii.gz &> /dev/null
-		rm 15_bfc_seg.nii.gz &> /dev/null
+		# echo "Skipping BFC... but still segmenting one VFA for matter masks"
+		# fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 15_masked.nii &> /dev/null
+		# rm 15_bfc_mixeltype.nii.gz &> /dev/null
+		# rm 15_bfc_pve_0.nii.gz &> /dev/null
+		# rm 15_bfc_pve_1.nii.gz &> /dev/null
+		# rm 15_bfc_pve_2.nii.gz &> /dev/null
+		# rm 15_bfc_pveseg.nii.gz &> /dev/null
+		# rm 15_bfc_seg.nii.gz &> /dev/null
 		
 		# threshold and binarize wm mask
 		#fslmaths 15_bfc_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
 		
 		# apply wm mask to all VFAs
-		fslmaths 2_bfc.nii -mas T1_wm_mask.nii.gz 2_bfc_wm.nii &> /dev/null
-		fslmaths 5_bfc.nii -mas T1_wm_mask.nii.gz 5_bfc_wm.nii &> /dev/null
-		fslmaths 10_bfc.nii -mas T1_wm_mask.nii.gz 10_bfc_wm.nii &> /dev/null
-		fslmaths 12_bfc.nii -mas T1_wm_mask.nii.gz 12_bfc_wm.nii &> /dev/null
-		fslmaths 15_bfc.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii &> /dev/null
+		# fslmaths 2_bfc.nii -mas T1_wm_mask.nii.gz 2_bfc_wm.nii &> /dev/null
+		# fslmaths 5_bfc.nii -mas T1_wm_mask.nii.gz 5_bfc_wm.nii &> /dev/null
+		# fslmaths 10_bfc.nii -mas T1_wm_mask.nii.gz 10_bfc_wm.nii &> /dev/null
+		# fslmaths 12_bfc.nii -mas T1_wm_mask.nii.gz 12_bfc_wm.nii &> /dev/null
+		# fslmaths 15_bfc.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii &> /dev/null
 		
 		# apply MP-RAGE wm mask
-		fslmaths 2_bfc.nii -mas T1_wm_mask.nii.gz 2_bfc_wm.nii &> /dev/null
-		fslmaths 5_bfc.nii -mas T1_wm_mask.nii.gz 5_bfc_wm.nii &> /dev/null
-		fslmaths 10_bfc.nii -mas T1_wm_mask.nii.gz 10_bfc_wm.nii &> /dev/null
-		fslmaths 12_bfc.nii -mas T1_wm_mask.nii.gz 12_bfc_wm.nii &> /dev/null
-		fslmaths 15_bfc.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii &> /dev/null
+		fslmaths 2_masked.nii -mas T1_wm_mask.nii.gz 2_bfc_wm.nii &> /dev/null
+		fslmaths 5_masked.nii -mas T1_wm_mask.nii.gz 5_bfc_wm.nii &> /dev/null
+		fslmaths 10_masked.nii -mas T1_wm_mask.nii.gz 10_bfc_wm.nii &> /dev/null
+		fslmaths 12_masked.nii -mas T1_wm_mask.nii.gz 12_bfc_wm.nii &> /dev/null
+		fslmaths 15_masked.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii &> /dev/null
 	fi
 
 	# Run Z-axis normalization VFA data
@@ -233,14 +237,16 @@ for dir in */*_timepoint/; do
 		python3 $SCRIPT_PATH/VFA_norm.py $SUBJECT_TP_PATH &> /dev/null
 		prog=$(echo "scale=2;  $prog + .33 / $count" | bc -l)
 		echo -ne "VFA MOTIONCORR [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
-	fi
 
-	if [ ! -f "12_BFC_Z.nii" ]
-		then
-			echo $dir "Missing Z-normalized files. Z-norm likely failed due to non-existent inputs." >> $LOG_FILE
-			cd ..
-			fail=1
-			continue
+		if [ ! -f "12_BFC_Z.nii" ]
+			then
+				echo $dir "Missing Z-normalized files. Z-norm likely failed due to non-existent inputs." >> $LOG_FILE
+				cd ..
+				fail=1
+				continue
+		fi
+	else
+		mkdir -p figures &> /dev/null
 	fi
 
 	if [ $EN_BIAS2 -eq 1 ]
@@ -295,7 +301,12 @@ for dir in */*_timepoint/; do
 	
 	# motion correction of VFA
 	# ------------------------------
-	mcflirt -in VFA.nii.gz -refvol 'VFA.nii.gz[0]' -cost mutualinfo -report -verbose -plots -o VFA_mc.nii &> /dev/null
+	if [ $EN_MOTION_CORR -eq 1 ]
+		then
+		mcflirt -in VFA.nii.gz -refvol 'VFA.nii.gz[0]' -cost mutualinfo -report -verbose -plots -o VFA_mc.nii &> /dev/null
+	else
+		cp VFA.nii.gz VFA_mc.nii.gz
+	fi
 	prog=$(echo "scale=2;  $prog + .5 / $count" | bc -l)
 	echo -ne "MAKE T1 MAPS   [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
 	gunzip -f VFA_mc.nii.gz
@@ -326,19 +337,25 @@ for dir in */*_timepoint/; do
 	# Motion correction of dynamic images using FSL
 	# ------------------------------
 	#echo Motion correcting dynamic images...
-	mcflirt -in DCE.nii -refvol 'DCE.nii[1]' -cost mutualinfo -report -plots -o DCE_mc.nii &> /dev/null
+	if [ $EN_MOTION_CORR -eq 1 ]
+		then
+		mcflirt -in DCE.nii -refvol 'DCE.nii[1]' -cost mutualinfo -report -plots -o DCE_mc.nii &> /dev/null
+		if [ ! -f "DCE_mc.nii.gz" ]
+			then
+				echo $dir "Missing motion corrected DCE file." >> $LOG_FILE
+				cd ..
+				fail=1
+				continue
+		fi
+	else
+		cp DCE.nii DCE_mc.nii
+		gzip DCE_mc.nii
+	fi
 	ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 	prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 	echo -ne "REG T1 MAP->DCE[=======================>                          ] $prog% ($current/$count) ~$ETA min remaining \r"
 	max=$(python3 $SCRIPT_PATH/max_disp.py $SUBJECT_TP_PATH)
 	echo -e "\e[1;33m$max\e[0m" >> $LOG_FILE
-	if [ ! -f "DCE_mc.nii.gz" ]
-		then
-			echo $dir "Missing motion corrected DCE file." >> $LOG_FILE
-			cd ..
-			fail=1
-			continue
-	fi
 	
 	# Align T1 map with Dynamic data
 	# ------------------------------
@@ -448,8 +465,8 @@ for dir in */*_timepoint/; do
 		fi
 	else
 		#echo Motion correcting dynamic set
-		gunzip -f DCE_mc.nii.gz
-		mv DCE_mc.nii DCE_mc_bfc.nii
+		cp DCE_mc.nii.gz DCE_mc_bfc.nii.gz
+		gunzip -f DCE_mc_bfc.nii.gz
 	fi
 	
 	# align existing white matter mask to dynamic images and re-binarize
@@ -459,12 +476,12 @@ for dir in */*_timepoint/; do
 	#antsRegistrationSyN.sh -d 3 -t r -f ref_rep.nii -m T1_wm_mask.nii.gz -o T1_wm_mask_dyn
 	if [ $USE_FREESURFER -eq 1 ] || [ $dir == "203450/1st_timepoint/" ]
 		then
-		flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -2D -o T1_wm_mask_dyn.nii &> /dev/null
+		flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -2D -o T1_wm_mask_dyn_pv.nii &> /dev/null
 	else
-		antsApplyTransforms -i T1_wm_mask.nii.gz -r ref_rep.nii -t T1_bet_mask_dyn0GenericAffine.mat -o T1_wm_mask_dyn.nii
+		antsApplyTransforms -i T1_wm_mask.nii.gz -r ref_rep.nii -t T1_bet_mask_dyn0GenericAffine.mat -o T1_wm_mask_dyn_pv.nii
 	fi
 	#mv T1_wm_mask_dynWarped.nii.gz T1_wm_mask_dyn.nii.gz
-	fslmaths T1_wm_mask_dyn.nii -thr 0.8 -bin T1_wm_mask_dyn.nii.gz &> /dev/null
+	fslmaths T1_wm_mask_dyn_pv.nii -thr 0.8 -bin T1_wm_mask_dyn.nii.gz &> /dev/null
 	
 	#fslmaths T1_wm_mask_dynWarped.nii -thr 0.7 -bin T1_wm_mask_dyn.nii
 	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_bet_mask.nii.gz T1_bet_mask_dyn.nii.gz
@@ -478,7 +495,12 @@ for dir in */*_timepoint/; do
 	# normalize dynamic images
 	# ------------------------------
 	#echo Normalizing dynamic images...
-	python3 $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH &> /dev/null
+	if [ $EN_Z_NORM -eq 1 ]
+		then
+		python3 $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH &> /dev/null
+	else
+		cp DCE_mc_bfc.nii DCE_mc_bfc_norm.nii
+	fi
 
 	if [ ! -f "DCE_mc_bfc_norm.nii" ]
 		then
