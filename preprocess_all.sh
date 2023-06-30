@@ -21,7 +21,7 @@ prog=0
 successes=0
 
 # options
-while getopts ":d:bBZfhc" options; do
+while getopts ":d:bBZfhcm" options; do
 	case "${options}" in
 		b)
 			EN_BIAS1=1
