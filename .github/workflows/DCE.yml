@@ -59,11 +59,13 @@ jobs:
         cat /media/network_mriphysics/USC-PPG/RUNNER_DATA/dce_log.txt
     
     - name: Upload analysis results
-      uses: actions/upload-artifact@v3.1.0
+      uses: actions/upload-artifact@v3
       with:
-        name: T1_Ktrans_graphs
-        path: /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/report.png
-        retention-days: 5
+        name: HTML_report
+        path: |
+          /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/giga_report.html
+          /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/figures/
+        retention-days: 7
         if-no-files-found: error
 
   docker:
