@@ -6,9 +6,10 @@ import nibabel as nib
 import numpy as np
 import os
 import subprocess
-from nilearn import plotting
 import matplotlib.pyplot as plt
 import re
+from nilearn import plotting
+from matplotlib import colors as mcolors
 
 dir = sys.argv[1]
 files_to_reorient = [dir + '/2.nii', dir + '/dce_patlak_fit_Ktrans.nii', dir + '/T1_wm_mask.nii.gz', dir + '/t1_map_fixed_use_me.nii.gz', dir + '/T1_bet_mask_dyn.nii.gz', dir + '/T1_wm_mask_dyn.nii.gz', dir + '/T1_gm_mask_dyn.nii.gz']
@@ -35,6 +36,7 @@ try:
     plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-124, -159, -5), axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
     plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-159, -194, -5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
     plt.savefig(str(dir) + '/figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
+    plt.close()
 except:
     print("Error plotting Ktrans")
     dimensions = 'ktrans failed to load'
@@ -72,12 +74,12 @@ except:
 
 try:
     # brain mask
-    plotting.plot_roi(str(dir) + '/T1_bet_mask.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, cmap='gray', output_file=str(dir)+'/figures/t1w_mask.svg', annotate=False, colorbar=False, draw_cross=False, title='mask')
+    plotting.plot_roi(str(dir) + '/T1_bet_mask.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, dim=-1, cmap='gray', output_file=str(dir)+'/figures/t1w_mask.svg', annotate=False, colorbar=False, draw_cross=False, title='mask')
 
     # T1w segmentation
-    plotting.plot_anat(str(dir) + '/T1.nii', cmap='gray', output_file=str(dir)+'/figures/t1w.svg', annotate=False, colorbar=False, draw_cross=False)
-    plotting.plot_roi(str(dir) + '/segmented_t1_seg_2.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, cmap='gray', output_file=str(dir)+'/figures/t1w_wm.svg', annotate=False, colorbar=False, draw_cross=False, title='wm')
-    plotting.plot_roi(str(dir) + '/segmented_t1_seg_1.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, cmap='gray', output_file=str(dir)+'/figures/t1w_gm.svg', annotate=False, colorbar=False, draw_cross=False, title='gm')
+    plotting.plot_anat(str(dir) + '/T1.nii', cmap='gray', output_file=str(dir)+'/figures/t1w.svg', vmin=0, vmax=3000, annotate=False, colorbar=False, draw_cross=False)
+    plotting.plot_roi(str(dir) + '/segmented_t1_seg_2.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, dim=-1, cmap='gray', output_file=str(dir)+'/figures/t1w_wm.svg', annotate=False, colorbar=False, draw_cross=False, title='wm')
+    plotting.plot_roi(str(dir) + '/segmented_t1_seg_1.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, dim=-1, cmap='gray', output_file=str(dir)+'/figures/t1w_gm.svg', annotate=False, colorbar=False, draw_cross=False, title='gm')
 except:
     print("Error plotting T1w segmentation")
 
@@ -86,9 +88,28 @@ try:
     plotting.plot_anat(str(dir) + '/T1_wm_mask_RAS.nii', cmap='gray', output_file=str(dir)+'/figures/t1w_to_vfa.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w to VFA')
 
     # T1w to dyn
-    plotting.plot_anat(str(dir) + '/T1_bet_mask_dyn_RAS.nii', cmap='gray', output_file=str(dir)+'/figures/t1bet_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w brain mask to dyn')
-    plotting.plot_anat(str(dir) + '/T1_wm_mask_dyn_RAS.nii', cmap='gray', output_file=str(dir)+'/figures/t1wm_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w wm to dyn')
-    plotting.plot_anat(str(dir) + '/T1_gm_mask_dyn_RAS.nii', cmap='gray', output_file=str(dir)+'/figures/t1gm_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w gm to dyn')
+    # flip T1w masks
+    t1w_mask = nib.load(str(dir) + '/T1_bet_mask_dyn_RAS.nii')
+    t1w_mask_data = t1w_mask.get_fdata()
+    t1w_mask_flipped = np.flip(t1w_mask_data, axis=1)
+    t1w_mask_flipped = nib.Nifti1Image(t1w_mask_flipped, t1w_mask.affine, t1w_mask.header)
+    # nib.save(t1w_mask_flipped, str(dir) + '/T1_bet_mask_dyn_RAS.nii')
+
+    t1w_wm_mask = nib.load(str(dir) + '/T1_wm_mask_dyn_RAS.nii')
+    t1w_wm_mask_data = t1w_wm_mask.get_fdata()
+    t1w_wm_mask_flipped = np.flip(t1w_wm_mask_data, axis=1)
+    t1w_wm_mask_flipped = nib.Nifti1Image(t1w_wm_mask_flipped, t1w_wm_mask.affine, t1w_wm_mask.header)
+    # nib.save(t1w_wm_mask_flipped, str(dir) + '/T1_wm_mask_dyn_RAS.nii')
+
+    t1w_gm_mask = nib.load(str(dir) + '/T1_gm_mask_dyn_RAS.nii')
+    t1w_gm_mask_data = t1w_gm_mask.get_fdata()
+    t1w_gm_mask_flipped = np.flip(t1w_gm_mask_data, axis=1)
+    t1w_gm_mask_flipped = nib.Nifti1Image(t1w_gm_mask_flipped, t1w_gm_mask.affine, t1w_gm_mask.header)
+    # nib.save(t1w_gm_mask_flipped, str(dir) + '/T1_gm_mask_dyn_RAS.nii')
+
+    plotting.plot_anat(t1w_mask_flipped, cmap='gray', output_file=str(dir)+'/figures/t1bet_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w brain mask to dyn')
+    plotting.plot_anat(t1w_wm_mask_flipped, cmap='gray', output_file=str(dir)+'/figures/t1wm_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w wm to dyn')
+    plotting.plot_anat(t1w_gm_mask_flipped, cmap='gray', output_file=str(dir)+'/figures/t1gm_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w gm to dyn')
 except:
     print("Error plotting T1w to dyn")
 
@@ -147,13 +168,57 @@ except:
 
 try:
     # T1 map
-    plotting.plot_anat(str(dir) + '/t1_map_fixed_use_me.nii.gz', cmap='gray', output_file=str(dir)+'/figures/t1_map.svg', annotate=False, colorbar=False, draw_cross=False, title='T1 map')
+    # flip T1 map
+    img = nib.load(str(dir) + '/t1_map_fixed_use_me_RAS.nii')
+    img_data = img.get_fdata()
+    # img_data = np.flip(img_data, axis=0)
+    img_data = np.flip(img_data, axis=1)
+    t1_map_flipped = nib.Nifti1Image(img_data, img.affine, img.header)
+    plotting.plot_anat(t1_map_flipped, cmap='gray', vmin=0, vmax=5000, output_file=str(dir)+'/figures/t1_map.svg', annotate=False, colorbar=False, draw_cross=False, title='T1 map')
 except:
     print("Error plotting T1 map")
 
 try:
     # AIF
-    plotting.plot_roi(str(dir) + '/aif.nii', bg_img=str(dir)+'/15.nii', vmin=0, vmax=1, cmap='gray', output_file=str(dir)+'/figures/AIF.svg', annotate=False, colorbar=False, draw_cross=False, title='AIF')
+    # plot graph of AIF region
+    aif = nib.load(str(dir) + '/aif.nii')
+    aif_data = aif.get_fdata()
+    img = nib.load(str(dir) + '/DCE_mc.nii.gz')
+    img_data = img.get_fdata()
+    # binarize AIF
+    aif_data[aif_data > 0] = 1
+    aif_data[aif_data < 0] = 0
+    # get AIF data
+    aif_data_roi = np.multiply(aif_data, img_data)
+    # sum AIF data for each time point, z-slice independent
+    aif_curve = np.sum(aif_data_roi, axis=(0, 1, 2))
+    # divide by AIF mean of first timepoint
+    aif_curve = aif_curve / aif_curve[0]
+
+    # plot AIF
+    plt.plot(aif_curve)
+    plt.title('AIF Curve')
+    plt.xlabel('Timepoint')
+    plt.ylabel('Signal intensity / Baseline')
+    plt.savefig(str(dir)+'/figures/AIF_graph.svg', bbox_inches='tight')
+    plt.close()
+
+    # plot AIF overlay
+    plt.figure(figsize=(15,5), dpi=250)
+    plt.subplot(1,2,1)
+    plt.axis('off')
+
+    # rotate images
+    img_data = np.rot90(img_data, axes=(0,1))
+    aif_data = np.rot90(aif_data, axes=(0,1))
+
+    # overlay AIF mask
+    aif_slice = np.where(aif_data > 0)[2][0]
+    cmap = mcolors.LinearSegmentedColormap.from_list('custom cmap', [(0, 0, 0, 0), 'blue', 'green', 'red'])
+    plt.imshow(img_data[:,:,aif_slice, 5], cmap='gray')
+    plt.imshow(aif_data[:,:,aif_slice], cmap=cmap, alpha=1)
+    plt.savefig(str(dir)+'/figures/AIF_overlay.svg', bbox_inches='tight')
+    plt.close()
 except:
     print("Error plotting AIF")
 
@@ -302,7 +367,7 @@ data = {
     'heading': 'Summary',
     'Subject': 'Subject ID: ' + subject_id,
     'Timepoint': 'Timepoint: ' + timepoint,
-    'Date': 'Date: ' + date,
+    'Date': 'Date Processed: ' + date,
     'Commit': 'Commit: ' + commit_hash,
     'Institute': 'Institute: ' + institute,
     'Machine': 'Machine: ' + manufacturer + ' ' + MR_machine_model + ' ' + str(field_strength) + 'T',
@@ -336,6 +401,8 @@ data = {
     'displacements' : dir + '/figures/displacements.svg',
     'AIF_mask': dir + '/figures/AIF_mask.svg',
     'AIF_curve': dir + '/figures/AIF_curve.svg',
+    'AIF_overlay': dir + '/figures/AIF_overlay.svg',
+    'AIF_graph': dir + '/figures/AIF_graph.svg',
     't1w_bet_dyn' : dir + '/figures/t1bet_to_dyn.svg',
     't1w_wm_dyn' : dir + '/figures/t1wm_to_dyn.svg',
     't1w_gm_dyn' : dir + '/figures/t1gm_to_dyn.svg',

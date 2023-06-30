@@ -27,12 +27,44 @@
             padding: 0;
         }
 
+        .navbar-nav li {
+        position: relative;
+        }
+
+        .navbar-nav ul.dropdown {
+            position: absolute;
+            top: 30px;
+            display: none;
+            background-color: #fff;
+            padding: 0px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            list-style-type: none;
+            width: 100%;
+        }
+
+        .navbar-nav li:hover ul.dropdown {
+            display: block;
+        }
+
+        .navbar-nav ul.dropdown li {
+            margin: 10px 0;
+        }
+
+        .navbar-nav ul.dropdown li a {
+            color: #000;
+            text-decoration: none;
+        }
+
+        .navbar-nav ul.dropdown li:hover a {
+            background-color: #f1f1f1;
+        }
+
         .nav-item {
             margin-right: 10px;
         }
 
         .nav-item a {
-            color: #fff;
+            color: #ffffff;
             text-decoration: none;
             padding: 10px;
         }
@@ -83,8 +115,30 @@
     <nav class="navbar">
         <ul class="navbar-nav">
             <li class="nav-item"><a href="#">Summary</a></li>
-            <li class="nav-item"><a href="#Preprocessing">Preprocessing</a></li>
-            <li class="nav-item"><a href="#DCE">DCE</a></li>
+            <li class="nav-item">
+                <a href="#Preprocessing">Preprocessing</a>
+                <ul class="dropdown">
+                    <li><a href="#T1w_masks">T1w Masks</a></li>
+                    <li><a href="#T1w_to_VFA">T1w->VFA</a></li>
+                    <li><a href="#VFA_Z-norm">VFA Z</a></li>
+                    <li><a href="#T1_map">T1 Map</a></li>
+                    <li><a href="#MCFLIRT">MCFLIRT</a></li>
+                    <li><a href="#AIF">AIF</a></li>
+                    <li><a href="#T1w_dyn">T1w->dyn</a></li>
+                    <li><a href="#DCE_Z-norm">DCE Z</a></li>
+                </ul>
+            </li>
+            
+            <li class="nav-item">
+                <a href="#DCE">DCE</a>
+                <ul class="dropdown">
+                    <li><a href="#RUN_A">RUNA</a></li>
+                    <li><a href="#RUN_B">RUNB</a></li>
+                    <li><a href="#RUN_D">RUND</a></li>
+                    <li><a href="#Ktrans">Ktrans</a></li>
+                    <li><a href="#MNI">MNI</a></li>
+                </ul>
+            </li>
         </ul>
     </nav>
     <p></p>
@@ -103,7 +157,7 @@
     <h2>Anatomical Info</h2>
     <li>{{ Dimensions }}</li>
     <li>{{ Voxel_Size }}</li>
-    <h2>T1w Segmentation and Brain Mask</h2>
+    <h2 id="T1w_masks">T1w Segmentation and Brain Mask</h2>
     <div id="image-container" class="image-container">
         <img id="image1_mask" src="{{ T1w }}" alt="{{ image_alt1 }}">
         <img id="image2_mask" src="{{ T1w_mask }}" alt="{{ image_alt2 }}">
@@ -116,9 +170,9 @@
         <img id="image1gm" src="{{ T1w }}" alt="{{ image_alt1 }}">
         <img id="image2gm" src="{{ T1w_gm }}" alt="{{ image_alt2 }}">
     </div>
-    <h2>Registration to VFA Space</h2>
+    <h2 id="T1w_to_VFA">T1w Registration to VFA Space</h2>
     <img src="{{ T1w_to_VFA }}" alt="{{ image_alt1 }}"></img>
-    <h2>VFA Z-Normalization</h2>
+    <h2 id="VFA_Z-norm">VFA Z-Normalization</h2>
     <h3> {{ FA_1 }} </h3>
     <img src="{{ Z_1 }}" alt="{{ image_alt1 }}" width="1000"></img>
     <h3> {{ FA_2 }} </h3>
@@ -129,26 +183,29 @@
     <img src="{{ Z_4 }}" alt="{{ image_alt1 }}" width="1000"></img>
     <h3> {{ FA_5 }} </h3>
     <img src="{{ Z_5 }}" alt="{{ image_alt1 }}" width="1000"></img>
-    <h2>T1 Maps</h2>
+    <h2 id="T1_map">T1 Map</h2>
     <!-- <p>check for T1 ROCKETSHIP params</p> -->
     <li>{{ T1_TR }}</li>
     <li>{{ T1_FAs }}</li>
     <li>{{ T1_GPU }}</li>
     <img src="{{ T1_map }}" alt="{{ image_alt1 }}" width="75%"></img>
     <!-- <p>T1 wm/gm graphs</p> -->
-    <h2>MCFLIRT Displacements</h2>
+    <h2 id="MCFLIRT">MCFLIRT Displacements</h2>
     <img src="{{ displacements }}" alt="{{ image_alt1 }}" width="1000"></img>
-    <h2>AIF mask and curve</h2>
-    <img src="{{ AIF_mask }}" alt="{{ image_alt1 }}"" width="50%"></img>
-    <img src="{{ AIF_curve }}" alt="{{ image_alt1 }}"" width="50%"></img>
-    <h2>Registrations to Dynamic Space</h2>
+    <h2 id="AIF">AIF mask and curve</h2>
+    <img src="{{ AIF_mask }}" alt="AutoAIF not used" width="50%"></img>
+    <img src="{{ AIF_curve }}" alt="AutoAIF not used" width="50%"></img>
+    <br>
+    <img src="{{ AIF_overlay }}" width="50%"></img>
+    <img src="{{ AIF_graph }}" width="50%"></img>
+    <h2 id="T1w_dyn">Registrations to Dynamic Space</h2>
     <img src="{{ t1w_bet_dyn }}" alt="{{ image_alt1 }}"></img>
     <img src="{{ t1w_wm_dyn }}" alt="{{ image_alt1 }}"></img>
     <img src="{{ t1w_gm_dyn }}" alt="{{ image_alt1 }}"></img>
-    <h2>DCE Z-Normalization</h2>
+    <h2 id="DCE_Z-norm">DCE Z-Normalization</h2>
     <img src="{{ Z_DCE }}" alt="{{ image_alt1 }}" width="1200"></img>
     <h1 id="DCE">DCE Outputs</h1>
-    <h2>RUN A</h2>
+    <h2 id="RUN_A">RUN A</h2>
     <ul>
         <li>{{ DCE_TR }}</li>
         <li>{{ DCE_FA }}</li>
@@ -158,7 +215,7 @@
         <li>{{ A_last_line }}</li>
     </ul>
     <!-- % of voxels removed? -->
-    <h2>RUN B</h2>
+    <h2 id="RUN_B">RUN B</h2>
     <ul>
         <li>{{ Time_Resolution }}</li>
         <li>{{ R_squared_fit }}</li>
@@ -170,13 +227,13 @@
         <img src="{{ DCE_AIF_fit }}" alt="{{ image_alt1 }}" width="800"></img>
         <img src="{{ DCE_AIF_timecurve }}" alt="{{ image_alt1 }}" width="800"></img>
     </div>
-    <h2>RUN D</h2>
+    <h2 id="RUN_D">RUN D</h2>
     <ul>
         <li>{{ DCE_model }}</li>
         <li>{{ GPU_DCE }}</li>
         <li>{{ DCE_elapsed_time }}</li>
     </ul>
-    <h2>Ktrans maps</h2>
+    <h2 id="Ktrans">Ktrans maps</h2>
     <img src="{{ ktrans }}" alt="{{ ELYOUEL }}" width="1600"></img>
     <p>maybe Ktrans with segmentation overlay</p>
     <h2>Ktrans stats</h2>
@@ -184,7 +241,7 @@
         <img src="{{ ktrans_zeros }}" alt="{{ image_alt1 }}" width="800"></img>
         <img src="{{ ktrans_analysis }}" alt="{{ image_alt1 }}" width="800"></img>
     </div>
-    <h2>MNI Registration</h2>
+    <h2 id="MNI">MNI Registration</h2>
     <div id="image-container-3" class="image-container">
         <img id="MNI_std" src="{{ MNI_img }}" alt="{{ image_alt1 }}" width="800"></img>
         <img id="T1w_MNI" src="{{ MNI_T1w }}" alt="{{ image_alt1 }}" width="800"></img>
