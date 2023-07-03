@@ -236,7 +236,7 @@ for dir in */*_timepoint/; do
 	if [ $EN_Z_NORM -eq 1 ] 
 		then
 		#echo begin slice normalization
-		python3 $SCRIPT_PATH/VFA_norm.py $SUBJECT_TP_PATH
+		python3 $SCRIPT_PATH/VFA_norm.py $SUBJECT_TP_PATH &> /dev/null
 		prog=$(echo "scale=2;  $prog + .33 / $count" | bc -l)
 		echo -ne "VFA MOTIONCORR [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
 
@@ -502,7 +502,7 @@ for dir in */*_timepoint/; do
 	#echo Normalizing dynamic images...
 	if [ $EN_Z_NORM -eq 1 ]
 		then
-		python3 $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH &> /dev/null
+		python3 $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH
 	else
 		cp DCE_mc_bfc.nii DCE_mc_bfc_norm.nii
 	fi
