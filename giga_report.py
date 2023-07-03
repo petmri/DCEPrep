@@ -18,9 +18,10 @@ for file in files_to_reorient:
     command = ['c3d', file, '-orient', 'RAS', '-o', file_no_extension + '_RAS.nii']
     try:
         subprocess.run(command, check=True)
-    except:
+    except Exception as e:
         print("Error running c3d command: " + ' '.join(command))
-        print("Check if c3d is installed and in your path, or if the target file exists.")
+        # print("Check if c3d is installed and in your path, or if the target file exists.")
+        print(e)
 
 try:
     ktrans = nib.load(str(dir) + '/dce_patlak_fit_Ktrans_RAS.nii')
@@ -37,10 +38,11 @@ try:
     plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-159, -194, -5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
     plt.savefig(str(dir) + '/figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
     plt.close()
-except:
+except Exception as e:
     print("Error plotting Ktrans")
     dimensions = 'ktrans failed to load'
     voxel_size = 'ktrans failed to load'
+    print(e)
 
 # use jinja2 to generate html
 env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))))
@@ -65,12 +67,14 @@ try:
     manufacturer = dce['Manufacturer']
     MR_machine_model = dce['ManufacturersModelName']
     field_strength = dce['MagneticFieldStrength']
-except:
+except Exception as e:
     dce = {}
     institute = 'no json'
     manufacturer = 'no json'
     MR_machine_model = 'no json'
     field_strength = 'no json'
+    print("Error loading DCE.json")
+    print(e)
 
 try:
     # brain mask
@@ -80,8 +84,9 @@ try:
     plotting.plot_anat(str(dir) + '/T1.nii', cmap='gray', output_file=str(dir)+'/figures/t1w.svg', vmin=0, vmax=3000, annotate=False, colorbar=False, draw_cross=False)
     plotting.plot_roi(str(dir) + '/segmented_t1_seg_2.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, dim=-1, cmap='gray', output_file=str(dir)+'/figures/t1w_wm.svg', annotate=False, colorbar=False, draw_cross=False, title='wm')
     plotting.plot_roi(str(dir) + '/segmented_t1_seg_1.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, dim=-1, cmap='gray', output_file=str(dir)+'/figures/t1w_gm.svg', annotate=False, colorbar=False, draw_cross=False, title='gm')
-except:
+except Exception as e:
     print("Error plotting T1w segmentation")
+    print(e)
 
 try:
     # T1w to VFA
@@ -110,8 +115,9 @@ try:
     plotting.plot_anat(t1w_mask_flipped, cmap='gray', output_file=str(dir)+'/figures/t1bet_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w brain mask to dyn')
     plotting.plot_anat(t1w_wm_mask_flipped, cmap='gray', output_file=str(dir)+'/figures/t1wm_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w wm to dyn')
     plotting.plot_anat(t1w_gm_mask_flipped, cmap='gray', output_file=str(dir)+'/figures/t1gm_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w gm to dyn')
-except:
+except Exception as e:
     print("Error plotting T1w to dyn")
+    print(e)
 
 try:
     # T1 map
@@ -159,12 +165,13 @@ try:
         GPU_T1 = 'GPU was used'
     else:
         GPU_T1 = 'CPU was used'
-except:
+except Exception as e:
     print("Error getting T1 map parameters")
     FAs = [-1, -1, -1, -1, -1]
     FA_str = 'Failed to load FAs'
     TR = -1
     GPU_T1 = 'Failed to load GPU info'
+    print(e)
 
 try:
     # T1 map
@@ -175,8 +182,9 @@ try:
     img_data = np.flip(img_data, axis=1)
     t1_map_flipped = nib.Nifti1Image(img_data, img.affine, img.header)
     plotting.plot_anat(t1_map_flipped, cmap='gray', vmin=0, vmax=5000, output_file=str(dir)+'/figures/t1_map.svg', annotate=False, colorbar=False, draw_cross=False, title='T1 map')
-except:
+except Exception as e:
     print("Error plotting T1 map")
+    print(e)
 
 try:
     # AIF
@@ -188,15 +196,17 @@ try:
     # binarize AIF
     aif_data[aif_data > 0] = 1
     aif_data[aif_data < 0] = 0
-    # get AIF data
-    aif_data_roi = np.multiply(aif_data, img_data)
+    # mask DCE where AIF is 1
+    aif_data = np.expand_dims(aif_data, axis=-1)
+    aif_data_roi = img_data * aif_data
     # sum AIF data for each time point, z-slice independent
     aif_curve = np.sum(aif_data_roi, axis=(0, 1, 2))
     # divide by AIF mean of first timepoint
-    aif_curve = aif_curve / aif_curve[0]
+    aif_curve_ratio = aif_curve / aif_curve[0]
 
     # plot AIF
-    plt.plot(aif_curve)
+    plt.plot(aif_curve_ratio)
+    plt.text(0.7, 0.95, 'Baseline SI: ' + str(aif_curve[0]), transform=plt.gca().transAxes, fontsize=11, verticalalignment='top')
     plt.title('AIF Curve')
     plt.xlabel('Timepoint')
     plt.ylabel('Signal intensity / Baseline')
@@ -219,8 +229,10 @@ try:
     plt.imshow(aif_data[:,:,aif_slice], cmap=cmap, alpha=1)
     plt.savefig(str(dir)+'/figures/AIF_overlay.svg', bbox_inches='tight')
     plt.close()
-except:
+except Exception as e:
     print("Error plotting AIF")
+    # print error
+    print(e)
 
 # T1 dynamic space
 
@@ -235,9 +247,11 @@ try:
     with open(dir + '/A_dceR1info.log', 'r') as file:
         log_text = file.read()
     RUNA_log = True
-except:
+except Exception as e:
     log_text = ''
     RUNA_log = False
+    print("Error getting DCE parameters from A_dceR1info.log")
+    print(e)
 
 tr_pattern = r"User selected TR \(ms\):\s+(\d+\.\d+)"
 fa_pattern = r"User selected FA \(degrees\):\s+(\d+)"
@@ -291,8 +305,9 @@ try:
                 else:
                     is_target_line = False
     RUNB_log = True
-except:
-    print("Error getting DCE RUNB parameters")
+except Exception as e:
+    print("Error getting DCE RUNB parameters from B_dcefitted_R1info.log")
+    print(e)
     RUNB_log = False
 
 if RUNB_log:
@@ -332,8 +347,9 @@ try:
     else:
         GPU_DCE = 'CPU was used'
     RUND_log = True
-except:
-    print("Error getting DCE GPU info")
+except Exception as e:
+    print("Error getting DCE GPU info from dce_patlak_fit.log")
+    print(e)
     RUND_log = False
     GPU_DCE = 'Failed to load GPU info'
 
@@ -434,3 +450,5 @@ output = template.render(data)
 # write html to file
 with open(dir + '/giga_report.html', 'w') as f:
     f.write(output)
+
+print('Report generated in ' + dir + '/giga_report.html')

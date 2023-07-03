@@ -45,10 +45,11 @@ while getopts ":d:bBZfhcm" options; do
 			echo "-b: enable first round of bias field corrections"
 			echo "-B: enable second round of bias field corrections, post-Z-norm if enabled"
 			echo "-c: clean generated files prior to processing"
-			echo "-Z: enable Z-slice normalization"
 			echo "-d: specify main data directory containing all subject folders"
 			echo "-f: use freesurfer for registration (seems to cut off top of cortical region for most subjects, works perfectly for one site)"
+			echo "-m: enable motion correction"
 			echo "-h: display this message"
+			echo "-Z: enable Z-slice normalization"
 			exit 0
 			;;
 		m)
