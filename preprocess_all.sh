@@ -236,7 +236,7 @@ for dir in */*_timepoint/; do
 	if [ $EN_Z_NORM -eq 1 ] 
 		then
 		#echo begin slice normalization
-		python3 $SCRIPT_PATH/VFA_norm.py $SUBJECT_TP_PATH &> /dev/null
+		python3 $SCRIPT_PATH/VFA_norm.py $SUBJECT_TP_PATH
 		prog=$(echo "scale=2;  $prog + .33 / $count" | bc -l)
 		echo -ne "VFA MOTIONCORR [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
 
@@ -323,7 +323,10 @@ for dir in */*_timepoint/; do
 
 	# T1 mapping where the input image is 'VFA.motioncorrected.nii'
 	# ------------------------------
-	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts'; addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; T1mapping_fit('$SUBJECT_TP_PATH/'); exit;"
+	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; \
+		addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; \
+		addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts';	\
+		addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; T1mapping_fit('$SUBJECT_TP_PATH/'); exit;" &> /dev/null
 	((diff = SECONDS - diff))
 	ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 	prog=$(echo "scale=2;  $prog + 1.33 / $count" | bc -l)

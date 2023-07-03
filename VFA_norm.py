@@ -227,9 +227,9 @@ for file in files_in_dir:
         mask_file = file1.split('.', 1)
         mask_file = mask_file[0] + '_wm.nii'
         try:
-            normalize(file1, mask_file, str(dir))   #CALLING THE 'normalize()' FUNCTION TO PERFORM THE NORMALIZATION
-        except FileNotFoundError:
             normalize(file1, mask_file + ".gz", str(dir))
+        except FileNotFoundError:
+            normalize(file1, mask_file, str(dir))   #CALLING THE 'normalize()' FUNCTION TO PERFORM THE NORMALIZATION
         except Exception as e:
             print(e)
             print("Error in " + str(file))
