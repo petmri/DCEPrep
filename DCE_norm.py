@@ -231,3 +231,6 @@ for file in files_in_dir:
             normalize(file1, mask_file, str(dir))
         except FileNotFoundError:
             normalize(file1, mask_file + ".gz", str(dir))
+        except Exception as e:
+            print(e)
+            print("Error in normalizing " + file1)

@@ -81,6 +81,7 @@ else
 	SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
 	GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
 fi
+echo "SCRIPT_PATH: $SCRIPT_PATH"
 cd $DATA_DIR || exit 1
 # count timepoints
 for dir in */*_timepoint/; do
@@ -241,7 +242,7 @@ for dir in */*_timepoint/; do
 
 		if [ ! -f "12_BFC_Z.nii" ]
 			then
-				echo $dir "Missing Z-normalized files. Z-norm likely failed due to non-existent inputs." >> $LOG_FILE
+				echo $dir "Missing Z-normalized VFA files. Z-norm likely failed due to non-existent inputs." >> $LOG_FILE
 				cd ..
 				fail=1
 				continue

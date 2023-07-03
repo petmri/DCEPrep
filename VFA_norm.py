@@ -230,3 +230,7 @@ for file in files_in_dir:
             normalize(file1, mask_file, str(dir))   #CALLING THE 'normalize()' FUNCTION TO PERFORM THE NORMALIZATION
         except FileNotFoundError:
             normalize(file1, mask_file + ".gz", str(dir))
+        except Exception as e:
+            print(e)
+            print("Error in " + str(file))
+            continue
