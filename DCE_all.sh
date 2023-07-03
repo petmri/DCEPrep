@@ -66,7 +66,7 @@ for dir in */*_timepoint/; do
 	if [ ! -f "DCE_mc_bfc_norm.nii" ]
 		then
 		echo Missing input file. Make sure the data has been preprocessed. Skipping $dir... >> $LOG_FILE
-		cd ..
+		cd ../..
 		fail=1
 		continue
 	fi
@@ -79,7 +79,7 @@ for dir in */*_timepoint/; do
 		then
 			echo $dir "Missing Ktrans maps. DCE failed or inputs were not generated. Hopefully message below is relevant." >> $LOG_FILE
 			tail -1 A_dceR1info.log >> $LOG_FILE
-			cd ..
+			cd ../..
 			fail=1
 			continue
 	fi
@@ -198,7 +198,7 @@ for dir in */*_timepoint/; do
 		if [ ! -f "DCE_mc_bfc_norm.nii" ]
 			then
 				echo $dir "Missing normalized DCE file." >> $LOG_FILE
-				cd ..
+				cd ../..
 				fail=1
 				continue
 		fi
@@ -208,7 +208,7 @@ for dir in */*_timepoint/; do
 		if [ ! -f "dce_patlak_fit_Ktrans.nii" ]
 			then
 				echo $dir "Missing Ktrans maps. Check terminal--DCE failed or inputs were otherwise not generated." >> $LOG_FILE
-				cd ..
+				cd ../..
 				fail=1
 				continue
 		fi
