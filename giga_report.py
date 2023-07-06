@@ -13,44 +13,57 @@ from matplotlib import colors as mcolors
 
 dir = sys.argv[1]
 files_to_reorient = [dir + '/2.nii', dir + '/dce_patlak_fit_Ktrans.nii', dir + '/T1_wm_mask.nii.gz', dir + '/t1_map_fixed_use_me.nii.gz', dir + '/T1_bet_mask_dyn.nii.gz', dir + '/T1_wm_mask_dyn.nii.gz', dir + '/T1_gm_mask_dyn.nii.gz']
-# # if c3d exists, reorient files to RAS
-# if os.path.exists('/usr/bin/c3d'):
-#     for file in files_to_reorient:
-#         file_no_extension = file.split('.')[0]
-#         command = ['c3d', file, '-orient', 'RAS', '-o', file_no_extension + '_RAS.nii']
-#         try:
-#             subprocess.run(command, check=True)
-#         except Exception as e:
-#             print("Error running c3d command: " + ' '.join(command))
-#             # print("Check if c3d is installed and in your path, or if the target file exists.")
-#             print(e)
-# else:
+# if c3d exists, reorient files to RAS
+if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
+    for file in files_to_reorient:
+        file_no_extension = file.split('.')[0]
+        command = ['c3d', file, '-orient', 'RAS', '-o', file_no_extension + '_RAS.nii']
+        try:
+            subprocess.run(command, check=True)
+            ktrans = nib.load(str(dir) + '/dce_patlak_fit_Ktrans_RAS.nii')
+            ktrans_data = ktrans.get_fdata()
+            ktrans_flipped = np.flip(ktrans_data, axis=1)
+            ktrans_flipped = nib.Nifti1Image(ktrans_flipped, ktrans.affine, ktrans.header)
+            dimensions = ktrans.header.get_data_shape()
+            voxel_size = ktrans.header.get_zooms()
+
+            # plot ktrans
+            fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(15, 5), gridspec_kw={'hspace': -.1, 'wspace': -.1}, dpi=300)
+            expected_ktrans_vmax = 0.005
+            plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-119, -154, -5), axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
+            plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-154, -189, -5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
+            plt.savefig(str(dir) + '/figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
+            plt.close()
+        except Exception as e:
+            print("Error running c3d command: " + ' '.join(command))
+            # print("Check if c3d is installed and in your path, or if the target file exists.")
+            print(e)
+else:
 # use freesurfer's mri_convert to reorient files to RAS
-for file in files_to_reorient:
-    file_no_extension = file.split('.')[0]
-    command = ['mri_convert', '--in_orientation', 'RAS', file, file_no_extension + '_RAS.nii']
-    subprocess.run(command, check=True)
+    for file in files_to_reorient:
+        file_no_extension = file.split('.')[0]
+        command = ['mri_convert', '--in_orientation', 'LPI', file, file_no_extension + '_RAS.nii']
+        try:
+            subprocess.run(command, check=True)
+            ktrans = nib.load(str(dir) + '/dce_patlak_fit_Ktrans_RAS.nii')
+            ktrans_data = ktrans.get_fdata()
+            ktrans_flipped = np.flip(ktrans_data, axis=1)
+            ktrans_flipped = nib.Nifti1Image(ktrans_flipped, ktrans.affine, ktrans.header)
+            dimensions = ktrans.header.get_data_shape()
+            voxel_size = ktrans.header.get_zooms()
 
-try:
-    ktrans = nib.load(str(dir) + '/dce_patlak_fit_Ktrans_RAS.nii')
-    ktrans_data = ktrans.get_fdata()
-    ktrans_flipped = np.flip(ktrans_data, axis=1)
-    ktrans_flipped = nib.Nifti1Image(ktrans_flipped, ktrans.affine, ktrans.header)
-    dimensions = ktrans.header.get_data_shape()
-    voxel_size = ktrans.header.get_zooms()
-
-    # save plot of Ktrans
-    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(15, 5), gridspec_kw={'hspace': -.1, 'wspace': -.1}, dpi=300)
-    expected_ktrans_vmax = 0.005
-    plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-124, -159, -5), axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
-    plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-159, -194, -5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
-    plt.savefig(str(dir) + '/figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
-    plt.close()
-except Exception as e:
-    print("Error plotting Ktrans")
-    dimensions = 'ktrans failed to load'
-    voxel_size = 'ktrans failed to load'
-    print(e)
+            # plot Ktrans, different coords
+            fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(15, 5), gridspec_kw={'hspace': -.1, 'wspace': -.1}, dpi=300)
+            expected_ktrans_vmax = 0.005
+            plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-56, -21, 5), axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
+            plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-21, 13, 5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
+            plt.savefig(str(dir) + '/figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
+            plt.close()
+        except Exception as e:
+            print("Error plotting Ktrans")
+            dimensions = 'ktrans failed to load'
+            voxel_size = 'ktrans failed to load'
+            print(e)
 
 # use jinja2 to generate html
 env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))))
