@@ -70,6 +70,10 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
             # Initial guess for the parameters
             # count voxels within 1 std of mean
             area = np.count_nonzero(wm_data[:,:,i][a])
+            # check if slice is empty
+            if area == 0:
+                gaussian_params.append({'A1': -1, 'mu1': -1, 'sigma1': -1, 'A2': -1, 'mu2': -1, 'sigma2': -1})
+                continue
             # get bin width
             bin_width = bins[1] - bins[0]
             amp_guess = area / pstdev(wm_data[:,:,i][a]) * 0.3989 * bin_width
