@@ -57,73 +57,57 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     wm_final = wm_data
 
     gaussian_params = []
-    # get histogram of each wm slice
-    for i in range(slice_num):
-        # print("SLICE: " + str(i + 1))
-        a = np.where(wm_data[:, :, i] > 0)
-        hist, bins = np.histogram(wm_data[:,:,i][a].flatten(), bins=100)
-
-        def double_gaussian(x, A1, mu1, sigma1, A2, mu2, sigma2):
-            return (
-                A1 * np.exp(-0.5 * ((x - mu1) / sigma1) ** 2) +
-                A2 * np.exp(-0.5 * ((x - mu2) / sigma2) ** 2)
-            )
-
-        # Initial guess for the parameters
-        # count voxels within 1 std of mean
-        area = np.count_nonzero(wm_data[:,:,i][a])
-        # get bin width
-        bin_width = bins[1] - bins[0]
-        # print("bin: " + str(bin_width))
-        amp_guess = area / pstdev(wm_data[:,:,i][a]) * 0.3989 * bin_width
-        
-        # print("voxels: " + str(area))
-        # print("stdev: " + str(pstdev(wm_data[:,:,i][a])))
-        # print("amp_guess: " + str(amp_guess))
-        # initial_params = [100, wm_mean[i], 20, amp_guess, median(wm_data[:,:,i][a]), 20]
-        
-        model = Model(double_gaussian)
-        params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i], sigma1=pstdev(wm_data[:,:,i][a]), A2=amp_guess, mu2=median(wm_data[:,:,i][a]), sigma2=pstdev(wm_data[:,:,i][a]))
-        result = model.fit(hist, params, x=bins[:-1])
-        # print(result.fit_report())
-        # print(result.best_values)
-        gaussian_params.append(result.best_values)
-
-        # Perform the fitting
-        # optimized_params, _ = curve_fit(double_gaussian, bins[:-1], hist, p0=initial_params, maxfev=100000)
-        # gaussian_params.append(optimized_params)
-        
-        # Generate x values for plotting the fitted curve
-        # x_values = np.linspace(bins[0], bins[-1], 1000)
-
-        # Compute the fitted curve using the fitted parameters
-        # fitted_curve = double_gaussian(x_values, *optimized_params)
-
-        # Plot the histogram
-        plt.figure()
-        plt.bar(bins[:-1], hist, width=np.diff(bins), align='edge', alpha=0.5)
-
-        # Plot the fitted curve
-        plt.plot(bins[:-1], result.best_fit, color='red', linewidth=2)
-
-        # Add labels and title
-        plt.title(f"Histogram and Fitted Curve - Slice {i+1}")
-        plt.xlabel("Pixel Value")
-        plt.ylabel("Frequency")
-
-        # make hist directory if it doesn't exist
-        hist_dir = file_dir + '/figures/hist'
-        Path(hist_dir).mkdir(parents=True, exist_ok=True)
-
-        # Save the figure
-        path1 = file_dir + '/figures/hist/' + str(num) + '_' + str(i+1) + '_hist.png'
-        plt.savefig(path1)
-        plt.close()
-
-    # print(gaussian_params[2])
-
-    # apply normalizations
     if GAUSSFIT:
+        # get histogram of each wm slice
+        for i in range(slice_num):
+            # print("SLICE: " + str(i + 1))
+            a = np.where(wm_data[:, :, i] > 0)
+            hist, bins = np.histogram(wm_data[:,:,i][a].flatten(), bins=100)
+
+            def double_gaussian(x, A1, mu1, sigma1, A2, mu2, sigma2):
+                return (
+                    A1 * np.exp(-0.5 * ((x - mu1) / sigma1) ** 2) +
+                    A2 * np.exp(-0.5 * ((x - mu2) / sigma2) ** 2)
+                )
+
+            # Initial guess for the parameters
+            # count voxels within 1 std of mean
+            area = np.count_nonzero(wm_data[:,:,i][a])
+            # get bin width
+            bin_width = bins[1] - bins[0]
+            # print("bin: " + str(bin_width))
+            amp_guess = area / pstdev(wm_data[:,:,i][a]) * 0.3989 * bin_width
+                        
+            model = Model(double_gaussian)
+            params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i], sigma1=pstdev(wm_data[:,:,i][a]), A2=amp_guess, mu2=median(wm_data[:,:,i][a]), sigma2=pstdev(wm_data[:,:,i][a]))
+            result = model.fit(hist, params, x=bins[:-1])
+            # print(result.fit_report())
+            # print(result.best_values)
+            gaussian_params.append(result.best_values)
+
+            # Plot the histogram
+            plt.figure()
+            plt.bar(bins[:-1], hist, width=np.diff(bins), align='edge', alpha=0.5)
+
+            # Plot the fitted curve
+            plt.plot(bins[:-1], result.best_fit, color='red', linewidth=2)
+
+            # Add labels and title
+            plt.title(f"Histogram and Fitted Curve - Slice {i+1}")
+            plt.xlabel("Pixel Value")
+            plt.ylabel("Frequency")
+
+            # make hist directory if it doesn't exist
+            hist_dir = file_dir + '/figures/hist'
+            Path(hist_dir).mkdir(parents=True, exist_ok=True)
+
+            # Save the figure
+            path1 = file_dir + '/figures/hist/' + str(num) + '_' + str(i+1) + '_hist.png'
+            plt.savefig(path1)
+            plt.close()
+
+
+        # apply normalizations
         print("Using Gaussian fitting to normalize FA " + str(num))
         mu = []
         for i in range(slice_num):

@@ -13,15 +13,23 @@ from matplotlib import colors as mcolors
 
 dir = sys.argv[1]
 files_to_reorient = [dir + '/2.nii', dir + '/dce_patlak_fit_Ktrans.nii', dir + '/T1_wm_mask.nii.gz', dir + '/t1_map_fixed_use_me.nii.gz', dir + '/T1_bet_mask_dyn.nii.gz', dir + '/T1_wm_mask_dyn.nii.gz', dir + '/T1_gm_mask_dyn.nii.gz']
+# # if c3d exists, reorient files to RAS
+# if os.path.exists('/usr/bin/c3d'):
+#     for file in files_to_reorient:
+#         file_no_extension = file.split('.')[0]
+#         command = ['c3d', file, '-orient', 'RAS', '-o', file_no_extension + '_RAS.nii']
+#         try:
+#             subprocess.run(command, check=True)
+#         except Exception as e:
+#             print("Error running c3d command: " + ' '.join(command))
+#             # print("Check if c3d is installed and in your path, or if the target file exists.")
+#             print(e)
+# else:
+# use freesurfer's mri_convert to reorient files to RAS
 for file in files_to_reorient:
     file_no_extension = file.split('.')[0]
-    command = ['c3d', file, '-orient', 'RAS', '-o', file_no_extension + '_RAS.nii']
-    try:
-        subprocess.run(command, check=True)
-    except Exception as e:
-        print("Error running c3d command: " + ' '.join(command))
-        # print("Check if c3d is installed and in your path, or if the target file exists.")
-        print(e)
+    command = ['mri_convert', '--in_orientation', 'RAS', file, file_no_extension + '_RAS.nii']
+    subprocess.run(command, check=True)
 
 try:
     ktrans = nib.load(str(dir) + '/dce_patlak_fit_Ktrans_RAS.nii')
@@ -81,9 +89,9 @@ try:
     plotting.plot_roi(str(dir) + '/T1_bet_mask.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, dim=-1, cmap='gray', output_file=str(dir)+'/figures/t1w_mask.svg', annotate=False, colorbar=False, draw_cross=False, title='mask')
 
     # T1w segmentation
-    plotting.plot_anat(str(dir) + '/T1.nii', cmap='gray', output_file=str(dir)+'/figures/t1w.svg', vmin=0, vmax=3000, annotate=False, colorbar=False, draw_cross=False)
-    plotting.plot_roi(str(dir) + '/segmented_t1_seg_2.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, dim=-1, cmap='gray', output_file=str(dir)+'/figures/t1w_wm.svg', annotate=False, colorbar=False, draw_cross=False, title='wm')
-    plotting.plot_roi(str(dir) + '/segmented_t1_seg_1.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, dim=-1, cmap='gray', output_file=str(dir)+'/figures/t1w_gm.svg', annotate=False, colorbar=False, draw_cross=False, title='gm')
+    plotting.plot_anat(str(dir) + '/T1.nii', cmap='gray', output_file=str(dir)+'/figures/t1w.svg', dim=-1, annotate=False, colorbar=False, draw_cross=False)
+    plotting.plot_roi(str(dir) + '/segmented_t1_seg_2.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, dim=0, cmap='gray', output_file=str(dir)+'/figures/t1w_wm.svg', annotate=False, colorbar=False, draw_cross=False, title='wm')
+    plotting.plot_roi(str(dir) + '/segmented_t1_seg_1.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, dim=0, cmap='gray', output_file=str(dir)+'/figures/t1w_gm.svg', annotate=False, colorbar=False, draw_cross=False, title='gm')
 except Exception as e:
     print("Error plotting T1w segmentation")
     print(e)
