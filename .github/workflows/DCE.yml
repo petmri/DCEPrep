@@ -32,6 +32,7 @@ jobs:
 
     - name: Install dependencies
       run: |
+        sudo apt-get install wkhtmltopdf
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     #    pip install flake8 pytest
@@ -61,6 +62,9 @@ jobs:
       run:  |
         cat /media/network_mriphysics/USC-PPG/RUNNER_DATA/preprocessing_log.txt
         cat /media/network_mriphysics/USC-PPG/RUNNER_DATA/dce_log.txt
+
+    - name: Convert HTML to PDF
+      run:  wkhtmltopdf /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/giga_report.html /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/giga_report.pdf
     
     - name: Upload analysis results
       uses: actions/upload-artifact@v3
@@ -69,6 +73,7 @@ jobs:
         path: |
           /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/giga_report.html
           /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/figures/
+          /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/giga_report.pdf
         retention-days: 7
         if-no-files-found: error
 
