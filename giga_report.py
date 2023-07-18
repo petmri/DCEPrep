@@ -17,11 +17,11 @@ files_to_reorient = [dir + '/2.nii', dir + '/dce_patlak_fit_Ktrans.nii', dir + '
 if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
     for file in files_to_reorient:
         file_no_extension = file.split('.')[0]
-        command = ['c3d', file, '-orient', 'RAS', '-o', file_no_extension + '_RAS.nii']
+        command = ['c3d', file, '-orient', 'RAS', '-o', file_no_extension + '_RAS.nii.gz']
         try:
             subprocess.run(command, check=True)
-            if file == dir + '/dce_patlak_fit_Ktrans.nii':
-                ktrans = nib.load(str(dir) + '/dce_patlak_fit_Ktrans_RAS.nii')
+            if file == dir + '/dce_patlak_fit_Ktrans.nii.gz':
+                ktrans = nib.load(str(dir) + '/dce_patlak_fit_Ktrans_RAS.nii.gz')
                 ktrans_data = ktrans.get_fdata()
                 ktrans_flipped = np.flip(ktrans_data, axis=1)
                 ktrans_flipped = nib.Nifti1Image(ktrans_flipped, ktrans.affine, ktrans.header)
@@ -113,23 +113,23 @@ except Exception as e:
 
 try:
     # T1w to VFA
-    plotting.plot_anat(str(dir) + '/T1_wm_mask_RAS.nii', cmap='gray', output_file=str(dir)+'/figures/t1w_to_vfa.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w to VFA')
+    plotting.plot_anat(str(dir) + '/T1_wm_mask_RAS.nii.gz', cmap='gray', output_file=str(dir)+'/figures/t1w_to_vfa.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w to VFA')
 
     # T1w to dyn
     # flip T1w masks
-    t1w_mask = nib.load(str(dir) + '/T1_bet_mask_dyn_RAS.nii')
+    t1w_mask = nib.load(str(dir) + '/T1_bet_mask_dyn_RAS.nii.gz')
     t1w_mask_data = t1w_mask.get_fdata()
     t1w_mask_flipped = np.flip(t1w_mask_data, axis=1)
     t1w_mask_flipped = nib.Nifti1Image(t1w_mask_flipped, t1w_mask.affine, t1w_mask.header)
     # nib.save(t1w_mask_flipped, str(dir) + '/T1_bet_mask_dyn_RAS.nii')
 
-    t1w_wm_mask = nib.load(str(dir) + '/T1_wm_mask_dyn_RAS.nii')
+    t1w_wm_mask = nib.load(str(dir) + '/T1_wm_mask_dyn_RAS.nii.gz')
     t1w_wm_mask_data = t1w_wm_mask.get_fdata()
     t1w_wm_mask_flipped = np.flip(t1w_wm_mask_data, axis=1)
     t1w_wm_mask_flipped = nib.Nifti1Image(t1w_wm_mask_flipped, t1w_wm_mask.affine, t1w_wm_mask.header)
     # nib.save(t1w_wm_mask_flipped, str(dir) + '/T1_wm_mask_dyn_RAS.nii')
 
-    t1w_gm_mask = nib.load(str(dir) + '/T1_gm_mask_dyn_RAS.nii')
+    t1w_gm_mask = nib.load(str(dir) + '/T1_gm_mask_dyn_RAS.nii.gz')
     t1w_gm_mask_data = t1w_gm_mask.get_fdata()
     t1w_gm_mask_flipped = np.flip(t1w_gm_mask_data, axis=1)
     t1w_gm_mask_flipped = nib.Nifti1Image(t1w_gm_mask_flipped, t1w_gm_mask.affine, t1w_gm_mask.header)
@@ -199,7 +199,7 @@ except Exception as e:
 try:
     # T1 map
     # flip T1 map
-    img = nib.load(str(dir) + '/t1_map_fixed_use_me_RAS.nii')
+    img = nib.load(str(dir) + '/t1_map_fixed_use_me_RAS.nii.gz')
     img_data = img.get_fdata()
     # img_data = np.flip(img_data, axis=0)
     img_data = np.flip(img_data, axis=1)
