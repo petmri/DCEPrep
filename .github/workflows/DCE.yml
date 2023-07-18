@@ -96,7 +96,7 @@ jobs:
     
     - name: Build Dockerfile
       run: |
-        docker build --build-arg MATLAB_RELEASE=${{ matrix.release }} . -t lsaca05/dce:${{ matrix.release }}-${{ steps.extract_branch.outputs.branch }}
+        docker build --build-arg MATLAB_RELEASE=${{ matrix.release }} . -t lsaca05/dce:${{ matrix.release }}-QC_report_test
 
     # - name: Run Docker
     #   if: ${{ matrix.release }} == "R2020a"
