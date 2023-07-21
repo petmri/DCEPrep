@@ -351,6 +351,9 @@ for dir in */*_timepoint/; do
 				cd ..
 				fail=1
 				continue
+		else
+			max=$(python3 $SCRIPT_PATH/max_disp.py $SUBJECT_TP_PATH)
+			echo -e "\e[1;33m$max\e[0m" >> $LOG_FILE
 		fi
 	else
 		cp DCE.nii DCE_mc.nii
@@ -359,8 +362,6 @@ for dir in */*_timepoint/; do
 	ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 	prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 	echo -ne "REG T1 MAP->DCE[=======================>                          ] $prog% ($current/$count) ~$ETA min remaining \r"
-	max=$(python3 $SCRIPT_PATH/max_disp.py $SUBJECT_TP_PATH)
-	echo -e "\e[1;33m$max\e[0m" >> $LOG_FILE
 	
 	# Align T1 map with Dynamic data
 	# ------------------------------

@@ -97,6 +97,7 @@ jobs:
     - name: Build Dockerfile
       id: docker_build
       run: |
+        docker image prune -f
         docker build --build-arg MATLAB_RELEASE=${{ matrix.release }} . -t lsaca05/dce:${{ matrix.release }}-QC_report_test
 
     # - name: Run Docker
@@ -105,7 +106,7 @@ jobs:
     #     ./run_docker.sh
     #     exit
 
-    - name: Push to Docker Hub
-      if: steps.docker_build.outcome == 'success'
-      run: |
-        docker push lsaca05/dce:${{ matrix.release }}-QC_report_test
+    # - name: Push to Docker Hub
+    #   if: steps.docker_build.outcome == 'success'
+    #   run: |
+    #     docker push lsaca05/dce:${{ matrix.release }}-QC_report_test

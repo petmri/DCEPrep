@@ -397,7 +397,7 @@ else:
 # MNI space registration
 fsl_dir = os.environ['FSLDIR']
 # print(fsl_dir)
-plotting.plot_anat(fsl_dir + '/data/standard/MNI152_T1_1mm_brain.nii.gz', title='MNI152_T1_1mm_brain', output_file=dir + '/figures/MNI152_T1_1mm_brain.svg', annotate=False, colorbar=False, draw_cross=False)
+plotting.plot_anat(fsl_dir + '/data/standard/MNI152_T1_1mm.nii.gz', title='MNI152_T1_1mm', output_file=dir + '/figures/MNI152_T1_1mm.svg', annotate=False, colorbar=False, draw_cross=False)
 plotting.plot_anat(dir + '/t1w_MNI.nii.gz', title='t1w_MNI', output_file=dir + '/figures/t1w_MNI.svg', annotate=False, colorbar=False, draw_cross=False)
 plotting.plot_anat(dir + '/ktrans_2_MNI.nii.gz', title='ktrans_MNI', vmin=0, vmax=0.009, output_file=dir + '/figures/Ktrans_MNI.svg', annotate=False, colorbar=False, draw_cross=False)
 
