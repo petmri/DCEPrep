@@ -98,7 +98,7 @@ jobs:
       id: docker_build
       run: |
         docker image prune -f
-        docker build --build-arg MATLAB_RELEASE=${{ matrix.release }} . -t lsaca05/dce:${{ matrix.release }}-QC_report_test
+        docker build --build-arg MATLAB_RELEASE=${{ matrix.release }} . -t lsaca05/dce:${{ matrix.release }}-${{ steps.extract_branch.outputs.branch }}
 
     # - name: Run Docker
     #   if: ${{ matrix.release }} == "R2020a"
@@ -109,4 +109,4 @@ jobs:
     # - name: Push to Docker Hub
     #   if: steps.docker_build.outcome == 'success'
     #   run: |
-    #     docker push lsaca05/dce:${{ matrix.release }}-QC_report_test
+    #     docker push lsaca05/dce:${{ matrix.release }}-${{ steps.extract_branch.outputs.branch }}
