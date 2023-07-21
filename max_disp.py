@@ -45,8 +45,11 @@ plt.xlabel("Slice #")
 plt.ylim([-2.5, 2.5])
 plt.text(len(mc_params[:,0])/2, 2, "max displacement: " + max_disp + "mm")
 plt.text(len(mc_params[:,0])/2, 1.8, "param: " + param_type)
-path = dir + '/displacements.png'
+path = dir + '/figures/displacements.svg'
 plt.savefig(path, bbox_inches='tight')
+
+# save as png too
+plt.savefig(dir + '/figures/displacements.png', bbox_inches='tight')
 
 ## PART 2 - Correlation
 # dce = nib.load(dir + '/DCE.nii')

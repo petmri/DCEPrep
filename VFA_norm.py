@@ -9,9 +9,12 @@ import matplotlib.pyplot as plt
 from numpy.polynomial import Polynomial
 from numpy.polynomial.polynomial import polyval
 import nibabel as nib
+from scipy.optimize import curve_fit
+from lmfit import Model
 matplotlib.use('Agg')
 
 # add as arg? add mask arg?
+GAUSSFIT = True
 POLYFIT = True
 
 def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE NORMALIZATION
@@ -53,8 +56,86 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     mri_final = mri_data
     wm_final = wm_data
 
-    # apply normalizations
-    if POLYFIT is True:
+    gaussian_params = []
+    if GAUSSFIT:
+        # get histogram of each wm slice
+        for i in range(slice_num):
+            # print("SLICE: " + str(i + 1))
+            a = np.where(wm_data[:, :, i] > 0)
+            hist, bins = np.histogram(wm_data[:,:,i][a].flatten(), bins=100)
+
+            def double_gaussian(x, A1, mu1, sigma1, A2, mu2, sigma2):
+                return (
+                    A1 * np.exp(-0.5 * ((x - mu1) / sigma1) ** 2) +
+                    A2 * np.exp(-0.5 * ((x - mu2) / sigma2) ** 2)
+                )
+
+            # Initial guess for the parameters
+            # count voxels within 1 std of mean
+            area = np.count_nonzero(wm_data[:,:,i][a])
+            # get bin width
+            bin_width = bins[1] - bins[0]
+            # print("bin: " + str(bin_width))
+            amp_guess = area / pstdev(wm_data[:,:,i][a]) * 0.3989 * bin_width
+                        
+            model = Model(double_gaussian)
+            params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i], sigma1=pstdev(wm_data[:,:,i][a]), A2=amp_guess, mu2=median(wm_data[:,:,i][a]), sigma2=pstdev(wm_data[:,:,i][a]))
+            result = model.fit(hist, params, x=bins[:-1])
+            # print(result.fit_report())
+            # print(result.best_values)
+            gaussian_params.append(result.best_values)
+
+            # Plot the histogram
+            plt.figure()
+            plt.bar(bins[:-1], hist, width=np.diff(bins), align='edge', alpha=0.5)
+
+            # Plot the fitted curve
+            plt.plot(bins[:-1], result.best_fit, color='red', linewidth=2)
+
+            # Add labels and title
+            plt.title(f"Histogram and Fitted Curve - Slice {i+1}")
+            plt.xlabel("Pixel Value")
+            plt.ylabel("Frequency")
+
+            # make hist directory if it doesn't exist
+            hist_dir = file_dir + '/figures/hist'
+            Path(hist_dir).mkdir(parents=True, exist_ok=True)
+
+            # Save the figure
+            path1 = file_dir + '/figures/hist/' + str(num) + '_' + str(i+1) + '_hist.png'
+            plt.savefig(path1)
+            plt.close()
+
+
+        # apply normalizations
+        print("Using Gaussian fitting to normalize FA " + str(num))
+        mu = []
+        for i in range(slice_num):
+            # max(gaussian_params[i][0], gaussian_params[i][3])
+            # if gaussian_params[i][0] > gaussian_params[i][3] and gaussian_params[i][1] > 0 and gaussian_params[i][1] < 1000:# and abs(gaussian_params[i][1] - wm_mean[i]) < abs(gaussian_params[i][4] - wm_mean[i]):
+            #     mu.append(gaussian_params[i][1])
+            # else:
+            #     mu.append(gaussian_params[i][4])
+            
+            if gaussian_params[i]['A1'] > gaussian_params[i]['A2']:
+                mu.append(gaussian_params[i]['mu1'])
+            else:
+                mu.append(gaussian_params[i]['mu2'])
+
+            # print("mu " + str(mu[i]))
+            # print("SLICE: " + str(i + 1))
+            # print("mu: " + str(gaussian_params[i]['mu1']) + " " + str(gaussian_params[i]['mu2']))
+            # print("A: " + str(gaussian_params[i]['A1']) + " " + str(gaussian_params[i]['A2']))
+            # print("sigma: " + str(gaussian_params[i]['sigma1']) + " " + str(gaussian_params[i]['sigma2']))
+
+        mean_mu = mean(mu)
+        # print("mean_mu: " + str(mean_mu))
+        for i in range(slice_num):
+            scale_factor = mean_mu / mu[i]
+            mri_final[:, :, i] *= scale_factor
+            wm_final[:, :, i] *= scale_factor
+
+    elif POLYFIT is True:
         print("Using Polynomial fitting to normalize")
         poly_norm_curve = Polynomial.fit(list(range(slice_num)), wm_mean, 4, w=polyfit_slice_weights)
         norm_slices = polyval(list(range(slice_num)), poly_norm_curve.convert().coef)
@@ -102,16 +183,19 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
 
     fig, ax = plt.subplots(figsize=(20, 6))
     ax.plot(range(slice_num), wm_mean, '-ok', label='original')
-    if POLYFIT is True:
+    if POLYFIT is True and GAUSSFIT is False:
         ax.plot(range(slice_num), norm_slices, ':ob', label='fit')
-    ax.plot(range(slice_num), norm_wm, '--og', label='corrected')
+    ax.plot(range(slice_num), norm_wm, '--xg', label='corrected', mfc='none')
+    if GAUSSFIT:
+        ax.plot(range(slice_num), mu, 'o', label='mu', color='grey')
+        ax.plot(range(slice_num), np.ones(slice_num)*mean_mu, ':x', label='mean_mu', color='lightgreen')
     ax.set_xlabel('Slice #')
     ax.set_ylabel('White Matter Mean')
     ax.set_title("VFA Slice Normalization")
     ax.legend()
 
-    path2 = file_dir + '/' + str(num) +'_BFC_Z.png'
-    plt.savefig(path2)
+    path2 = file_dir + '/figures/' + str(num) +'_BFC_Z.svg'
+    plt.savefig(path2, bbox_inches='tight')
 
     mri_final = np.transpose(mri_final, (x_index, y_index, z_index))
     final_img = nib.Nifti1Image(mri_final, mri.affine)
@@ -127,6 +211,10 @@ for file in files_in_dir:
         mask_file = file1.split('.', 1)
         mask_file = mask_file[0] + '_wm.nii'
         try:
-            normalize(file1, mask_file, str(dir))   #CALLING THE 'normalize()' FUNCTION TO PERFORM THE NORMALIZATION
-        except FileNotFoundError:
             normalize(file1, mask_file + ".gz", str(dir))
+        except FileNotFoundError:
+            normalize(file1, mask_file, str(dir))   #CALLING THE 'normalize()' FUNCTION TO PERFORM THE NORMALIZATION
+        except Exception as e:
+            print(e)
+            print("Error in " + str(file))
+            continue

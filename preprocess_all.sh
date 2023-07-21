@@ -6,7 +6,7 @@ shopt -s extglob
 EN_Z_NORM=0
 EN_BIAS1=0
 EN_BIAS2=0
-#EN_MOTION_CORR=1
+EN_MOTION_CORR=0
 USE_FREESURFER=0
 
 # internal vars (don't change)
@@ -21,12 +21,13 @@ prog=0
 successes=0
 
 # options
-while getopts ":d:bBZfhc" options; do
+while getopts ":d:bBZfhcm" options; do
 	case "${options}" in
 		b)
 			EN_BIAS1=1
 			;;
-		B)	EN_BIAS2=1
+		B)	
+			EN_BIAS2=1
 			;;
 		c)
 			clean=1
@@ -44,11 +45,15 @@ while getopts ":d:bBZfhc" options; do
 			echo "-b: enable first round of bias field corrections"
 			echo "-B: enable second round of bias field corrections, post-Z-norm if enabled"
 			echo "-c: clean generated files prior to processing"
-			echo "-Z: enable Z-slice normalization"
 			echo "-d: specify main data directory containing all subject folders"
 			echo "-f: use freesurfer for registration (seems to cut off top of cortical region for most subjects, works perfectly for one site)"
+			echo "-m: enable motion correction"
 			echo "-h: display this message"
+			echo "-Z: enable Z-slice normalization"
 			exit 0
+			;;
+		m)
+			EN_MOTION_CORR=1
 			;;
 		Z)
 			EN_Z_NORM=1
@@ -65,24 +70,26 @@ if [ -z "$DATA_DIR" ]
 		echo "ERROR: Please use '-d [dir_path]' to pass the path to your main data directory to this script."
 		exit 1
 fi
-cd $DATA_DIR || exit 1
+
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit || find / -name '*run_dce_auto.m' -printf '%h\n' -quit) &> /dev/null
-	SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit || find / -name '*auto_analysis.py' -printf '%h\n' -quit) &> /dev/null
+	SCRIPT_PATH=$(dirname "$(realpath $0)")
 	GPUFIT_PATH=$(find $HOME -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit || find / -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit) &> /dev/null
+	GPUFIT_M_PATH=$(find $HOME -name 'ModelID.m' -printf '%h\n' -quit || find / -name 'ModelID.m' -printf '%h\n' -quit)
 else
 	ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 	SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
 	GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
 fi
-
+echo "SCRIPT_PATH: $SCRIPT_PATH"
+cd $DATA_DIR || exit 1
 # count timepoints
 for dir in */*_timepoint/; do
 	((count++))
 done
 # Run bias correction on VFA data 
 # ------------------------------
-rm preprocessing_log.txt
+rm -f preprocessing_log.txt
 for dir in */*_timepoint/; do
 	date >> preprocessing_log.txt
 	echo "Preprocessing ${dir}..."
@@ -143,7 +150,7 @@ for dir in */*_timepoint/; do
 	
 	if [ $EN_BIAS1 -eq 1 ]
 		then
-		if [ ! -f "15_bfc.nii" ]
+		if [ ! -f "12_bfc.nii" ]
 		then
 			#echo "Bias field correction with FAST"
 			# don't forget to remove all unnecessary images
@@ -190,37 +197,38 @@ for dir in */*_timepoint/; do
 		fslmaths 15_bfc.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii.gz &> /dev/null
 	else
 		# dumb file name management for norm only runs
-		fslmaths 2.nii -mas T1_bet_mask.nii.gz 2_bfc.nii &> /dev/null
-		fslmaths 5.nii -mas T1_bet_mask.nii.gz 5_bfc.nii &> /dev/null
-		fslmaths 10.nii -mas T1_bet_mask.nii.gz 10_bfc.nii &> /dev/null
-		fslmaths 12.nii -mas T1_bet_mask.nii.gz 12_bfc.nii &> /dev/null
-		fslmaths 15.nii -mas T1_bet_mask.nii.gz 15_bfc.nii &> /dev/null
+		# fslmaths 2.nii -mas T1_bet_mask.nii.gz 2_bfc.nii &> /dev/null
+		# fslmaths 5.nii -mas T1_bet_mask.nii.gz 5_bfc.nii &> /dev/null
+		# fslmaths 10.nii -mas T1_bet_mask.nii.gz 10_bfc.nii &> /dev/null
+		# fslmaths 12.nii -mas T1_bet_mask.nii.gz 12_bfc.nii &> /dev/null
+		# fslmaths 15.nii -mas T1_bet_mask.nii.gz 15_bfc.nii &> /dev/null
+
 		
-		echo "Skipping BFC... but still segmenting one VFA for matter masks"
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 15_bfc.nii &> /dev/null
-		rm 15_bfc_mixeltype.nii.gz &> /dev/null
-		rm 15_bfc_pve_0.nii.gz &> /dev/null
-		rm 15_bfc_pve_1.nii.gz &> /dev/null
-		rm 15_bfc_pve_2.nii.gz &> /dev/null
-		rm 15_bfc_pveseg.nii.gz &> /dev/null
-		rm 15_bfc_seg.nii.gz &> /dev/null
+		# echo "Skipping BFC... but still segmenting one VFA for matter masks"
+		# fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 15_masked.nii &> /dev/null
+		# rm 15_bfc_mixeltype.nii.gz &> /dev/null
+		# rm 15_bfc_pve_0.nii.gz &> /dev/null
+		# rm 15_bfc_pve_1.nii.gz &> /dev/null
+		# rm 15_bfc_pve_2.nii.gz &> /dev/null
+		# rm 15_bfc_pveseg.nii.gz &> /dev/null
+		# rm 15_bfc_seg.nii.gz &> /dev/null
 		
 		# threshold and binarize wm mask
 		#fslmaths 15_bfc_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
 		
 		# apply wm mask to all VFAs
-		fslmaths 2_bfc.nii -mas T1_wm_mask.nii.gz 2_bfc_wm.nii &> /dev/null
-		fslmaths 5_bfc.nii -mas T1_wm_mask.nii.gz 5_bfc_wm.nii &> /dev/null
-		fslmaths 10_bfc.nii -mas T1_wm_mask.nii.gz 10_bfc_wm.nii &> /dev/null
-		fslmaths 12_bfc.nii -mas T1_wm_mask.nii.gz 12_bfc_wm.nii &> /dev/null
-		fslmaths 15_bfc.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii &> /dev/null
+		# fslmaths 2_bfc.nii -mas T1_wm_mask.nii.gz 2_bfc_wm.nii &> /dev/null
+		# fslmaths 5_bfc.nii -mas T1_wm_mask.nii.gz 5_bfc_wm.nii &> /dev/null
+		# fslmaths 10_bfc.nii -mas T1_wm_mask.nii.gz 10_bfc_wm.nii &> /dev/null
+		# fslmaths 12_bfc.nii -mas T1_wm_mask.nii.gz 12_bfc_wm.nii &> /dev/null
+		# fslmaths 15_bfc.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii &> /dev/null
 		
 		# apply MP-RAGE wm mask
-		fslmaths 2_bfc.nii -mas T1_wm_mask.nii.gz 2_bfc_wm.nii &> /dev/null
-		fslmaths 5_bfc.nii -mas T1_wm_mask.nii.gz 5_bfc_wm.nii &> /dev/null
-		fslmaths 10_bfc.nii -mas T1_wm_mask.nii.gz 10_bfc_wm.nii &> /dev/null
-		fslmaths 12_bfc.nii -mas T1_wm_mask.nii.gz 12_bfc_wm.nii &> /dev/null
-		fslmaths 15_bfc.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii &> /dev/null
+		fslmaths 2_masked.nii -mas T1_wm_mask.nii.gz 2_bfc_wm.nii &> /dev/null
+		fslmaths 5_masked.nii -mas T1_wm_mask.nii.gz 5_bfc_wm.nii &> /dev/null
+		fslmaths 10_masked.nii -mas T1_wm_mask.nii.gz 10_bfc_wm.nii &> /dev/null
+		fslmaths 12_masked.nii -mas T1_wm_mask.nii.gz 12_bfc_wm.nii &> /dev/null
+		fslmaths 15_masked.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii &> /dev/null
 	fi
 
 	# Run Z-axis normalization VFA data
@@ -231,14 +239,16 @@ for dir in */*_timepoint/; do
 		python3 $SCRIPT_PATH/VFA_norm.py $SUBJECT_TP_PATH &> /dev/null
 		prog=$(echo "scale=2;  $prog + .33 / $count" | bc -l)
 		echo -ne "VFA MOTIONCORR [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
-	fi
 
-	if [ ! -f "15_BFC_Z.nii" ]
-		then
-			echo $dir "Missing Z-normalized files. Z-norm likely failed due to non-existent inputs." >> $LOG_FILE
-			cd ..
-			fail=1
-			continue
+		if [ ! -f "12_BFC_Z.nii" ]
+			then
+				echo $dir "Missing Z-normalized VFA files. Z-norm likely failed due to non-existent inputs." >> $LOG_FILE
+				cd ..
+				fail=1
+				continue
+		fi
+	else
+		mkdir -p figures &> /dev/null
 	fi
 
 	if [ $EN_BIAS2 -eq 1 ]
@@ -293,7 +303,12 @@ for dir in */*_timepoint/; do
 	
 	# motion correction of VFA
 	# ------------------------------
-	mcflirt -in VFA.nii.gz -refvol 'VFA.nii.gz[0]' -cost mutualinfo -report -verbose -plots -o VFA_mc.nii &> /dev/null
+	if [ $EN_MOTION_CORR -eq 1 ]
+		then
+		mcflirt -in VFA.nii.gz -refvol 'VFA.nii.gz[0]' -cost mutualinfo -report -verbose -plots -o VFA_mc.nii &> /dev/null
+	else
+		cp VFA.nii.gz VFA_mc.nii.gz
+	fi
 	prog=$(echo "scale=2;  $prog + .5 / $count" | bc -l)
 	echo -ne "MAKE T1 MAPS   [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
 	gunzip -f VFA_mc.nii.gz
@@ -308,7 +323,10 @@ for dir in */*_timepoint/; do
 
 	# T1 mapping where the input image is 'VFA.motioncorrected.nii'
 	# ------------------------------
-	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts'; addpath '$GPUFIT_PATH'; T1mapping_fit('$SUBJECT_TP_PATH/'); exit;" &> /dev/null
+	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; \
+		addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; \
+		addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts';	\
+		addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; T1mapping_fit('$SUBJECT_TP_PATH/'); exit;" &> /dev/null
 	((diff = SECONDS - diff))
 	ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 	prog=$(echo "scale=2;  $prog + 1.33 / $count" | bc -l)
@@ -324,19 +342,26 @@ for dir in */*_timepoint/; do
 	# Motion correction of dynamic images using FSL
 	# ------------------------------
 	#echo Motion correcting dynamic images...
-	mcflirt -in DCE.nii -refvol 'DCE.nii[1]' -cost mutualinfo -report -plots -o DCE_mc.nii &> /dev/null
+	if [ $EN_MOTION_CORR -eq 1 ]
+		then
+		mcflirt -in DCE.nii -refvol 'DCE.nii[1]' -cost mutualinfo -report -plots -o DCE_mc.nii &> /dev/null
+		if [ ! -f "DCE_mc.nii.gz" ]
+			then
+				echo $dir "Missing motion corrected DCE file." >> $LOG_FILE
+				cd ..
+				fail=1
+				continue
+		else
+			max=$(python3 $SCRIPT_PATH/max_disp.py $SUBJECT_TP_PATH)
+			echo -e "\e[1;33m$max\e[0m" >> $LOG_FILE
+		fi
+	else
+		cp DCE.nii DCE_mc.nii
+		gzip DCE_mc.nii
+	fi
 	ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 	prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 	echo -ne "REG T1 MAP->DCE[=======================>                          ] $prog% ($current/$count) ~$ETA min remaining \r"
-	max=$(python3 $SCRIPT_PATH/max_disp.py $SUBJECT_TP_PATH)
-	echo -e "\e[1;33m$max\e[0m" >> $LOG_FILE
-	if [ ! -f "DCE_mc.nii.gz" ]
-		then
-			echo $dir "Missing motion corrected DCE file." >> $LOG_FILE
-			cd ..
-			fail=1
-			continue
-	fi
 	
 	# Align T1 map with Dynamic data
 	# ------------------------------
@@ -403,58 +428,35 @@ for dir in */*_timepoint/; do
 			# Applying bias field correction on dynamic images
 			# ------------------------------
 			#echo Applying BFC to dynamic images...
-			fslmerge -n 0 1st_rep.nii DCE_mc_masked.nii		# extract images from different DCE repetitions
-			fslmerge -n 4 5th_rep.nii DCE_mc_masked.nii
-			fslmerge -n 9 10th_rep.nii DCE_mc_masked.nii
-			fslmerge -n 19 20th_rep.nii DCE_mc_masked.nii
-			fslmerge -n 29 30th_rep.nii DCE_mc_masked.nii
-			fslmerge -n 39 40th_rep.nii DCE_mc_masked.nii
-			fslmerge -n 49 50th_rep.nii DCE_mc_masked.nii
-			fslmerge -n 59 60th_rep.nii DCE_mc_masked.nii
+			reps=$(fslnvols DCE_mc_masked.nii)
+			rep_interval=$((reps / 8))
+			# round rep_interval up
+			rep_interval=$(echo "scale=0; ($rep_interval + 0.5) / 1" | bc -l)
 
+			# take 9 repetitions with rep_interval from DCE_mc_masked.nii
+			fslmerge -n 0 rep_0.nii DCE_mc_masked.nii &> /dev/null
+			for i in {1..8}
+			do
+				# name file with rep_interval*i
+				fslmerge -n $((rep_interval*i-1)) rep_$((rep_interval*i-1)).nii DCE_mc_masked.nii &> /dev/null
+			done
 
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 1st_rep.nii &> /dev/null
+			# BFC each repetition
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o rep_0.nii &> /dev/null
 			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "FAST DCE REP 5 [===========================>                      ] $prog% ($current/$count) ~$ETA min remaining \r"
-	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 5th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "FAST DCE REP 10[==============================>                   ] $prog% ($current/$count) ~$ETA min remaining \r"
-	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 10th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "FAST DCE REP 20[=================================>                ] $prog% ($current/$count) ~$ETA min remaining \r"
-	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 20th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "FAST DCE REP 30[====================================>             ] $prog% ($current/$count) ~$ETA min remaining \r"
-	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 30th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "FAST DCE REP 40[=======================================>          ] $prog% ($current/$count) ~$ETA min remaining \r"
-	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 40th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "FAST DCE REP 50[==========================================>       ] $prog% ($current/$count) ~$ETA min remaining \r"
-	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 50th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "FAST DCE REP 60[=============================================>    ] $prog% ($current/$count) ~$ETA min remaining \r"
-	
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 60th_rep.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
+			echo -ne "FAST DCE REP 0 [===========================>                      ] $prog% ($current/$count) ~$ETA min remaining \r"
+			for i in {1..8}
+			do
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o rep_$((rep_interval*i-1)).nii &> /dev/null
+				ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
+				prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
+				echo -ne "FAST DCE REP $((rep_interval*i-1)) [====================================>             ] $prog% ($current/$count) ~$ETA min remaining \r"
+			done
 			echo -ne "DCE BFC + NORM [================================================> ] $prog% ($current/$count) ~$ETA min remaining \r"
-
+			
 			# Concatenation1
-			fslmerge -t dyn_bias.nii.gz *_rep_bias.nii.gz
+			fslmerge -t dyn_bias.nii.gz rep_*_bias.nii.gz
 	
 			# Computing average across 8 bias field that have been sampled
 			fslmaths dyn_bias.nii.gz -Tmean mean_dyn_bias_map.nii.gz
@@ -462,15 +464,15 @@ for dir in */*_timepoint/; do
 			# Normalizing motion corrected DCE image with mean bias field 
 			fslmaths DCE_mc_masked.nii.gz -div mean_dyn_bias_map.nii.gz DCE_mc_bfc.nii
 	
-			# remove sampled slice files
-			rm [0-9]*_rep*
+			# remove sampled files
+			rm rep_*.nii.gz
 		else
 			echo Skipping DCE BFC because it already exists...
 		fi
 	else
 		#echo Motion correcting dynamic set
-		gunzip -f DCE_mc.nii.gz
-		mv DCE_mc.nii DCE_mc_bfc.nii
+		cp DCE_mc.nii.gz DCE_mc_bfc.nii.gz
+		gunzip -f DCE_mc_bfc.nii.gz
 	fi
 	
 	# align existing white matter mask to dynamic images and re-binarize
@@ -480,12 +482,12 @@ for dir in */*_timepoint/; do
 	#antsRegistrationSyN.sh -d 3 -t r -f ref_rep.nii -m T1_wm_mask.nii.gz -o T1_wm_mask_dyn
 	if [ $USE_FREESURFER -eq 1 ] || [ $dir == "203450/1st_timepoint/" ]
 		then
-		flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -2D -o T1_wm_mask_dyn.nii &> /dev/null
+		flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -2D -o T1_wm_mask_dyn_pv.nii &> /dev/null
 	else
-		antsApplyTransforms -i T1_wm_mask.nii.gz -r ref_rep.nii -t T1_bet_mask_dyn0GenericAffine.mat -o T1_wm_mask_dyn.nii
+		antsApplyTransforms -i T1_wm_mask.nii.gz -r ref_rep.nii -t T1_bet_mask_dyn0GenericAffine.mat -o T1_wm_mask_dyn_pv.nii
 	fi
 	#mv T1_wm_mask_dynWarped.nii.gz T1_wm_mask_dyn.nii.gz
-	fslmaths T1_wm_mask_dyn.nii -thr 0.8 -bin T1_wm_mask_dyn.nii.gz &> /dev/null
+	fslmaths T1_wm_mask_dyn_pv.nii -thr 0.8 -bin T1_wm_mask_dyn.nii.gz &> /dev/null
 	
 	#fslmaths T1_wm_mask_dynWarped.nii -thr 0.7 -bin T1_wm_mask_dyn.nii
 	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_bet_mask.nii.gz T1_bet_mask_dyn.nii.gz
@@ -499,7 +501,12 @@ for dir in */*_timepoint/; do
 	# normalize dynamic images
 	# ------------------------------
 	#echo Normalizing dynamic images...
-	python3 $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH &> /dev/null
+	if [ $EN_Z_NORM -eq 1 ]
+		then
+		python3 $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH
+	else
+		cp DCE_mc_bfc.nii DCE_mc_bfc_norm.nii
+	fi
 
 	if [ ! -f "DCE_mc_bfc_norm.nii" ]
 		then

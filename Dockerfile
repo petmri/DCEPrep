@@ -123,6 +123,7 @@ RUN apt-get update -qq \
         -name "fslinfo" -or \
         -name "fslmaths" -or \
         -name "fslmerge" -or \
+        -name "fslnvols" -or \
         # -name "fslroi" -or \
         -name "fslsplit" -or \
         -name "fslstats" -or \
@@ -134,7 +135,7 @@ RUN apt-get update -qq \
         # -name "susan" -or \
         # -name "topup" -or \
         # -name "zeropad" \
-    && find /opt/fsl-6.0.5.2/data/standard -type f -not -name "MNI152_T1_2mm_brain.nii.gz" -delete
+    && find /opt/fsl-6.0.5.2/data/standard -type f -not -name "MNI152_T1_1mm.nii.gz" -delete
 ENV FSLDIR="/opt/fsl-6.0.5.2" \
     PATH="/opt/fsl-6.0.5.2/bin:$PATH" \
     FSLOUTPUTTYPE="NIFTI_GZ" \
@@ -169,7 +170,13 @@ RUN curl -sSL "https://dl.dropbox.com/s/gwf51ykkk5bifyj/ants-Linux-centos6_x86_6
         --exclude "T*" \
         --exclude "W*" \
         --exclude "w*" \
-        --exclude "antsA*" \
+        # --exclude "antsA*" \
+        --exclude "antsAI" \
+        --exclude "antsASLProcessing*" \
+        --exclude "antsAffine*" \
+        --exclude "antsAlign*" \
+        --exclude "antsApplyTransformsToPoints" \
+        --exclude "antsAtroposN4*" \
         --exclude "antsB*" \
         --exclude "antsC*" \
         --exclude "antsI*" \
@@ -199,7 +206,11 @@ RUN curl -sSLO "https://github.com/MIC-DKFZ/HD-BET/archive/refs/heads/master.zip
     && curl -sSLo '#1.model' https://zenodo.org/record/2540695/files/[0-4].model?download=1 \
     && rm /master.zip
 
-# THIS
+# AUTO AIF
+RUN curl -sSLO "https://github.com/petmri/vascular_function/archive/refs/heads/optimize_input.zip" \
+    && unzip -d /opt/vascular_function *optimize_input.zip && rm /optimize_input.zip
+
+# pip requirements for this
 COPY requirements.txt .
 
 RUN python3 -m pip install --no-cache-dir -r requirements.txt && python3 -m pip cache purge && \

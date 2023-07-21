@@ -19,13 +19,13 @@ except:
     cmap = 'gnuplot'
 
 
-analysis = mpimg.imread(str(dir) + '/T1_Ktrans_analysis.png')
-zeros = mpimg.imread(str(dir) + '/T1_Ktrans_zeros.png')
+analysis = mpimg.imread(str(dir) + '/figures/T1_Ktrans_analysis.png')
+zeros = mpimg.imread(str(dir) + '/figures/T1_Ktrans_zeros.png')
 aif_curve = mpimg.imread(str(dir) + '/dceAIF_fitting.png')
 timecurves = mpimg.imread(str(dir) + '/dce_timecurves.png')
 plots = []
-plots.append(mpimg.imread(str(dir) + '/T1_Ktrans_zeros.png'))
-plots.append(mpimg.imread(str(dir) + '/displacements.png'))
+plots.append(mpimg.imread(str(dir) + '/figures/T1_Ktrans_zeros.png'))
+plots.append(mpimg.imread(str(dir) + '/figures/displacements.png'))
 curves = []
 curves.append(mpimg.imread(str(dir) + '/dceAIF_fitting.png'))
 curves.append(mpimg.imread(str(dir) + '/dce_timecurves.png'))
@@ -102,7 +102,7 @@ bozo = fig.colorbar(x, cax=cax, orientation='vertical', label='Ktrans (/min)', p
 bozo.set_label('Ktrans (10^-3/min)', labelpad=-15, fontsize = 'xx-small', color = 'white')
 bozo.ax.set_yticklabels(range(0,10), fontsize = 'xx-small')
 
-plt.savefig(str(dir) + '/report.png', bbox_inches='tight')
+plt.savefig(str(dir) + '/figures/report.png', bbox_inches='tight')
 
 ## REGISTRATION QC
 diff = nib.load(str(dir) + '/bozo.nii.gz')
@@ -130,7 +130,7 @@ fig2.tight_layout(pad=-2)
 # ax.imshow(diff_data[:,:,7], cmap=cmap)
 # ax.axis('off')
 
-plt.savefig(str(dir) + '/wm_reg_QC.png', bbox_inches='tight')
+plt.savefig(str(dir) + '/figures/wm_reg_QC.png', bbox_inches='tight')
 
 diff = nib.load(str(dir) + '/bozo2.nii.gz')
 diff_data = diff.get_fdata()
@@ -157,4 +157,4 @@ fig3.tight_layout(pad=-2)
 # ax.imshow(diff_data[:,:,7], cmap=cmap)
 # ax.axis('off')
 
-plt.savefig(str(dir) + '/gm_reg_QC.png', bbox_inches='tight')
+plt.savefig(str(dir) + '/figures/gm_reg_QC.png', bbox_inches='tight')

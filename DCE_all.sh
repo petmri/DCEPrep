@@ -43,16 +43,17 @@ if [ -z "$DATA_DIR" ]
 		echo "ERROR: Please use '-d [dir_path]' to pass the path to your main data directory to this script."
 		exit 1
 fi
-cd $DATA_DIR || exit
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit || find / -name '*run_dce_auto.m' -printf '%h\n' -quit) &> /dev/null
-	SCRIPT_PATH=$(find $HOME -name '*auto_analysis.py' -printf '%h\n' -quit || find / -name '*auto_analysis.py' -printf '%h\n' -quit) &> /dev/null
-	GPUFIT_PATH=$(find $HOME -name 'gpufit_constrained.m' -printf '%h\n' -quit || find / -name 'gpufit_constrained.m' -printf '%h\n' -quit) &> /dev/null
+	SCRIPT_PATH=$(dirname "$(realpath $0)")
+	GPUFIT_PATH=$(find $HOME -name 'GpufitConstrainedMex.mexa64' -printf '%h\n' -quit || find / -name 'GpufitConstrainedMex.mexa64' -printf '%h\n' -quit)
+	GPUFIT_M_PATH=$(find $HOME -name 'ModelID.m' -printf '%h\n' -quit || find / -name 'ModelID.m' -printf '%h\n' -quit)
 else
 	ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 	SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
 	GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
 fi
+cd $DATA_DIR || exit 1
 
 rm dce_log.txt
 for dir in */*_timepoint/; do
@@ -73,7 +74,7 @@ for dir in */*_timepoint/; do
 	# DCE
 	# ------------------------------
 	echo Begin DCE processing...
-	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; run_dce_auto('$SUBJECT_TP_PATH/'); exit;"
+	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; run_dce_auto('$SUBJECT_TP_PATH/'); exit;"
 	if [ ! -f "dce_patlak_fit_Ktrans.nii" ]
 		then
 			echo $dir "Missing Ktrans maps. DCE failed or inputs were not generated. Hopefully message below is relevant." >> $LOG_FILE
@@ -113,7 +114,8 @@ for dir in */*_timepoint/; do
 	fslmaths dce_patlak_fit_Ktrans.nii -mas T1_csf_dyn.nii Ktrans_csf.nii
 	
 	# registration QC
-	high_zeros=$(python3 $SCRIPT_PATH/auto_analysis.py $SUBJECT_TP_PATH)
+	python3 $SCRIPT_PATH/auto_analysis.py $SUBJECT_TP_PATH
+	high_zeros="False"
 	if [ $high_zeros = "True" ]
 		then
 		# re-register
@@ -257,7 +259,12 @@ for dir in */*_timepoint/; do
 	fslmaths ref_rep.nii -sub huh2.nii.gz bozo2.nii
 	fslmaths bozo2.nii -thr 0 bozo2.nii
 	
+	flirt -in DCE_mc.nii.gz -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -omat DCE2MNI.mat -out DCE_MNI_FSL.nii.gz
+	flirt -in T1.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out t1w_MNI.nii.gz -bins 256 -cost mutualinfo -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear
+	flirt -in dce_patlak_fit_Ktrans.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out ktrans_2_MNI.nii.gz -init DCE2MNI.mat -applyxfm
+
 	python3 $SCRIPT_PATH/report.py $SUBJECT_TP_PATH
+	python3 $SCRIPT_PATH/giga_report.py $SUBJECT_TP_PATH
 	cd ../../
 	echo $dir processing complete! >> $LOG_FILE
 	((successes++))

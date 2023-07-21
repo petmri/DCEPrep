@@ -1,10 +1,15 @@
 freesurfer/average*
 freesurfer/bin/A*
+freesurfer/bin/c*
 freesurfer/bin/f*
 freesurfer/bin/g*
 freesurfer/bin/mri_a*
 freesurfer/bin/mri_b*
-freesurfer/bin/mri_c*
+freesurfer/bin/mri_ca*
+freesurfer/bin/mri_cc
+freesurfer/bin/mri_com*
+freesurfer/bin/mri_conc*
+freesurfer/bin/mri_coreg
 freesurfer/bin/mri_d*
 freesurfer/bin/mri_e*
 freesurfer/bin/mri_f*
@@ -23,6 +28,7 @@ freesurfer/bin/mris*
 freesurfer/bin/p*
 freesurfer/bin/r*
 freesurfer/bin/s*
+freesurfer/bin/ta*
 freesurfer/bin/v*
 freesurfer/bin/3dvolreg.afni
 freesurfer/bin/4dfptoanalyze
