@@ -74,7 +74,14 @@ template = env.get_template('template.html')
 # get date
 date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 # get commit hash
-commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=os.path.dirname(os.path.realpath(__file__))).decode('ascii').strip()
+try:
+    commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=os.path.dirname(os.path.realpath(__file__))).decode('ascii').strip()
+except e:
+    print(e)
+    print("Git didn't work correctly. Trying a different way of getting latest dev branch commit hash...")
+    command = ['cat', '.git/refs/heads/dev', 'LPI', file, file_no_extension + '_RAS.nii']
+
+    commit_hash = subprocess.run(command, check=True)
 
 # get subject id
 subject_id = dir.split('/')[-2]
