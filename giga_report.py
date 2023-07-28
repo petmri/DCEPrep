@@ -14,6 +14,8 @@ from matplotlib import colors as mcolors
 dir = sys.argv[1]
 files_to_reorient = [dir + '/2.nii', dir + '/dce_patlak_fit_Ktrans.nii', dir + '/T1_wm_mask.nii.gz', dir + '/t1_map_fixed_use_me.nii.gz', dir + '/T1_bet_mask_dyn.nii.gz', dir + '/T1_wm_mask_dyn.nii.gz', dir + '/T1_gm_mask_dyn.nii.gz']
 # if c3d exists, reorient files to RAS
+dimensions = 0
+voxel_size = 0
 if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
     for file in files_to_reorient:
         file_no_extension = file.split('.')[0]
@@ -40,7 +42,7 @@ if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
             # print("Check if c3d is installed and in your path, or if the target file exists.")
             print(e)
 else:
-# use freesurfer's mri_convert to reorient files to RAS
+    # use freesurfer's mri_convert to reorient files to RAS
     for file in files_to_reorient:
         file_no_extension = file.split('.')[0]
         command = ['mri_convert', '--in_orientation', 'LPI', file, file_no_extension + '_RAS.nii.gz']
@@ -76,7 +78,7 @@ date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 # get commit hash
 try:
     commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=os.path.dirname(os.path.realpath(__file__))).decode('ascii').strip()
-except e:
+except Exception as e:
     print(e)
     print("Git didn't work correctly. Trying a different way of getting latest dev branch commit hash...")
     command = ['cat', '.git/refs/heads/dev', 'LPI', file, file_no_extension + '_RAS.nii']
