@@ -79,9 +79,8 @@ date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 try:
     commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=os.path.dirname(os.path.realpath(__file__))).decode('ascii').strip()
 except Exception as e:
-    print(e)
     print("Git didn't work correctly. Trying a different way of getting latest dev branch commit hash...")
-    command = ['cat', '.git/refs/heads/dev', 'LPI', file, file_no_extension + '_RAS.nii']
+    command = ['cat', '.git/refs/heads/dev']
 
     commit_hash = subprocess.run(command, check=True)
 
