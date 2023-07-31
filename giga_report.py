@@ -82,7 +82,7 @@ except Exception as e:
     print("Git didn't work correctly. Trying a different way of getting latest dev branch commit hash...")
     command = ['cat', '.git/refs/heads/dev']
 
-    commit_hash = subprocess.run(command, check=True)
+    commit_hash = subprocess.check_output(command, cwd=os.path.dirname(os.path.realpath(__file__))).decode('ascii').strip()
 
 # get subject id
 subject_id = dir.split('/')[-2]
