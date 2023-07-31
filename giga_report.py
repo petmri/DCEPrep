@@ -228,7 +228,9 @@ try:
     aif_data[aif_data > 0] = 1
     aif_data[aif_data < 0] = 0
     # mask DCE where AIF is 1
-    aif_data = np.expand_dims(aif_data, axis=-1)
+    # but first ensure that DCE and AIF have same number of dimensions
+    if len(aif_data.shape) < len(img_data.shape):
+        aif_data = np.expand_dims(aif_data, axis=-1)
     aif_data_roi = img_data * aif_data
     # sum AIF data for each time point, z-slice independent
     aif_curve = np.sum(aif_data_roi, axis=(0, 1, 2))
