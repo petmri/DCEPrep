@@ -24,9 +24,24 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     mri_shape = mri_data.shape
     wm_shape = wm_data.shape
     slice_num = min(mri_shape[0], mri_shape[1], mri_shape[2])
-    z_index = mri_shape.index(slice_num)
-    x_index = mri_shape.index(max(mri_shape[0], mri_shape[1], mri_shape[2]))
-    y_index = mri_shape[1:3].index(max(0, mri_shape[1], mri_shape[2])) + 1
+    # usual shape should be x >= y > z
+    # if x < y, swap x and y
+    if mri_shape[0] < mri_shape[1]:
+        x_index = 1
+        y_index = 0
+    else:
+        x_index = 0
+        y_index = 1
+    # if x < z, swap x and z
+    if mri_shape[0] < mri_shape[2]:
+        x_index = 2
+        z_index = 0
+    else:
+        z_index = 2
+    # if y < z, swap y and z
+    if mri_shape[1] < mri_shape[2]:
+        y_index = 2
+        z_index = 1
     mri_data = np.transpose(mri_data, (x_index, y_index, z_index, 3))
     wm_data = np.transpose(wm_data, (x_index, y_index, z_index, 3))
     wm_mean = []
@@ -70,16 +85,29 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
             # Initial guess for the parameters
             # count voxels within 1 std of mean
             area = np.count_nonzero(wm_data[:,:,i][a])
+
+            # prepare for gaussian fitting
+            bin_width = bins[1] - bins[0]
+            model = Model(double_gaussian)
+            amp_guess = 0
+            params = None
             # check if slice is empty
             if area == 0:
-                gaussian_params.append({'A1': -1, 'mu1': -1, 'sigma1': -1, 'A2': -1, 'mu2': -1, 'sigma2': -1})
-                continue
-            # get bin width
-            bin_width = bins[1] - bins[0]
-            amp_guess = area / pstdev(wm_data[:,:,i][a]) * 0.3989 * bin_width
+                # just get from next slice
+                if i == slice_num - 1:
+                    a = np.where(wm_data[:,:,i-1] > 0)
+                    area = np.count_nonzero(wm_data[:,:,i-1][a])
+                    amp_guess = area / pstdev(wm_data[:,:,i-1][a]) * 0.3989 * bin_width
+                    params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i-1], sigma1=pstdev(wm_data[:,:,i-1][a]), A2=amp_guess, mu2=median(wm_data[:,:,i-1][a]), sigma2=pstdev(wm_data[:,:,i-1][a]))
+                else:
+                    a = np.where(wm_data[:,:,i+1] > 0)
+                    area = np.count_nonzero(wm_data[:,:,i+1][a])
+                    amp_guess = area / pstdev(wm_data[:,:,i+1][a]) * 0.3989 * bin_width
+                    params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i+1], sigma1=pstdev(wm_data[:,:,i+1][a]), A2=amp_guess, mu2=median(wm_data[:,:,i+1][a]), sigma2=pstdev(wm_data[:,:,i+1][a]))
+            else:
+                amp_guess = area / pstdev(wm_data[:,:,i][a]) * 0.3989 * bin_width
+                params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i], sigma1=pstdev(wm_data[:,:,i][a]), A2=amp_guess, mu2=median(wm_data[:,:,i][a]), sigma2=pstdev(wm_data[:,:,i][a]))
                     
-            model = Model(double_gaussian)
-            params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i], sigma1=pstdev(wm_data[:,:,i][a]), A2=amp_guess, mu2=median(wm_data[:,:,i][a]), sigma2=pstdev(wm_data[:,:,i][a]))
             result = model.fit(hist, params, x=bins[:-1])
             gaussian_params.append(result.best_values)
 

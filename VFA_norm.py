@@ -6,6 +6,7 @@ import numpy as np
 # import numpy.polynomial.polynomial as poly
 import matplotlib
 import matplotlib.pyplot as plt
+import multiprocessing
 from numpy.polynomial import Polynomial
 from numpy.polynomial.polynomial import polyval
 import nibabel as nib
@@ -27,9 +28,24 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     mri_shape = mri_data.shape
     wm_shape = wm_data.shape
     slice_num = min(mri_shape[0], mri_shape[1], mri_shape[2])
-    x_index = mri_shape.index(max(mri_shape[0], mri_shape[1], mri_shape[2]))
-    y_index = mri_shape[1:3].index(max(0, mri_shape[1], mri_shape[2])) + 1
-    z_index = mri_shape.index(slice_num)
+    # usual shape should be x >= y > z
+    # if x < y, swap x and y
+    if mri_shape[0] < mri_shape[1]:
+        x_index = 1
+        y_index = 0
+    else:
+        x_index = 0
+        y_index = 1
+    # if x < z, swap x and z
+    if mri_shape[0] < mri_shape[2]:
+        x_index = 2
+        z_index = 0
+    else:
+        z_index = 2
+    # if y < z, swap y and z
+    if mri_shape[1] < mri_shape[2]:
+        y_index = 2
+        z_index = 1
     mri_data = np.transpose(mri_data, (x_index, y_index, z_index))
     wm_data = np.transpose(wm_data, (x_index, y_index, z_index))
     wm_mean = []
@@ -73,12 +89,29 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
             # Initial guess for the parameters
             # count voxels within 1 std of mean
             area = np.count_nonzero(wm_data[:,:,i][a])
-            # get bin width
+
+            # prepare for gaussian fitting
             bin_width = bins[1] - bins[0]
-            # print("bin: " + str(bin_width))
-            amp_guess = area / pstdev(wm_data[:,:,i][a]) * 0.3989 * bin_width
-                        
             model = Model(double_gaussian)
+            amp_guess = 0
+            params = 0
+            # check if slice is empty
+            if area == 0:
+                # just get from next slice
+                if i == slice_num - 1:
+                    a = np.where(wm_data[:,:,i-1] > 0)
+                    area = np.count_nonzero(wm_data[:,:,i-1][a])
+                    amp_guess = area / pstdev(wm_data[:,:,i-1][a]) * 0.3989 * bin_width
+                    params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i-1], sigma1=pstdev(wm_data[:,:,i-1][a]), A2=amp_guess, mu2=median(wm_data[:,:,i-1][a]), sigma2=pstdev(wm_data[:,:,i-1][a]))
+                else:
+                    a = np.where(wm_data[:,:,i+1] > 0)
+                    area = np.count_nonzero(wm_data[:,:,i+1][a])
+                    amp_guess = area / pstdev(wm_data[:,:,i+1][a]) * 0.3989 * bin_width
+                    params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i+1], sigma1=pstdev(wm_data[:,:,i+1][a]), A2=amp_guess, mu2=median(wm_data[:,:,i+1][a]), sigma2=pstdev(wm_data[:,:,i+1][a]))
+            else:
+                amp_guess = area / pstdev(wm_data[:,:,i][a]) * 0.3989 * bin_width
+                params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i], sigma1=pstdev(wm_data[:,:,i][a]), A2=amp_guess, mu2=median(wm_data[:,:,i][a]), sigma2=pstdev(wm_data[:,:,i][a]))
+                        
             params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i], sigma1=pstdev(wm_data[:,:,i][a]), A2=amp_guess, mu2=median(wm_data[:,:,i][a]), sigma2=pstdev(wm_data[:,:,i][a]))
             result = model.fit(hist, params, x=bins[:-1])
             # print(result.fit_report())
@@ -194,27 +227,23 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     ax.set_title("VFA Slice Normalization")
     ax.legend()
 
+    # if figures directory doesn't exist, create it
+    Path(file_dir + '/figures').mkdir(parents=True, exist_ok=True)
+
     path2 = file_dir + '/figures/' + str(num) +'_BFC_Z.svg'
     plt.savefig(path2, bbox_inches='tight')
 
-    mri_final = np.transpose(mri_final, (x_index, y_index, z_index))
+    # mri_final = np.transpose(mri_final, (x_index, y_index, z_index))
     final_img = nib.Nifti1Image(mri_final, mri.affine)
     path3 = file_dir + '/' + str(num) + '_BFC_Z.nii'
     nib.save(final_img, path3)
 
+if __name__ == "__main__":
+    dir = Path(sys.argv[1])     # takes timepoint directory as argument
+    files_in_dir = dir.iterdir()
+    file_list = [file for file in files_in_dir if re.search(r'\d+_bfc.nii.*', str(file))]
+    
+    num_processes = len(file_list)
 
-dir = Path(sys.argv[1])     # takes timepoint directory as argument
-files_in_dir = dir.iterdir()
-for file in files_in_dir:
-    if re.search(r'\d+_bfc.nii.*', str(file)):
-        file1 = str(file)
-        mask_file = file1.split('.', 1)
-        mask_file = mask_file[0] + '_wm.nii'
-        try:
-            normalize(file1, mask_file + ".gz", str(dir))
-        except FileNotFoundError:
-            normalize(file1, mask_file, str(dir))   #CALLING THE 'normalize()' FUNCTION TO PERFORM THE NORMALIZATION
-        except Exception as e:
-            print(e)
-            print("Error in " + str(file))
-            continue
+    with multiprocessing.Pool(processes=num_processes) as pool:
+        pool.starmap(normalize, [(str(file), str(file).split('.', 1)[0] + '_wm.nii.gz', str(dir)) for file in file_list])
