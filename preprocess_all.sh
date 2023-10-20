@@ -7,7 +7,9 @@ EN_Z_NORM=0
 EN_BIAS1=0
 EN_BIAS2=0
 EN_MOTION_CORR=0
+T1_ONLY=0
 USE_FREESURFER=0
+USE_AUTO_AIF=0
 
 # internal vars (don't change)
 fail=0
@@ -21,8 +23,11 @@ prog=0
 successes=0
 
 # options
-while getopts ":d:bBZfhcm" options; do
+while getopts ":d:bBAZfhcmt" options; do
 	case "${options}" in
+		A)
+			USE_AUTO_AIF=1
+			;;
 		b)
 			EN_BIAS1=1
 			;;
@@ -42,18 +47,23 @@ while getopts ":d:bBZfhcm" options; do
 		h)
 			echo "This script runs through all subject folders of a specified main data directory, preprocessing every folder ending in '_timepoint'."
 			echo "The output is the DCE input, which are the corrected dynamic images, brain mask, T1 maps."
+			echo "-A: enable AutoAIF"
 			echo "-b: enable first round of bias field corrections"
 			echo "-B: enable second round of bias field corrections, post-Z-norm if enabled"
 			echo "-c: clean generated files prior to processing"
 			echo "-d: specify main data directory containing all subject folders"
 			echo "-f: use freesurfer for registration (seems to cut off top of cortical region for most subjects, works perfectly for one site)"
-			echo "-m: enable motion correction"
 			echo "-h: display this message"
+			echo "-m: enable motion correction"
+			echo "-t: only run up to T1 mapping"
 			echo "-Z: enable Z-slice normalization"
 			exit 0
 			;;
 		m)
 			EN_MOTION_CORR=1
+			;;
+		t)
+			T1_ONLY=1
 			;;
 		Z)
 			EN_Z_NORM=1
@@ -94,107 +104,101 @@ for dir in */*_timepoint/; do
 	date >> preprocessing_log.txt
 	echo "Preprocessing ${dir}..."
 	((current++))
-	cd $dir || exit
+	cd $dir || exit 1
 	SUBJECT_TP_PATH=$(pwd)
 
-	if [ ! -f "2.nii" ] || [ ! -f "5.nii" ] || [ ! -f "10.nii" ] || [ ! -f "12.nii" ] || [ ! -f "15.nii" ] || [ ! -f "DCE.nii" ] || [ ! -f "T1.nii" ]
+	# get list of VFAs
+	VFA_LIST=($(ls -1 *.nii | grep -v "DCE.nii" | grep -v "T1.nii" | grep -v "aif.nii"))
+	# sort VFAs
+	VFA_LIST=($(printf '%s\n' "${VFA_LIST[@]}" | grep -o -E '[0-9]+.nii'| sort -n))
+	echo "Found ${#VFA_LIST[@]} VFAs: ${VFA_LIST[@]}"
+	VFA_NUMS=($(printf '%s\n' "${VFA_LIST[@]}" | grep -o '[0-9]*'))
+	# error if no VFAs found
+	if [ ${#VFA_LIST[@]} -eq 0 ]
 		then
-		echo "$dir Base file(s) missing! Expected VFAs 2.nii, 5.nii, 10.nii, 12.nii, 15.nii, DCE.nii, and T1.nii (MP-RAGE). Skipping timepoint..." >> $LOG_FILE
-		cd ..
+		echo "$dir No VFAs found! Skipping timepoint..." >> $LOG_FILE
+		cd ../..
 		continue
 	fi
+
+	# if [ ! -f "2.nii" ] || [ ! -f "5.nii" ] || [ ! -f "10.nii" ] || [ ! -f "12.nii" ] || [ ! -f "15.nii" ] || [ ! -f "DCE.nii" ] || [ ! -f "T1.nii" ]
+	# 	then
+	# 	echo "$dir Base file(s) missing! Expected VFAs 2.nii, 5.nii, 10.nii, 12.nii, 15.nii, DCE.nii, and T1.nii (MP-RAGE). Skipping timepoint..." >> $LOG_FILE
+	# 	cd ../..
+	# 	continue
+	# fi
 	
 	if [ $clean -eq 1 ]
 		then
 		echo Cleaning folder...
-        rm -f !(2.nii|5.nii|10.nii|12.nii|15.nii|DCE.nii|aif.nii|T1.nii|*.json)
+        # rm -f !(2.nii|5.nii|10.nii|12.nii|15.nii|DCE.nii|aif.nii|T1.nii|*.json)
+		# remove all files except for the VFA list, DCE, AIF, T1, and json files
+		rm -dfr !([0-9]*.nii|DCE.nii|aif.nii|T1.nii|*.json)
+		rm *BFC*
     fi
 	
 	# HD-BET brain extraction & segmentations from MP-RAGE
 	SECONDS=0
 	echo -ne "HD-BET MP-RAGE [                                                  ] $prog% ($current/$count) Calculating runtime...   \r"
 	
-	if [ nvidia-smi ]
+	if [ ! -f "T1_bet_mask.nii.gz" ]
 		then
-		# about 15 min
-		hd-bet -i T1.nii &> /dev/null
-		mETA=$(echo "scale=0;  $SECONDS * 34 * ($count - $current + 1) / 60" | bc -l)
-	else
-		# 2-3 hours
-		hd-bet -i T1.nii -device cpu &> /dev/null
-		mETA=$(echo "scale=0;  $SECONDS * 2 * ($count - $current + 1) / 60" | bc -l)
+		if [ nvidia-smi ]
+			then
+			# about 15 min
+			hd-bet -i T1.nii &> /dev/null
+			mETA=$(echo "scale=0;  $SECONDS * 34 * ($count - $current + 1) / 60" | bc -l)
+		else
+			# 2-3 hours
+			hd-bet -i T1.nii -device cpu &> /dev/null
+			mETA=$(echo "scale=0;  $SECONDS * 2 * ($count - $current + 1) / 60" | bc -l)
+		fi
 	fi
 	prog=$(echo "scale=2;  $prog + 3.33 / $count" | bc -l)
 
 	echo -ne "T1 SEG w/ FAST [=>                                                ] $prog% ($current/$count) ~$mETA min remaining \r"
-	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -g -o segmented_t1 T1_bet.nii.gz &> /dev/null
+	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -g -o segmented_t1 T1_bet.nii.gz
 	ETA=$(echo "scale=0;  $mETA - ($SECONDS/60)" | bc -l)
 	#ETA=$(echo "scale=0;  $mETA - $mETA * .0667" | bc -l)
 	prog=$(echo "scale=2;  $prog + 6.67 / $count" | bc -l)
-	echo -ne "BFC FAST VFA2  [====>                                             ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
-	bash $SCRIPT_PATH/tktregistration.sh 2.nii segmented_t1_seg_2.nii.gz T1_wm_mask.nii.gz &> /dev/null
+	bash $SCRIPT_PATH/tktregistration.sh ${VFA_LIST[0]} segmented_t1_seg_2.nii.gz T1_wm_mask.nii.gz
 	fslmaths T1_wm_mask.nii.gz -thr 0.4 -bin T1_wm_mask.nii.gz &> /dev/null
-	# FAST documentation recommends brain masking first
-	#fslmaths 2.nii -mas T1_bet_mask.nii.gz 2_masked.nii 
-	#fslmaths 5.nii -mas T1_bet_mask.nii.gz 5_masked.nii
-	#fslmaths 10.nii -mas T1_bet_mask.nii.gz 10_masked.nii
-	#fslmaths 12.nii -mas T1_bet_mask.nii.gz 12_masked.nii
-	#fslmaths 15.nii -mas T1_bet_mask.nii.gz 15_masked.nii
-	cp 2.nii 2_masked.nii
-	cp 5.nii 5_masked.nii
-	cp 10.nii 10_masked.nii
-	cp 12.nii 12_masked.nii
-	cp 15.nii 15_masked.nii
+	# copy VFA files to _masked.nii
+	for VFA in "${VFA_LIST[@]}"; do
+		# get VFA number
+		VFA_NUM=$(echo $VFA | grep -o '[0-9]*')
+		# FAST documentation recommends brain masking first
+		# fslmaths $VFA -mas T1_bet_mask.nii.gz ${VFA_NUM}_masked.nii
+		cp $VFA ${VFA_NUM}_masked.nii
+	done
 	gzip -f *_masked.nii
 	
 	if [ $EN_BIAS1 -eq 1 ]
 		then
-		if [ ! -f "12_bfc.nii" ]
-		then
+			VFA_FAST () {
+				local VFA=$1
+				VFA_NUM=$(echo $VFA | grep -o '[0-9]*')
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o ${VFA_NUM}_masked.nii &> /dev/null
+				# ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
+				# prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
+				# echo -ne "BFC FAST VFA${VFA_NUM}  [=======>                                          ] $prog% ($current/$count) ~$ETA min remaining \r"
+				mv ${VFA_NUM}_masked_restore* ${VFA_NUM}_bfc.nii.gz
+				rm ${VFA_NUM}_masked_[mps]*
+
+				# apply wm mask to all VFAs
+				fslmaths ${VFA_NUM}_bfc.nii.gz -mas T1_wm_mask.nii.gz ${VFA_NUM}_bfc_wm.nii.gz &> /dev/null
+			}
+
 			#echo "Bias field correction with FAST"
-			# don't forget to remove all unnecessary images
-			fast -t 3 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o 2_masked.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "BFC FAST VFA5  [=======>                                          ] $prog% ($current/$count) ~$ETA min remaining \r"
-			mv 2_masked_restore* 2_bfc.nii.gz
-
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o 5_masked.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "BFC FAST VFA10 [==========>                                       ] $prog% ($current/$count) ~$ETA min remaining \r"
-			mv 5_masked_restore* 5_bfc.nii.gz
-
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o 10_masked.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "BFC FAST VFA12 [=============>                                    ] $prog% ($current/$count) ~$ETA min remaining \r"
-			mv 10_masked_restore* 10_bfc.nii.gz
-
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o 12_masked.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "BFC FAST VFA15 [================>                                 ] $prog% ($current/$count) ~$ETA min remaining \r"
-			mv 12_masked_restore* 12_bfc.nii.gz
-
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o 15_masked.nii &> /dev/null
-			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "VFA POLY NORM  [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
-			mv 15_masked_restore* 15_bfc.nii.gz
-			
-			rm [0-9]*_masked_[mps]*
-		else
-			echo Found BFC VFAs. Skipping BFC...
-		fi
-
-		# apply wm mask to all VFAs
-		fslmaths 2_bfc.nii.gz -mas T1_wm_mask.nii.gz 2_bfc_wm.nii.gz &> /dev/null
-		fslmaths 5_bfc.nii.gz -mas T1_wm_mask.nii.gz 5_bfc_wm.nii.gz &> /dev/null
-		fslmaths 10_bfc.nii -mas T1_wm_mask.nii.gz 10_bfc_wm.nii.gz &> /dev/null
-		fslmaths 12_bfc.nii -mas T1_wm_mask.nii.gz 12_bfc_wm.nii.gz &> /dev/null
-		fslmaths 15_bfc.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii.gz &> /dev/null
+			# FAST every VFA
+			echo -ne "BFC FAST VFAS  [=======>                                          ] $prog% ($current/$count) ~$ETA min remaining \r"
+			for VFA in "${VFA_LIST[@]}"; do
+				VFA_FAST "$VFA" &
+			done
+			wait
+			echo -ne "Z NORM VFAS    [================>                             ] $prog% ($current/$count) ~$ETA min remaining \r"
+			rm -f [0-9]*_masked_[mps]*
 	else
 		# dumb file name management for norm only runs
 		# fslmaths 2.nii -mas T1_bet_mask.nii.gz 2_bfc.nii &> /dev/null
@@ -224,11 +228,10 @@ for dir in */*_timepoint/; do
 		# fslmaths 15_bfc.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii &> /dev/null
 		
 		# apply MP-RAGE wm mask
-		fslmaths 2_masked.nii -mas T1_wm_mask.nii.gz 2_bfc_wm.nii &> /dev/null
-		fslmaths 5_masked.nii -mas T1_wm_mask.nii.gz 5_bfc_wm.nii &> /dev/null
-		fslmaths 10_masked.nii -mas T1_wm_mask.nii.gz 10_bfc_wm.nii &> /dev/null
-		fslmaths 12_masked.nii -mas T1_wm_mask.nii.gz 12_bfc_wm.nii &> /dev/null
-		fslmaths 15_masked.nii -mas T1_wm_mask.nii.gz 15_bfc_wm.nii &> /dev/null
+		for VFA in "${VFA_LIST[@]}"; do
+			VFA_NUM=$(echo $VFA | grep -o '[0-9]*')
+			fslmaths ${VFA_NUM}_masked.nii.gz -mas T1_wm_mask.nii.gz ${VFA_NUM}_bfc_wm.nii.gz &> /dev/null
+		done
 	fi
 
 	# Run Z-axis normalization VFA data
@@ -240,10 +243,10 @@ for dir in */*_timepoint/; do
 		prog=$(echo "scale=2;  $prog + .33 / $count" | bc -l)
 		echo -ne "VFA MOTIONCORR [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
 
-		if [ ! -f "12_BFC_Z.nii" ]
+		if [ ! -f "${VFA_NUMS[0]}_BFC_Z.nii" ]
 			then
 				echo $dir "Missing Z-normalized VFA files. Z-norm likely failed due to non-existent inputs." >> $LOG_FILE
-				cd ..
+				cd ../..
 				fail=1
 				continue
 		fi
@@ -258,45 +261,40 @@ for dir in */*_timepoint/; do
 		echo Begin second round of BFC
 		# Bias field correction with FAST
 		# don't forget to remove all unnecessary images
-		fast -t 3 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 2_BFC_Z.nii
-		fslmaths 2_BFC_Z.nii -div 2_BFC_Z_bias.nii.gz 2_b2corr.nii
-		
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 5_BFC_Z.nii
-		fslmaths 5_BFC_Z.nii -div 5_BFC_Z_bias.nii.gz 5_b2corr.nii
+		for VFA in "${VFA_LIST[@]}"; do
+			VFA_NUM=$(echo $VFA | grep -o '[0-9]*')
+			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o ${VFA_NUM}_BFC_Z.nii ${VFA_NUM}_BFC_Z.nii &> /dev/null
+			# fslmaths ${VFA_NUM}_BFC_Z.nii -div ${VFA_NUM}_BFC_Z_bias.nii.gz ${VFA_NUM}_b2corr.nii &> /dev/null
+			mv ${VFA_NUM}_BFC_Z_restore* ${VFA_NUM}_b2corr.nii.gz
+			rm -f ${VFA_NUM}_BFC_Z_[mps]* &> /dev/null
+		done
+		# concatenates all VFA images in one 4D VFA.nii.gz image
 
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 10_BFC_Z.nii
-		fslmaths 10_BFC_Z.nii -div 2_BFC_Z_bias.nii.gz 10_b2corr.nii
+		fslmerge -t VFA.nii.gz ${VFA_NUMS[@]/%/_b2corr.nii.gz} &> /dev/null
 
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 12_BFC_Z.nii
-		fslmaths 12_BFC_Z.nii -div 2_BFC_Z_bias.nii.gz 12_b2corr.nii
-
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 15_BFC_Z.nii
-		fslmaths 15_BFC_Z.nii -div 2_BFC_Z_bias.nii.gz 15_b2corr.nii
-
-		# concatenates 5 images in one VFA.nii.gz image  
-		fslmerge -t VFA.nii.gz 2_b2corr.nii 5_b2corr.nii 10_b2corr.nii 12_b2corr.nii 15_b2corr.nii
-		
+		# remove all unnecessary images
 		rm [0-9]*_BFC_Z_*
 		
 	elif [ $EN_Z_NORM -eq 1 ] 
 		then
 		#echo Concatenating Z-norm\'d images
-		# concatenates 5 images in one VFA.nii.gz image
-		fslmerge -t VFA.nii.gz 2_BFC_Z.nii 5_BFC_Z.nii 10_BFC_Z.nii 12_BFC_Z.nii 15_BFC_Z.nii &> /dev/null
+		# concatenates VFA images in one 4D VFA.nii.gz image
+		# echo ${VFA_NUMS[@]/%/_BFC_Z.nii.gz}
+		fslmerge -t VFA.nii.gz ${VFA_NUMS[@]/%/_BFC_Z.nii.gz}
 
 	elif [ $EN_BIAS1 -eq 1 ]
 		then
 		echo Concatenating non Z\'d images
-		fslmerge -t VFA.nii 2_bfc.nii 5_bfc.nii 10_bfc.nii 12_bfc.nii 15_bfc.nii &> /dev/null
+		fslmerge -t VFA.nii ${VFA_NUMS[@]/%/_bfc.nii} &> /dev/null
 	else
 		echo Concatenating raw images
-		fslmerge -t VFA.nii 2_masked.nii 5_masked.nii 10_masked.nii 12_masked.nii 15_masked.nii &> /dev/null
+		fslmerge -t VFA.nii ${VFA_NUMS[@]/%/_masked.nii.gz} &> /dev/null
 	fi
 	
 	if [ ! -f "VFA.nii.gz" ]
 		then
 			echo "$dir missing VFA file. Component files may have failed." >> $LOG_FILE
-			cd ..
+			cd ../..
 			fail=1
 			continue
 	fi
@@ -316,7 +314,7 @@ for dir in */*_timepoint/; do
 	if [ ! -f "VFA_mc.nii" ]
 		then
 			echo $dir "Missing VFA_mc file. Motion correction may have failed." >> $LOG_FILE
-			cd ..
+			cd ../..
 			fail=1
 			continue
 	fi
@@ -334,11 +332,11 @@ for dir in */*_timepoint/; do
 	if [ ! -f "T1_map_t1_fa_fit_VFA_mc.nii" ]
 		then
 			echo $dir "Missing T1 map file. T1 mapping may have failed." >> $LOG_FILE
-			cd ..
+			cd ../..
 			fail=1
 			continue
 	fi
-	
+
 	# Motion correction of dynamic images using FSL
 	# ------------------------------
 	#echo Motion correcting dynamic images...
@@ -348,7 +346,7 @@ for dir in */*_timepoint/; do
 		if [ ! -f "DCE_mc.nii.gz" ]
 			then
 				echo $dir "Missing motion corrected DCE file." >> $LOG_FILE
-				cd ..
+				cd ../..
 				fail=1
 				continue
 		else
@@ -359,6 +357,13 @@ for dir in */*_timepoint/; do
 		cp DCE.nii DCE_mc.nii
 		gzip DCE_mc.nii
 	fi
+
+	if [ $T1_ONLY -eq 1 ]
+		then
+		cd ../..
+		continue
+	fi
+	
 	ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 	prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 	echo -ne "REG T1 MAP->DCE[=======================>                          ] $prog% ($current/$count) ~$ETA min remaining \r"
@@ -378,7 +383,7 @@ for dir in */*_timepoint/; do
 	if [ ! -f "t1_map_fixed_use_me.nii.gz" ]
 		then
 			echo "Missing registered T1 map." >> $LOG_FILE
-			cd ..
+			cd ../..
 			fail=1
 			continue
 	fi
@@ -412,6 +417,25 @@ for dir in */*_timepoint/; do
 		echo -ne "FAST DCE REP 1 [========================>                         ] $prog% ($current/$count) ~$ETA min remaining \r"
 	fi
 	
+	if [ $USE_AUTO_AIF -eq 1 ]
+		then
+		# find AutoAIF path
+		# AUTO_AIF_PATH=$(find $HOME -type d -name main_vif.py)
+		AUTO_AIF_PATH=$(find $HOME -name '*main_vif.py' -printf '%h\n' -quit || find / -name '*main_vif.py' -printf '%h\n' -quit) &> /dev/null
+		# run AutoAIF
+		# conda activate tf
+		python3 $AUTO_AIF_PATH/main_vif.py --mode inference --input_path $PWD/DCE_mc.nii.gz --save_output_path $PWD \
+			--model_weight_path /media/network_mriphysics/USC-PPG/AI_training/weights/good_ones?/run2_fullMAE/model_weight.h5 \
+			--save_image 1
+		# conda deactivate
+		# rename output
+		mv *_mask.nii aif_floats.nii
+		mv DCE_mc_curve.svg figures/DCE_mc_curve.svg
+		mv DCE_mc_mask.svg figures/DCE_mc_mask.svg
+		fslmaths aif_floats.nii -thr 0.95 aif_mask.nii
+		fslmaths t1_map_fixed_use_me.nii.gz -mas aif_mask.nii aif.nii
+		gunzip -f aif.nii.gz
+	fi
 	# ensure AIF is included in mask
 	# fslcpgeom 2.nii T1_bet_mask_dyn.nii.gz
 	cp aif.nii aif_aligned.nii
@@ -441,18 +465,35 @@ for dir in */*_timepoint/; do
 				fslmerge -n $((rep_interval*i-1)) rep_$((rep_interval*i-1)).nii DCE_mc_masked.nii &> /dev/null
 			done
 
+			DCE_FAST () {
+				local i=$1
+				local rep_interval=$2
+				# if i is 0, then we're on the first repetition
+				if [ ! $i -eq 0 ]
+					then
+					# run FAST on rep_interval*i
+					fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o rep_$((rep_interval*i-1)).nii
+				else
+					# run FAST on first repetition
+					fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o rep_0.nii
+				fi
+			}
+			
+
 			# BFC each repetition
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o rep_0.nii &> /dev/null
+			# fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o rep_0.nii &> /dev/null
 			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-			echo -ne "FAST DCE REP 0 [===========================>                      ] $prog% ($current/$count) ~$ETA min remaining \r"
+			echo -ne "FAST DCE 8REPS [===========================>                      ] $prog% ($current/$count) ~$ETA min remaining \r"
+			DCE_FAST "0" "$rep_interval" &
 			for i in {1..8}
 			do
-				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o rep_$((rep_interval*i-1)).nii &> /dev/null
-				ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-				prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
-				echo -ne "FAST DCE REP $((rep_interval*i-1)) [====================================>             ] $prog% ($current/$count) ~$ETA min remaining \r"
+				DCE_FAST "$i" "$rep_interval" &
+				# echo -ne "FAST DCE REP $((rep_interval*i-1)) [====================================>             ] $prog% ($current/$count) ~$ETA min remaining \r"
 			done
+			wait
+			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
+			prog=$(echo "scale=2;  $prog + 48 / $count" | bc -l)
 			echo -ne "DCE BFC + NORM [================================================> ] $prog% ($current/$count) ~$ETA min remaining \r"
 			
 			# Concatenation1
@@ -484,7 +525,7 @@ for dir in */*_timepoint/; do
 		then
 		flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -2D -o T1_wm_mask_dyn_pv.nii &> /dev/null
 	else
-		antsApplyTransforms -i T1_wm_mask.nii.gz -r ref_rep.nii -t T1_bet_mask_dyn0GenericAffine.mat -o T1_wm_mask_dyn_pv.nii
+		antsApplyTransforms -i T1_wm_mask.nii.gz -r ref_rep.nii -t T1_bet_mask_dyn0GenericAffine.mat -o T1_wm_mask_dyn_pv.nii &> /dev/null
 	fi
 	#mv T1_wm_mask_dynWarped.nii.gz T1_wm_mask_dyn.nii.gz
 	fslmaths T1_wm_mask_dyn_pv.nii -thr 0.8 -bin T1_wm_mask_dyn.nii.gz &> /dev/null
@@ -494,9 +535,26 @@ for dir in */*_timepoint/; do
 	#fslmaths 15_wm_mask_dyn.nii.gz -thr 1.7 -bin 15_wm_mask_dyn.nii
 	#rm T1_wm_mask_dynInverseWarped.nii.gz
 	#rm T1_wm_mask_dyn0GenericAffine.mat
+
+	# if first slice is all 0, replace it with masked second slice
+	fslroi T1_wm_mask_dyn.nii.gz first_wm_slice.nii.gz 0 -1 0 -1 0 1
+	# get sum of first slice
+	sum=$(fslstats first_wm_slice.nii.gz -V | awk '{print $2}')
+	# convert sum to int
+	sum=${sum%.*}
+	# if sum is 0, replace first slice with second slice
+	if [ $sum -lt 1 ]
+		then
+		fslroi T1_wm_mask_dyn.nii.gz second_wm_slice.nii.gz 0 -1 0 -1 1 1
+		fslroi T1_wm_mask_dyn.nii.gz T1_wm_mask_dyn.nii.gz 0 -1 0 -1 1 -1
+		fslroi T1_wm_mask_dyn.nii.gz T1_wm_mask_dyn.nii.gz 0 -1 0 -1 0 -1
+		fslmerge -z T1_wm_mask_dyn.nii.gz second_wm_slice.nii.gz T1_wm_mask_dyn.nii.gz
+		rm first_wm_slice.nii.gz second_wm_slice.nii.gz
+	fi
 	
 	# apply wm mask to all DCE images
 	fslmaths DCE_mc_bfc.nii -mas T1_wm_mask_dyn.nii.gz DCE_mc_bfc_wm.nii.gz &> /dev/null
+
 
 	# normalize dynamic images
 	# ------------------------------
@@ -511,7 +569,7 @@ for dir in */*_timepoint/; do
 	if [ ! -f "DCE_mc_bfc_norm.nii" ]
 		then
 			echo $dir "Missing normalized DCE file." >> $LOG_FILE
-			cd ..
+			cd ../..
 			fail=1
 			continue
 	fi

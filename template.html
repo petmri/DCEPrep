@@ -234,8 +234,14 @@
         <li>{{ DCE_elapsed_time }}</li>
     </ul>
     <h2 id="Ktrans">Ktrans maps</h2>
+    <ul>
+        <li>{{ ktrans_wm_mean }}</li>
+        <li>{{ ktrans_wm_std }}</li>
+        <li>{{ ktrans_gm_mean }}</li>
+        <li>{{ ktrans_gm_std }}</li>
+    </ul>
     <img src="{{ ktrans }}" alt="{{ ELYOUEL }}" width="1600"></img>
-    <p>maybe Ktrans with segmentation overlay</p>
+    <!-- <p>maybe Ktrans with segmentation overlay</p> -->
     <h2>Ktrans stats</h2>
     <div class="dce-image-container">
         <img src="{{ ktrans_zeros }}" alt="{{ image_alt1 }}" width="800"></img>
@@ -250,6 +256,8 @@
         <img id="MNI_std" src="{{ MNI_img }}" alt="{{ image_alt1 }}" width="800"></img>
         <img id="Ktrans_MNI" src="{{ MNI_Ktrans }}" alt="{{ image_alt1 }}" width="800"></img>
     </div>
+    <h2 id="Placement">Placement in Population</h2>
+    <img src="{{ placement }}" alt="to be inserted post-population report" width="1600"></img>
     <script>
         var containers = document.querySelectorAll('.image-container');
         containers.forEach(function(container) {
