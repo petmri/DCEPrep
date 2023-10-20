@@ -16,13 +16,16 @@ files_to_reorient = [dir + '/2.nii', dir + '/dce_patlak_fit_Ktrans.nii', dir + '
 # if c3d exists, reorient files to RAS
 dimensions = 0
 voxel_size = 0
+mean_wm = 0
+mean_gm = 0
+expected_ktrans_vmax = 0.005
 if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
     for file in files_to_reorient:
         file_no_extension = file.split('.')[0]
         command = ['c3d', file, '-orient', 'RAS', '-o', file_no_extension + '_RAS.nii.gz']
         try:
             subprocess.run(command, check=True)
-            if file == dir + '/dce_patlak_fit_Ktrans.nii.gz':
+            if file == dir + '/dce_patlak_fit_Ktrans.nii':
                 ktrans = nib.load(str(dir) + '/dce_patlak_fit_Ktrans_RAS.nii.gz')
                 ktrans_data = ktrans.get_fdata()
                 ktrans_flipped = np.flip(ktrans_data, axis=1)
@@ -32,7 +35,6 @@ if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
 
                 # plot ktrans
                 fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(15, 5), gridspec_kw={'hspace': -.1, 'wspace': -.1}, dpi=300)
-                expected_ktrans_vmax = 0.005
                 plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-119, -154, -5), axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
                 plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-154, -189, -5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
                 plt.savefig(str(dir) + '/figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
@@ -58,7 +60,6 @@ else:
 
                 # plot Ktrans, different coords
                 fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(15, 5), gridspec_kw={'hspace': -.1, 'wspace': -.1}, dpi=300)
-                expected_ktrans_vmax = 0.005
                 plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-56, -21, 5), axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
                 plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-21, 13, 5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
                 plt.savefig(str(dir) + '/figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
@@ -233,13 +234,13 @@ try:
         aif_data = np.expand_dims(aif_data, axis=-1)
     aif_data_roi = img_data * aif_data
     # sum AIF data for each time point, z-slice independent
-    aif_curve = np.sum(aif_data_roi, axis=(0, 1, 2))
+    aif_curve = np.sum(aif_data_roi, axis=(0, 1, 2)) / np.sum(aif_data[aif_data > 0])
     # divide by AIF mean of first timepoint
     aif_curve_ratio = aif_curve / aif_curve[0]
 
     # plot AIF
     plt.plot(aif_curve_ratio)
-    plt.text(0.7, 0.95, 'Baseline SI: ' + str(aif_curve[0]), transform=plt.gca().transAxes, fontsize=11, verticalalignment='top')
+    plt.text(0.25, 0.95, 'Voxel Baseline Avg SI: ' + str(aif_curve[0]), transform=plt.gca().transAxes, fontsize=11, verticalalignment='top')
     plt.title('AIF Curve')
     plt.xlabel('Timepoint')
     plt.ylabel('Signal intensity / Baseline')
@@ -404,6 +405,17 @@ else:
 
 # Ktrans
 
+# get Ktrans mean wm and gm
+ktrans_wm = nib.load(str(dir) + '/Ktrans_wm.nii.gz')
+ktrans_wm_data = ktrans_wm.get_fdata()
+mean_wm = np.mean(ktrans_wm_data[ktrans_wm_data > 0])
+std_wm = np.std(ktrans_wm_data[ktrans_wm_data > 0])
+
+ktrans_gm = nib.load(str(dir) + '/Ktrans_gm.nii.gz')
+ktrans_gm_data = ktrans_gm.get_fdata()
+mean_gm = np.mean(ktrans_gm_data[ktrans_gm_data > 0])
+std_gm = np.std(ktrans_gm_data[ktrans_gm_data > 0])
+
 # MNI space registration
 fsl_dir = os.environ['FSLDIR']
 # print(fsl_dir)
@@ -433,23 +445,13 @@ data = {
     'T1w_gm': dir + '/figures/t1w_gm.svg',
     'T1w_wm': dir + '/figures/t1w_wm.svg',
     'T1w_to_VFA': dir + '/figures/t1w_to_vfa.svg',
-    'FA_1' : 'FA ' + str(FAs[0]),
-    'FA_2' : 'FA ' + str(FAs[1]),
-    'FA_3' : 'FA ' + str(FAs[2]),
-    'FA_4' : 'FA ' + str(FAs[3]),
-    'FA_5' : 'FA ' + str(FAs[4]),
-    'Z_1' : dir + '/figures/2_BFC_Z.svg',
-    'Z_2' : dir + '/figures/5_BFC_Z.svg',
-    'Z_3' : dir + '/figures/10_BFC_Z.svg',
-    'Z_4' : dir + '/figures/12_BFC_Z.svg',
-    'Z_5' : dir + '/figures/15_BFC_Z.svg',
     'T1_TR': 'TR: ' + str(TR) + 'ms',
     'T1_FAs': 'FAs: ' + FA_str,
     'T1_GPU': str(GPU_T1),
     'T1_map': dir + '/figures/t1_map.svg',
     'displacements' : dir + '/figures/displacements.svg',
-    'AIF_mask': dir + '/figures/AIF_mask.svg',
-    'AIF_curve': dir + '/figures/AIF_curve.svg',
+    'AIF_mask': dir + '/figures/DCE_mc_mask.svg',
+    'AIF_curve': dir + '/figures/DCE_mc_curve.svg',
     'AIF_overlay': dir + '/figures/AIF_overlay.svg',
     'AIF_graph': dir + '/figures/AIF_graph.svg',
     't1w_bet_dyn' : dir + '/figures/t1bet_to_dyn.svg',
@@ -473,15 +475,24 @@ data = {
     'DCE_elapsed_time' : 'Elapsed time: ' + str(dce_elapsed_time) + 's',
     'ktrans_zeros' : dir + '/figures/T1_Ktrans_zeros.png',
     'ktrans_analysis' : dir + '/figures/T1_Ktrans_analysis.png',
+    'ktrans_wm_mean' : 'Mean Ktrans (wm): ' + str(mean_wm),
+    'ktrans_wm_std' : 'Std Ktrans (wm): ' + str(std_wm),
+    'ktrans_gm_mean' : 'Mean Ktrans (gm): ' + str(mean_gm),
+    'ktrans_gm_std' : 'Std Ktrans (gm): ' + str(std_gm),
     'MNI_img' : dir + '/figures/MNI152_T1_1mm_brain.svg',
     'MNI_T1w' : dir + '/figures/t1w_MNI.svg',
     'MNI_Ktrans' : dir + '/figures/ktrans_MNI.svg',
 }
 
+# insert VFAs into template
+for i in range(len(FAs)):
+    data['FA_' + str(i)] = 'FA ' + str(FAs[i-1])
+    data['Z_' + str(i)] = dir + '/figures/' + str(FAs[i-1]) + '_BFC_Z.svg'
+
 output = template.render(data)
 
 # write html to file
-with open(dir + '/giga_report.html', 'w') as f:
+with open(dir + '/case_report.html', 'w') as f:
     f.write(output)
 
-print('Report generated in ' + dir + '/giga_report.html')
+print('Report generated in ' + dir + '/case_report.html')
