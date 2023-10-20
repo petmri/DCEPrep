@@ -63,7 +63,7 @@ jobs:
         cat /media/network_mriphysics/USC-PPG/RUNNER_DATA/dce_log.txt
 
     - name: Convert HTML to PDF
-      run:  wkhtmltopdf --enable-local-file-access /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/giga_report.html /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/giga_report.pdf
+      run:  wkhtmltopdf --enable-local-file-access /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/case_report.html /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/case_report.pdf
       continue-on-error: true
 
     - name: Upload analysis results
@@ -71,9 +71,9 @@ jobs:
       with:
         name: HTML_report
         path: |
-          /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/giga_report.html
+          /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/case_report.html
           /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/figures/
-          /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/giga_report.pdf
+          /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/case_report.pdf
         retention-days: 7
         if-no-files-found: error
 
