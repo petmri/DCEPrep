@@ -1,0 +1,165 @@
+<html>
+<head>
+    <title>{{ title }}</title>
+    <!-- <style>
+        body {
+            padding-top: 35px;
+        }
+
+        /* Styles for the navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #333;
+            height: 50px;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .navbar-nav {
+            list-style-type: none;
+            display: flex;
+            margin: 0;
+            padding: 0;
+        }
+
+        .navbar-nav li {
+        position: relative;
+        }
+
+        .navbar-nav ul.dropdown {
+            position: absolute;
+            top: 30px;
+            display: none;
+            background-color: #fff;
+            padding: 0px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            list-style-type: none;
+            width: 100%;
+        }
+
+        .navbar-nav li:hover ul.dropdown {
+            display: block;
+        }
+
+        .navbar-nav ul.dropdown li {
+            margin: 10px 0;
+        }
+
+        .navbar-nav ul.dropdown li a {
+            color: #000;
+            text-decoration: none;
+        }
+
+        .navbar-nav ul.dropdown li:hover a {
+            background-color: #f1f1f1;
+        }
+
+        .nav-item {
+            margin-right: 10px;
+        }
+
+        .nav-item a {
+            color: #ffffff;
+            text-decoration: none;
+            padding: 10px;
+        }
+
+        .nav-item a:hover {
+            background-color: #555;
+        }
+
+        .image-container {
+            position: relative;
+            width: 75%;
+            height: 40%;
+            background-color: black;
+        }
+
+        .image-container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 1s ease-in-out;
+        }
+
+        .image-container img.fade {
+            opacity: 0;
+        }
+
+        .image-container:hover img {
+            opacity: 0;
+        }
+
+        .dce-image-container {
+            display: flex;
+        }
+
+        .dce-image-container img {
+            flex: 1;
+            width: 100%;
+            height: auto;
+        }
+
+        
+    </style> -->
+    </head>
+<body>
+    <!-- <nav class="navbar">
+        <ul class="navbar-nav">
+            <li class="nav-item"><a href="#">Summary</a></li>
+            <li class="nav-item">
+                <a href="#Preprocessing">Preprocessing</a>
+                <ul class="dropdown">
+                    <li><a href="#T1w_masks">T1w Masks</a></li>
+                    <li><a href="#T1w_to_VFA">T1w->VFA</a></li>
+                    <li><a href="#VFA_Z-norm">VFA Z</a></li>
+                    <li><a href="#T1_map">T1 Map</a></li>
+                    <li><a href="#MCFLIRT">MCFLIRT</a></li>
+                    <li><a href="#AIF">AIF</a></li>
+                    <li><a href="#T1w_dyn">T1w->dyn</a></li>
+                    <li><a href="#DCE_Z-norm">DCE Z</a></li>
+                </ul>
+            </li>
+            
+            <li class="nav-item">
+                <a href="#DCE">DCE</a>
+                <ul class="dropdown">
+                    <li><a href="#RUN_A">RUNA</a></li>
+                    <li><a href="#RUN_B">RUNB</a></li>
+                    <li><a href="#RUN_D">RUND</a></li>
+                    <li><a href="#Ktrans">Ktrans</a></li>
+                    <li><a href="#MNI">MNI</a></li>
+                </ul>
+            </li>
+        </ul>
+    </nav> -->
+    <!-- <p></p> -->
+    <h1 id="Summary">Population Summary</h1>
+    <ul>
+        <li>Subjects: {{ Subjects }}</li>
+        <!-- <li>{{ Timepoint }}</li> -->
+        <li>Date: {{ Date }}</li>
+        <li>Commit: {{ Commit }}</li>
+        <!-- <li>{{ Institute }}</li>
+        <li>{{ Machine }}</li> -->
+    </ul>
+    <h2>Ktrans stats (/min)</h2>
+    <ul>
+        <li>White matter mean: {{ wm_mean }}*10^-3</li>
+        <li>White matter stdev: {{ wm_std }}*10^-3</li>
+        <li>Gray matter mean: {{ gm_mean }}*10^-3</li>
+        <li>Gray matter stdev: {{ gm_std }}*10^-3</li>
+    </ul>
+    <h2>Histogram</h2>
+    <div class="image-container">
+        <img src="{{ histogram }}" alt="histogram" />
+</body>
+</html>
