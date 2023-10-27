@@ -28,24 +28,13 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     mri_shape = mri_data.shape
     wm_shape = wm_data.shape
     slice_num = min(mri_shape[0], mri_shape[1], mri_shape[2])
+    axis_order = np.argsort([mri_shape[0], mri_shape[1], mri_shape[2]])
+    # Unpack the axis order
     # usual shape should be x >= y > z
-    # if x < y, swap x and y
-    if mri_shape[0] < mri_shape[1]:
-        x_index = 1
-        y_index = 0
-    else:
-        x_index = 0
-        y_index = 1
-    # if x < z, swap x and z
-    if mri_shape[0] < mri_shape[2]:
-        x_index = 2
-        z_index = 0
-    else:
-        z_index = 2
-    # if y < z, swap y and z
-    if mri_shape[1] < mri_shape[2]:
-        y_index = 2
-        z_index = 1
+    z_index, y_index, x_index = axis_order
+    # if x and y are the same, swap them
+    if mri_shape[x_index] == mri_shape[y_index]:
+        x_index, y_index = y_index, x_index
     mri_data = np.transpose(mri_data, (x_index, y_index, z_index))
     wm_data = np.transpose(wm_data, (x_index, y_index, z_index))
     wm_mean = []
@@ -232,8 +221,23 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
 
     path2 = file_dir + '/figures/' + str(num) +'_BFC_Z.svg'
     plt.savefig(path2, bbox_inches='tight')
+    plt.close()
 
-    # mri_final = np.transpose(mri_final, (x_index, y_index, z_index))
+    # transpose mri_final back to mri_shape order
+    x_index = mri_final.shape.index(mri_shape[0])
+    y_index = mri_final.shape.index(mri_shape[1])
+    z_index = mri_final.shape.index(mri_shape[2])
+    if x_index == y_index:
+        y_index = set(dim) - {x_index, z_index}
+        y_index = list(y_index)[0]
+    elif x_index == z_index:
+        z_index = set(dim) - {x_index, y_index}
+        z_index = list(z_index)[0]
+    elif y_index == z_index:
+        z_index = set(dim) - {x_index, y_index}
+        z_index = list(z_index)[0]
+
+    mri_final = np.transpose(mri_final, (x_index, y_index, z_index))
     final_img = nib.Nifti1Image(mri_final, mri.affine)
     path3 = file_dir + '/' + str(num) + '_BFC_Z.nii'
     nib.save(final_img, path3)
