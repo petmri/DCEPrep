@@ -12,7 +12,7 @@ from nilearn import plotting
 from matplotlib import colors as mcolors
 
 dir = sys.argv[1]
-files_to_reorient = [dir + '/2.nii', dir + '/dce_patlak_fit_Ktrans.nii', dir + '/T1_wm_mask.nii.gz', dir + '/t1_map_fixed_use_me.nii.gz', dir + '/T1_bet_mask_dyn.nii.gz', dir + '/T1_wm_mask_dyn.nii.gz', dir + '/T1_gm_mask_dyn.nii.gz']
+files_to_reorient = [dir + '/2.nii', dir + '/dce_patlak_fit_Ktrans.nii', dir + '/T1_wm_mask.nii.gz', dir + '/T1_map_t1_fa_fit_VFA.nii', dir + '/T1_bet_mask.nii.gz', dir + '/T1_gm_mask.nii.gz']
 # if c3d exists, reorient files to RAS
 dimensions = 0
 voxel_size = 0
@@ -126,23 +126,23 @@ try:
 
     # T1w to dyn
     # flip T1w masks
-    t1w_mask = nib.load(str(dir) + '/T1_bet_mask_dyn_RAS.nii.gz')
+    t1w_mask = nib.load(str(dir) + '/T1_bet_mask_RAS.nii.gz')
     t1w_mask_data = t1w_mask.get_fdata()
     t1w_mask_flipped = np.flip(t1w_mask_data, axis=1)
     t1w_mask_flipped = nib.Nifti1Image(t1w_mask_flipped, t1w_mask.affine, t1w_mask.header)
-    # nib.save(t1w_mask_flipped, str(dir) + '/T1_bet_mask_dyn_RAS.nii')
+    # nib.save(t1w_mask_flipped, str(dir) + '/T1_bet_mask_RAS.nii')
 
-    t1w_wm_mask = nib.load(str(dir) + '/T1_wm_mask_dyn_RAS.nii.gz')
+    t1w_wm_mask = nib.load(str(dir) + '/T1_wm_mask_RAS.nii.gz')
     t1w_wm_mask_data = t1w_wm_mask.get_fdata()
     t1w_wm_mask_flipped = np.flip(t1w_wm_mask_data, axis=1)
     t1w_wm_mask_flipped = nib.Nifti1Image(t1w_wm_mask_flipped, t1w_wm_mask.affine, t1w_wm_mask.header)
-    # nib.save(t1w_wm_mask_flipped, str(dir) + '/T1_wm_mask_dyn_RAS.nii')
+    # nib.save(t1w_wm_mask_flipped, str(dir) + '/T1_wm_mask_RAS.nii')
 
-    t1w_gm_mask = nib.load(str(dir) + '/T1_gm_mask_dyn_RAS.nii.gz')
+    t1w_gm_mask = nib.load(str(dir) + '/T1_gm_mask_RAS.nii.gz')
     t1w_gm_mask_data = t1w_gm_mask.get_fdata()
     t1w_gm_mask_flipped = np.flip(t1w_gm_mask_data, axis=1)
     t1w_gm_mask_flipped = nib.Nifti1Image(t1w_gm_mask_flipped, t1w_gm_mask.affine, t1w_gm_mask.header)
-    # nib.save(t1w_gm_mask_flipped, str(dir) + '/T1_gm_mask_dyn_RAS.nii')
+    # nib.save(t1w_gm_mask_flipped, str(dir) + '/T1_gm_mask_RAS.nii')
 
     plotting.plot_anat(t1w_mask_flipped, cmap='gray', output_file=str(dir)+'/figures/t1bet_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w brain mask to dyn')
     plotting.plot_anat(t1w_wm_mask_flipped, cmap='gray', output_file=str(dir)+'/figures/t1wm_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w wm to dyn')
@@ -156,7 +156,7 @@ try:
     # read txt file
     FAs = []
     is_target_line = False
-    with open(str(dir) + '/T1_map_t1_fa_fit_VFA_mc.txt', 'r') as f:
+    with open(str(dir) + '/T1_map_t1_fa_fit_VFA.txt', 'r') as f:
         for line in f:
             if "User selected TE/TR/FA/TI: " in line:
                 is_target_line = True
@@ -176,7 +176,7 @@ try:
     # now get TR from txt file
     TR = None
     is_target_line = False
-    with open(str(dir) + '/T1_map_t1_fa_fit_VFA_mc.txt', 'r') as f:
+    with open(str(dir) + '/T1_map_t1_fa_fit_VFA.txt', 'r') as f:
         for line in f:
             if "User selected tr: " in line:
                 is_target_line = True
@@ -189,7 +189,7 @@ try:
 
     # check if GPU was used
     GPU = False
-    with open(str(dir) + '/T1_map_t1_fa_fit_VFA_mc.txt', 'r') as f:
+    with open(str(dir) + '/T1_map_t1_fa_fit_VFA.txt', 'r') as f:
         for line in f:
             if "GPU detected" in line:
                 GPU = True
@@ -208,9 +208,9 @@ except Exception as e:
 try:
     # T1 map
     # flip T1 map
-    img = nib.load(str(dir) + '/t1_map_fixed_use_me_RAS.nii.gz')
+    img = nib.load(str(dir) + '/T1_map_t1_fa_fit_VFA_RAS.nii.gz')
     img_data = img.get_fdata()
-    # img_data = np.flip(img_data, axis=0)
+    img_data = np.flip(img_data, axis=0)
     img_data = np.flip(img_data, axis=1)
     t1_map_flipped = nib.Nifti1Image(img_data, img.affine, img.header)
     plotting.plot_anat(t1_map_flipped, cmap='gray', vmin=0, vmax=5000, output_file=str(dir)+'/figures/t1_map.svg', annotate=False, colorbar=False, draw_cross=False, title='T1 map')
@@ -408,13 +408,13 @@ else:
 # get Ktrans mean wm and gm
 ktrans_wm = nib.load(str(dir) + '/Ktrans_wm.nii.gz')
 ktrans_wm_data = ktrans_wm.get_fdata()
-mean_wm = np.mean(ktrans_wm_data[ktrans_wm_data > 0])
-std_wm = np.std(ktrans_wm_data[ktrans_wm_data > 0])
+mean_wm = np.mean(ktrans_wm_data[ktrans_wm_data > 0])*1000
+std_wm = np.std(ktrans_wm_data[ktrans_wm_data > 0])*1000
 
 ktrans_gm = nib.load(str(dir) + '/Ktrans_gm.nii.gz')
 ktrans_gm_data = ktrans_gm.get_fdata()
-mean_gm = np.mean(ktrans_gm_data[ktrans_gm_data > 0])
-std_gm = np.std(ktrans_gm_data[ktrans_gm_data > 0])
+mean_gm = np.mean(ktrans_gm_data[ktrans_gm_data > 0])*1000
+std_gm = np.std(ktrans_gm_data[ktrans_gm_data > 0])*1000
 
 # MNI space registration
 fsl_dir = os.environ['FSLDIR']
@@ -475,10 +475,10 @@ data = {
     'DCE_elapsed_time' : 'Elapsed time: ' + str(dce_elapsed_time) + 's',
     'ktrans_zeros' : dir + '/figures/T1_Ktrans_zeros.png',
     'ktrans_analysis' : dir + '/figures/T1_Ktrans_analysis.png',
-    'ktrans_wm_mean' : 'Mean Ktrans (wm): ' + str(mean_wm),
-    'ktrans_wm_std' : 'Std Ktrans (wm): ' + str(std_wm),
-    'ktrans_gm_mean' : 'Mean Ktrans (gm): ' + str(mean_gm),
-    'ktrans_gm_std' : 'Std Ktrans (gm): ' + str(std_gm),
+    'ktrans_wm_mean' : 'Mean Ktrans (wm): ' + str(mean_wm) + '*10^-3',
+    'ktrans_wm_std' : 'Std Ktrans (wm): ' + str(std_wm) + '*10^-3',
+    'ktrans_gm_mean' : 'Mean Ktrans (gm): ' + str(mean_gm) + '*10^-3',
+    'ktrans_gm_std' : 'Std Ktrans (gm): ' + str(std_gm) + '*10^-3',
     'MNI_img' : dir + '/figures/MNI152_T1_1mm_brain.svg',
     'MNI_T1w' : dir + '/figures/t1w_MNI.svg',
     'MNI_Ktrans' : dir + '/figures/ktrans_MNI.svg',
@@ -486,8 +486,8 @@ data = {
 
 # insert VFAs into template
 for i in range(len(FAs)):
-    data['FA_' + str(i)] = 'FA ' + str(FAs[i-1])
-    data['Z_' + str(i)] = dir + '/figures/' + str(FAs[i-1]) + '_BFC_Z.svg'
+    data['FA_' + str(i+1)] = 'FA ' + str(FAs[i])
+    data['Z_' + str(i+1)] = dir + '/figures/' + str(FAs[i]) + '_BFC_Z.svg'
 
 output = template.render(data)
 
