@@ -116,7 +116,7 @@ for dir in */*_timepoint/; do
 		then
 		if [ -f "DCE_mc_bfc_norm.nii" ]
 			then
-			echo "Skipping ${dir} because it has already been processed."
+			echo "Skipping ${dir} because it has already been processed." >> $LOG_FILE
 			cd ../..
 			continue
 		fi
@@ -417,48 +417,13 @@ for dir in */*_timepoint/; do
 	
 	# Align T1 map with Dynamic data
 	# ------------------------------
-	# FRAUDSURFER doesn't really do anything for most subjects
-	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_map_t1_fa_fit_VFA_mc.nii t1_map_fixed_use_me.nii.gz
-	# antsRegistrationSyN.sh -d 3 -t t -f ref_rep.nii -m T1_map_t1_fa_fit_VFA_mc.nii -o t1_map_fixed_use_me &> /dev/null
-	# antsRegistration --verbose 0 --dimensionality 3 --float 0 --collapse-output-transforms 1 \
-	# 	--output [ t1_map_fixed_use_me,t1_map_fixed_use_meWarped.nii.gz,t1_map_fixed_use_meInverseWarped.nii.gz ] \
-	# 	--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
-	# 	--transform Rigid[ 0.1 ] --metric MI[ ref_rep.nii,T1_map_t1_fa_fit_VFA_mc.nii,1,32,Regular,0.25 ] \
-	# 	--convergence [ 250x100,1e-6,10 ] --shrink-factors 4x2 --smoothing-sigmas 2x1vox
 
-	# mv t1_map_fixed_use_meWarped.nii.gz t1_map_fixed_use_me.nii.gz
-	# rm t1_map_fixed_use_meInverseWarped.nii.gz
-	# rm t1_map_fixed_use_me0GenericAffine.mat
 	#prog=$(echo "scale=2;  $prog + .55 / $count" | bc -l)
 	#echo -ne "ANTSREG T1->DCE[=======================>                          ] $prog% ($current/$count) ~$ETA min remaining \r"
-	# if [ ! -f "t1_map_fixed_use_me.nii.gz" ]
-	# 	then
-	# 		echo "Missing registered T1 map." >> $LOG_FILE
-	# 		cd ../..
-	# 		fail=1
-	# 		continue
-	# fi
 	
-	# align and apply brain mask
-	#flirt -in T1.nii -ref ref_rep.nii -dof 12 -omat T1toDCE.mat -o T1_dyn.nii
-	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1.nii T1_dyn.nii.gz
-	#antsRegistrationSyN.sh -d 3 -t a -f ref_rep.nii -m T1.nii -o T1_dyn &> /dev/null
-	#mv T1_dynWarped.nii.gz T1_dyn.nii.gz
-	#rm T1_dyn0GenericAffine.mat
-	#rm T1_dynInverseWarped.nii.gz
 	prog=$(echo "scale=2;  $prog + 2.77 / $count" | bc -l)
 	echo -ne "REG BET MASK   [========================>                         ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
-	#flirt -in T1_bet_mask.nii.gz -ref ref_rep.nii -init T1toDCE.mat -applyxfm -o T1_bet_mask_dyn.nii
-	#flirt -in T1_bet_mask.nii.gz -ref ref_rep.nii -dof 6 -o T1_bet_mask_dyn.nii
-	#fslmaths T1_bet_mask_dyn.nii -bin T1_bet_mask_dyn.nii
-	#echo "Registering T1 brain to dynamic space with ANTs..."
-	# antsRegistration --verbose 0 --dimensionality 3 --float 0 --collapse-output-transforms 1 \
-	# 	--output [ T1_bet_dyn,T1_bet_dynWarped.nii.gz,T1_bet_dynInverseWarped.nii.gz ] --interpolation Linear \
-	# 	--use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] --transform Rigid[ 0.1 ] \
-	# 	--metric MI[ ref_rep.nii,T1_bet.nii.gz,1,32,Regular,0.25 ] --convergence [ 250x100,1e-6,10 ] \
-	# 	--shrink-factors 4x2 --smoothing-sigmas 2x1vox
-	# mv T1_bet_mask_dynWarped.nii.gz T1_bet_mask_dyn.nii.gz
 	antsApplyTransforms -i T1_bet_mask.nii.gz -r ref_rep.nii -t T1_dyn0GenericAffine.mat -o T1_bet_mask_dyn_pv.nii &> /dev/null
 	fslmaths T1_bet_mask_dyn_pv.nii -thr 1 -bin T1_bet_mask_dyn.nii.gz &> /dev/null
 	rm T1_bet_mask_dyn_pv.nii
@@ -480,11 +445,12 @@ for dir in */*_timepoint/; do
 			--save_image 1 &> /dev/null
 		# conda deactivate
 		# rename output
-		mv *_mask.nii aif_floats.nii
+		mv *float_mask.nii aif_floats.nii
+		mv DCE_mc_mask.nii aif_topvoxels.nii
 		mv DCE_mc_curve.svg figures/DCE_mc_curve.svg
 		mv DCE_mc_mask.svg figures/DCE_mc_mask.svg
-		fslmaths aif_floats.nii -thr 0.95 aif_mask.nii
-		fslmaths T1_map_t1_fa_fit_VFA.nii -mas aif_mask.nii aif.nii
+		# fslmaths aif_floats.nii -thr 0.95 aif_mask.nii
+		fslmaths T1_map_t1_fa_fit_VFA.nii -mas aif_topvoxels.nii aif.nii
 		gunzip -f aif.nii.gz
 	fi
 	# ensure AIF is included in mask

@@ -8,9 +8,10 @@ fail=0
 count=0
 successes=0
 USE_FREESURFER=0
+SKIP_IF_SUCCESS=0
 
 # options
-while getopts ":d:bfh" options; do
+while getopts ":d:bfhs" options; do
 	case "${options}" in
 		b)
 			EN_BIAS1=1
@@ -30,6 +31,9 @@ while getopts ":d:bfh" options; do
 			echo "-d: specify main data directory containing all subject folders"
 			echo "-h: display this message"
 			exit 0
+			;;
+		s)
+			SKIP_IF_SUCCESS=1
 			;;
 		*)
 			echo "Invalid option ${OPTARG}. Please use -h for a list of valid options."
@@ -63,6 +67,15 @@ for dir in */*_timepoint/; do
 	cd $dir || exit 1
 	SUBJECT_TP_PATH=$(pwd)
 
+	if [ $SKIP_IF_SUCCESS -eq 1 ]
+		then
+		if [ -f "case_report.html" ]
+			then
+			echo "Skipping $dir because it has already been processed." >> $LOG_FILE
+			cd ../..
+			continue
+		fi
+	fi
 	if [ ! -f "DCE_mc_bfc_norm.nii" ]
 		then
 		echo Missing input file. Make sure the data has been preprocessed. Skipping $dir... >> $LOG_FILE
@@ -88,13 +101,6 @@ for dir in */*_timepoint/; do
 	# ------------------------------
 	
 	# Align then re-binarize gm mask
-	#bad
-	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii segmented_t1_seg_1.nii.gz T1_gm_dyn.nii.gz
-	#flirt -in segmented_t1_seg_1.nii.gz -ref ref_rep.nii -init T1toDCE.mat -applyxfm -o T1_gm_mask_dyn.nii
-	#fails on 1 subject (180deg rotation)
-	#flirt -in segmented_t1_seg_1.nii.gz -dof 6 -ref ref_rep.nii -o T1_gm_mask_dyn.nii
-	#fslmaths T1_gm_mask_dyn.nii -thr 0.5 -bin T1_gm_mask_dyn.nii
-	#good
 	# antsRegistrationSyN.sh -d 3 -t t -f ref_rep.nii -m segmented_t1_seg_1.nii.gz -o T1_gm_mask_dyn
 	antsApplyTransforms -i segmented_t1_seg_1.nii.gz -r ref_rep.nii -t T1_dyn0GenericAffine.mat -o T1_gm_mask_dyn_pv.nii &> /dev/null
 	fslmaths T1_gm_mask_dyn_pv.nii -thr 0.9 -bin T1_gm_mask.nii
@@ -134,7 +140,6 @@ for dir in */*_timepoint/; do
 	flirt -in DCE_mc.nii.gz -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -omat DCE2MNI.mat -out DCE_MNI_FSL.nii.gz
 	flirt -in T1.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out t1w_MNI.nii.gz -bins 256 -cost mutualinfo -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear
 	flirt -in dce_patlak_fit_Ktrans.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out ktrans_2_MNI.nii.gz -init DCE2MNI.mat -applyxfm
-	
 	python3 $SCRIPT_PATH/ktrans_report.py $SUBJECT_TP_PATH
 	python3 $SCRIPT_PATH/case_report.py $SUBJECT_TP_PATH
 	cd ../../
