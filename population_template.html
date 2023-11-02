@@ -145,18 +145,22 @@
     <h1 id="Summary">Population Summary</h1>
     <ul>
         <li>Subjects: {{ Subjects }}</li>
+        <li>Subject count: {{ Subject_count }}</li>
+        <li>Cases: {{ Cases }}</li>
         <!-- <li>{{ Timepoint }}</li> -->
         <li>Date: {{ Date }}</li>
         <li>Commit: {{ Commit }}</li>
         <!-- <li>{{ Institute }}</li>
         <li>{{ Machine }}</li> -->
     </ul>
-    <h2>Ktrans stats (/min)</h2>
+    <h2>Ktrans stats (10^-3/min)</h2>
     <ul>
-        <li>White matter mean: {{ wm_mean }}*10^-3</li>
-        <li>White matter stdev: {{ wm_std }}*10^-3</li>
-        <li>Gray matter mean: {{ gm_mean }}*10^-3</li>
-        <li>Gray matter stdev: {{ gm_std }}*10^-3</li>
+        <li>White matter mean median: {{ wm_mean }}</li>
+        <li>White matter median median: {{ wm_median }}</li>
+        <li>White matter stdev median: {{ wm_std }}</li>
+        <li>Gray matter mean median: {{ gm_mean }}</li>
+        <li>Gray matter median median: {{ gm_median }}</li>
+        <li>Gray matter stdev median: {{ gm_std }}</li>
     </ul>
     <h2>Histogram</h2>
     <div class="image-container">
