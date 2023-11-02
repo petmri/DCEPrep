@@ -35,8 +35,13 @@ if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
 
                 # plot ktrans
                 fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(15, 5), gridspec_kw={'hspace': -.1, 'wspace': -.1}, dpi=300)
-                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-119, -154, -5), axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
-                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-154, -189, -5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
+                #read ktrans coordinates
+                ktrans_coords = int(ktrans.header['qoffset_z'])
+                ktrans_z_slices = min(dimensions)
+                midpt = int(ktrans_coords-5*ktrans_z_slices/2)
+                max_coord = int(ktrans_coords-5*ktrans_z_slices)
+                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(ktrans_coords, midpt, -5), axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
+                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(midpt, max_coord, -5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
                 plt.savefig(str(dir) + '/figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
                 plt.close()
         except Exception as e:
@@ -406,22 +411,29 @@ else:
 # Ktrans
 
 # get Ktrans mean wm and gm
+KTRANS_MIN_THRESHOLD = 0.00001
 ktrans_wm = nib.load(str(dir) + '/Ktrans_wm.nii.gz')
 ktrans_wm_data = ktrans_wm.get_fdata()
-mean_wm = np.mean(ktrans_wm_data[ktrans_wm_data > 0])*1000
-std_wm = np.std(ktrans_wm_data[ktrans_wm_data > 0])*1000
+# mean_wm = np.mean(ktrans_wm_data[ktrans_wm_data > 0])*1000
+median_wm = np.median(ktrans_wm_data[ktrans_wm_data > KTRANS_MIN_THRESHOLD])*1000
+std_wm = np.std(ktrans_wm_data[ktrans_wm_data > KTRANS_MIN_THRESHOLD])*1000
 
 ktrans_gm = nib.load(str(dir) + '/Ktrans_gm.nii.gz')
 ktrans_gm_data = ktrans_gm.get_fdata()
-mean_gm = np.mean(ktrans_gm_data[ktrans_gm_data > 0])*1000
-std_gm = np.std(ktrans_gm_data[ktrans_gm_data > 0])*1000
+# mean_gm = np.mean(ktrans_gm_data[ktrans_gm_data > 0])*1000
+median_gm = np.median(ktrans_gm_data[ktrans_gm_data > KTRANS_MIN_THRESHOLD])*1000
+std_gm = np.std(ktrans_gm_data[ktrans_gm_data > KTRANS_MIN_THRESHOLD])*1000
 
 # MNI space registration
 fsl_dir = os.environ['FSLDIR']
 # print(fsl_dir)
-plotting.plot_anat(fsl_dir + '/data/standard/MNI152_T1_1mm.nii.gz', title='MNI152_T1_1mm', output_file=dir + '/figures/MNI152_T1_1mm.svg', annotate=False, colorbar=False, draw_cross=False)
-plotting.plot_anat(dir + '/t1w_MNI.nii.gz', title='t1w_MNI', output_file=dir + '/figures/t1w_MNI.svg', annotate=False, colorbar=False, draw_cross=False)
-plotting.plot_anat(dir + '/ktrans_2_MNI.nii.gz', title='ktrans_MNI', vmin=0, vmax=0.009, output_file=dir + '/figures/Ktrans_MNI.svg', annotate=False, colorbar=False, draw_cross=False)
+try:
+    plotting.plot_anat(fsl_dir + '/data/standard/MNI152_T1_1mm.nii.gz', title='MNI152_T1_1mm', output_file=dir + '/figures/MNI152_T1_1mm.svg', annotate=False, colorbar=False, draw_cross=False)
+    plotting.plot_anat(dir + '/t1w_MNI.nii.gz', title='t1w_MNI', output_file=dir + '/figures/t1w_MNI.svg', annotate=False, colorbar=False, draw_cross=False)
+    plotting.plot_anat(dir + '/ktrans_2_MNI.nii.gz', title='ktrans_MNI', vmin=0, vmax=0.009, output_file=dir + '/figures/Ktrans_MNI.svg', annotate=False, colorbar=False, draw_cross=False)
+except Exception as e:
+    print("Error plotting MNI space registration")
+    print(e)
 
 data = {
     'title': subject_id + ' ' + timepoint + ' Report',
@@ -475,10 +487,12 @@ data = {
     'DCE_elapsed_time' : 'Elapsed time: ' + str(dce_elapsed_time) + 's',
     'ktrans_zeros' : dir + '/figures/T1_Ktrans_zeros.png',
     'ktrans_analysis' : dir + '/figures/T1_Ktrans_analysis.png',
-    'ktrans_wm_mean' : 'Mean Ktrans (wm): ' + str(mean_wm) + '*10^-3',
-    'ktrans_wm_std' : 'Std Ktrans (wm): ' + str(std_wm) + '*10^-3',
-    'ktrans_gm_mean' : 'Mean Ktrans (gm): ' + str(mean_gm) + '*10^-3',
-    'ktrans_gm_std' : 'Std Ktrans (gm): ' + str(std_gm) + '*10^-3',
+    'ktrans_wm_mean' : 'Mean wm Ktrans: ' + str(round(mean_wm, 4)),
+    'ktrans_wm_median' : 'Median wm Ktrans: ' + str(round(median_wm, 4)),
+    'ktrans_wm_std' : 'Std wm Ktrans: ' + str(round(std_wm, 4)),
+    'ktrans_gm_mean' : 'Mean gm Ktrans: ' + str(round(mean_gm, 4)),
+    'ktrans_gm_median' : 'Median gm Ktrans: ' + str(round(median_gm, 4)),
+    'ktrans_gm_std' : 'Std gm Ktrans: ' + str(round(std_gm, 4)),
     'MNI_img' : dir + '/figures/MNI152_T1_1mm_brain.svg',
     'MNI_T1w' : dir + '/figures/t1w_MNI.svg',
     'MNI_Ktrans' : dir + '/figures/ktrans_MNI.svg',

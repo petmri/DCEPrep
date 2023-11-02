@@ -233,11 +233,13 @@
         <li>{{ GPU_DCE }}</li>
         <li>{{ DCE_elapsed_time }}</li>
     </ul>
-    <h2 id="Ktrans">Ktrans maps</h2>
+    <h2 id="Ktrans">Ktrans maps (10^-3/min)</h2>
     <ul>
-        <li>{{ ktrans_wm_mean }}</li>
+        <!-- <li>{{ ktrans_wm_mean }}</li> -->
+        <li>{{ ktrans_wm_median }}</li>
         <li>{{ ktrans_wm_std }}</li>
-        <li>{{ ktrans_gm_mean }}</li>
+        <!-- <li>{{ ktrans_gm_mean }}</li> -->
+        <li> {{ ktrans_gm_median }}</li>
         <li>{{ ktrans_gm_std }}</li>
     </ul>
     <img src="{{ ktrans }}" alt="{{ ELYOUEL }}" width="1600"></img>
