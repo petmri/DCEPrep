@@ -9,7 +9,6 @@ EN_BIAS1=0
 EN_BIAS2=0
 EN_MOTION_CORR=0
 T1_ONLY=0
-USE_FREESURFER=0
 USE_AUTO_AIF=0
 SKIP_IF_SUCCESS=0
 
@@ -52,9 +51,6 @@ while getopts ":d:bBAZfhcC::mst" options; do
 			DATE=$(date +%Y-%m-%d)
 			LOG_FILE=$DATA_DIR/preprocessing_log_$DATE.txt
 			;;
-		f)
-			USE_FREESURFER=1
-			;;
 		h)
 			echo "This script runs through all subject folders of a specified main data directory, preprocessing every folder ending in '_timepoint'."
 			echo "The output is the DCE input, which are the corrected dynamic images, brain mask, T1 maps."
@@ -64,7 +60,6 @@ while getopts ":d:bBAZfhcC::mst" options; do
 			echo "-c: clean generated files prior to processing"
 			echo "-C [dir_path]: enable comparison mode, which will output all files to the specified directory within each timepoint"
 			echo "-d [dir_path]: specify main data directory containing all subject folders"
-			echo "-f: use freesurfer for registration (seems to cut off top of cortical region for most subjects, works perfectly for one site)"
 			echo "-h: display this message"
 			echo "-m: enable motion correction"
 			echo "-s: skip processing if DCE input file already exists"

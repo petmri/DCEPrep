@@ -8,7 +8,6 @@ EN_BIAS1=0
 fail=0
 count=0
 successes=0
-USE_FREESURFER=0
 SKIP_IF_SUCCESS=0
 PURGE_INTERMEDIATES=1
 GIGA_PURGE=0
@@ -32,9 +31,6 @@ while getopts ":d:bC::fhs" options; do
 			fi
 			date=$(date +%Y-%m-%d)
 			LOG_FILE=$DATA_DIR/dce_log_$date.txt
-			;;
-		f)
-			USE_FREESURFER=1
 			;;
 		h)
 			echo "This script runs through all subject folders of a specified main data directory, processing every folder ending in '_timepoint'."
