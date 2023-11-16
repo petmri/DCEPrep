@@ -11,8 +11,12 @@ import re
 from nilearn import plotting
 from matplotlib import colors as mcolors
 
-dir = sys.argv[1]
-files_to_reorient = [dir + '/2.nii', dir + '/dce_patlak_fit_Ktrans.nii', dir + '/T1_wm_mask.nii.gz', dir + '/T1_map_t1_fa_fit_VFA.nii', dir + '/T1_bet_mask.nii.gz', dir + '/T1_gm_mask.nii.gz']
+tp_dir = sys.argv[1]
+dir = sys.argv[2]
+if dir[-1] == '/':
+    dir = dir[:-1]
+
+files_to_reorient = [tp_dir + '/2.nii', dir + '/dce_patlak_fit_Ktrans.nii', dir + '/T1_wm_mask.nii.gz', dir + '/T1_map_t1_fa_fit_VFA.nii', dir + '/T1_bet_mask.nii.gz', dir + '/T1_gm_mask.nii.gz']
 # if c3d exists, reorient files to RAS
 dimensions = 0
 voxel_size = 0
@@ -25,8 +29,8 @@ if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
         command = ['c3d', file, '-orient', 'RAS', '-o', file_no_extension + '_RAS.nii.gz']
         try:
             subprocess.run(command, check=True)
-            if file == dir + '/dce_patlak_fit_Ktrans.nii':
-                ktrans = nib.load(str(dir) + '/dce_patlak_fit_Ktrans_RAS.nii.gz')
+            if file == os.path.join(dir, 'dce_patlak_fit_Ktrans.nii'):
+                ktrans = nib.load(os.path.join(str(dir), 'dce_patlak_fit_Ktrans_RAS.nii.gz'))
                 ktrans_data = ktrans.get_fdata()
                 ktrans_flipped = np.flip(ktrans_data, axis=1)
                 ktrans_flipped = nib.Nifti1Image(ktrans_flipped, ktrans.affine, ktrans.header)
@@ -98,7 +102,7 @@ timepoint = dir.split('/')[-1]
 
 # get institute from DCE.json
 try:
-    with open(str(dir) + '/DCE.json') as f:
+    with open(str(tp_dir) + '/DCE.json') as f:
         dce = json.load(f)
     institute = dce['InstitutionName']
     manufacturer = dce['Manufacturer']
@@ -115,12 +119,12 @@ except Exception as e:
 
 try:
     # brain mask
-    plotting.plot_roi(str(dir) + '/T1_bet_mask.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, dim=-1, cmap='gray', output_file=str(dir)+'/figures/t1w_mask.svg', annotate=False, colorbar=False, draw_cross=False, title='mask')
+    plotting.plot_roi(str(dir) + '/T1_bet_mask.nii.gz', bg_img=str(tp_dir)+'/T1.nii', vmin=0, vmax=1, dim=-1, cmap='gray', output_file=str(dir)+'/figures/t1w_mask.svg', annotate=False, colorbar=False, draw_cross=False, title='mask')
 
     # T1w segmentation
-    plotting.plot_anat(str(dir) + '/T1.nii', cmap='gray', output_file=str(dir)+'/figures/t1w.svg', dim=-1, annotate=False, colorbar=False, draw_cross=False)
-    plotting.plot_roi(str(dir) + '/segmented_t1_seg_2.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, dim=0, cmap='gray', output_file=str(dir)+'/figures/t1w_wm.svg', annotate=False, colorbar=False, draw_cross=False, title='wm')
-    plotting.plot_roi(str(dir) + '/segmented_t1_seg_1.nii.gz', bg_img=str(dir)+'/T1.nii', vmin=0, vmax=1, dim=0, cmap='gray', output_file=str(dir)+'/figures/t1w_gm.svg', annotate=False, colorbar=False, draw_cross=False, title='gm')
+    plotting.plot_anat(str(tp_dir) + '/T1.nii', cmap='gray', output_file=str(dir)+'/figures/t1w.svg', dim=-1, annotate=False, colorbar=False, draw_cross=False)
+    plotting.plot_roi(str(dir) + '/segmented_t1_seg_2.nii.gz', bg_img=str(tp_dir)+'/T1.nii', vmin=0, vmax=1, dim=0, cmap='gray', output_file=str(dir)+'/figures/t1w_wm.svg', annotate=False, colorbar=False, draw_cross=False, title='wm')
+    plotting.plot_roi(str(dir) + '/segmented_t1_seg_1.nii.gz', bg_img=str(tp_dir)+'/T1.nii', vmin=0, vmax=1, dim=0, cmap='gray', output_file=str(dir)+'/figures/t1w_gm.svg', annotate=False, colorbar=False, draw_cross=False, title='gm')
 except Exception as e:
     print("Error plotting T1w segmentation")
     print(e)
@@ -223,55 +227,97 @@ except Exception as e:
     print("Error plotting T1 map")
     print(e)
 
-try:
-    # AIF
-    # plot graph of AIF region
-    aif = nib.load(str(dir) + '/aif.nii')
-    aif_data = aif.get_fdata()
-    img = nib.load(str(dir) + '/DCE_mc.nii.gz')
-    img_data = img.get_fdata()
-    # binarize AIF
-    aif_data[aif_data > 0] = 1
-    aif_data[aif_data < 0] = 0
-    # mask DCE where AIF is 1
-    # but first ensure that DCE and AIF have same number of dimensions
-    if len(aif_data.shape) < len(img_data.shape):
-        aif_data = np.expand_dims(aif_data, axis=-1)
-    aif_data_roi = img_data * aif_data
-    # sum AIF data for each time point, z-slice independent
-    aif_curve = np.sum(aif_data_roi, axis=(0, 1, 2)) / np.sum(aif_data[aif_data > 0])
-    # divide by AIF mean of first timepoint
-    aif_curve_ratio = aif_curve / aif_curve[0]
+# try:
+# AIF
+# plot graph of AIF region
+aif = nib.load(str(dir) + '/aif.nii')
+aif_data = aif.get_fdata()
+img = nib.load(str(dir) + '/DCE_mc.nii.gz')
+img_data = img.get_fdata()
+# binarize AIF
+aif_data[aif_data > 0] = 1
+aif_data[aif_data < 0] = 0
+# mask DCE where AIF is 1
+# but first ensure that DCE and AIF have same number of dimensions
+if len(aif_data.shape) < len(img_data.shape):
+    aif_data = np.expand_dims(aif_data, axis=-1)
+aif_data_roi = img_data * aif_data
+# sum AIF data for each time point, z-slice independent
+aif_curve = np.sum(aif_data_roi, axis=(0, 1, 2)) / np.sum(aif_data[aif_data > 0])
+# divide by AIF mean of first timepoint
+aif_curve_ratio = aif_curve / aif_curve[0]
 
-    # plot AIF
-    plt.plot(aif_curve_ratio)
-    plt.text(0.25, 0.95, 'Voxel Baseline Avg SI: ' + str(aif_curve[0]), transform=plt.gca().transAxes, fontsize=11, verticalalignment='top')
-    plt.title('AIF Curve')
-    plt.xlabel('Timepoint')
-    plt.ylabel('Signal intensity / Baseline')
-    plt.savefig(str(dir)+'/figures/AIF_graph.svg', bbox_inches='tight')
-    plt.close()
+# get metric of AIF
+def quality_peak(aif_curve):
+    peak_ratio = max(aif_curve) / aif_curve[0]
+    # peak_ratio = tf.cast(peak_ratio, tf.float32)
+    return peak_ratio*(100/7.546971123202499)
 
-    # plot AIF overlay
-    plt.figure(figsize=(15,5), dpi=250)
-    plt.subplot(1,2,1)
-    plt.axis('off')
+def quality_tail(aif_curve):
+    # end is mean of last 20% of curve
+    end_ratio = np.mean(aif_curve[-int(float(int(len(aif_curve)))*0.2):]) / aif_curve[0]
+    # end_ratio = tf.cast(end_ratio, tf.float32)
 
-    # rotate images
-    img_data = np.rot90(img_data, axes=(0,1))
-    aif_data = np.rot90(aif_data, axes=(0,1))
+    quality = (1 / (end_ratio + 1)) * (100/0.24035631585328981)
+    # if quality > 200:
+    #     quality = 200
+    return quality
 
-    # overlay AIF mask
-    aif_slice = np.where(aif_data > 0)[2][0]
-    cmap = mcolors.LinearSegmentedColormap.from_list('custom cmap', [(0, 0, 0, 0), 'blue', 'green', 'red'])
-    plt.imshow(img_data[:,:,aif_slice, 5], cmap='gray')
-    plt.imshow(aif_data[:,:,aif_slice], cmap=cmap, alpha=1)
-    plt.savefig(str(dir)+'/figures/AIF_overlay.svg', bbox_inches='tight')
-    plt.close()
-except Exception as e:
-    print("Error plotting AIF")
-    # print error
-    print(e)
+def quality_peak_to_end(aif_curve):
+    peak_ratio = quality_peak(aif_curve)/(100/7.546971123202499)
+    end_ratio = np.mean(aif_curve[-int(float(int(len(aif_curve)))*0.2):]) / aif_curve[0]
+    # end_ratio = tf.cast(end_ratio, tf.float32)
+    
+    return (peak_ratio / end_ratio)*(100/2.4085609761976534)
+
+def quality_peak_time(aif_curve):
+    peak_time = np.argmax(aif_curve)
+    # peak_time = tf.cast(peak_time, tf.float32)
+    num_timeslices = len(aif_curve)
+    qpt = (num_timeslices - peak_time) / num_timeslices
+    return qpt*(100/0.9157142857142857)
+
+def quality_ultimate(aif_curve):
+    peak_ratio = quality_peak(aif_curve)
+    end_ratio = quality_tail(aif_curve)
+    peak_to_end = quality_peak_to_end(aif_curve)
+    peak_time = quality_peak_time(aif_curve)
+
+    # take weighted average
+    return peak_ratio*0.3 + end_ratio*0.3 + peak_to_end*0.3 + peak_time*0.1
+    # return peak_ratio + 0.3*end_ratio + 0.3*peak_to_end + 0.1*peak_time
+
+aif_metric = quality_ultimate(aif_curve_ratio)
+
+# plot AIF
+plt.plot(aif_curve_ratio)
+plt.text(0.25, 0.95, 'Voxel Baseline Avg SI: ' + str(aif_curve[0]), transform=plt.gca().transAxes, fontsize=11, verticalalignment='top')
+plt.title('AIF Curve')
+plt.xlabel('Timepoint')
+plt.ylabel('Signal intensity / Baseline')
+plt.savefig(str(dir)+'/figures/AIF_graph.svg', bbox_inches='tight')
+plt.close()
+
+# plot AIF overlay
+plt.figure(figsize=(15,5), dpi=250)
+plt.subplot(1,2,1)
+plt.axis('off')
+
+# rotate images
+img_data = np.rot90(img_data, axes=(0,1))
+aif_data = np.rot90(aif_data, axes=(0,1))
+
+# overlay AIF mask
+aif_slice = np.where(aif_data > 0)[2][0]
+cmap = mcolors.LinearSegmentedColormap.from_list('custom cmap', [(0, 0, 0, 0), 'blue', 'green', 'red'])
+plt.imshow(img_data[:,:,aif_slice, 5], cmap='gray')
+plt.imshow(aif_data[:,:,aif_slice], cmap=cmap, alpha=1)
+plt.savefig(str(dir)+'/figures/AIF_overlay.svg', bbox_inches='tight')
+plt.close()
+# except Exception as e:
+#     print("Error plotting AIF")
+#     # print error
+#     print(e)
 
 # T1 dynamic space
 
@@ -298,6 +344,7 @@ hematocrit_pattern = r"User selected hematocit \(0 to 1.0\):\s+(\d+\.\d+)"
 snr_threshold_pattern = r"User selected SNR threshold for AIF:\s+(\d+)"
 relaxivity_pattern = r"User selected contrast agent R1 relaxivity \(/mM/sec\):\s+(\d+\.\d+)"
 steady_state_pattern = r"User selected end of steady state time \(image number\):\s+(-?\d+)"
+blood_t1_pattern = r"Average Filtered AIF T1: (\d+)"
 
 DCE_tr = extract_value(tr_pattern, log_text)
 DCE_fa = extract_value(fa_pattern, log_text)
@@ -305,6 +352,7 @@ hematocrit = extract_value(hematocrit_pattern, log_text)
 snr_threshold = extract_value(snr_threshold_pattern, log_text)
 relaxivity = extract_value(relaxivity_pattern, log_text)
 steady_state = extract_value(steady_state_pattern, log_text)
+blood_t1 = extract_value(blood_t1_pattern, log_text)
 
 if RUNA_log:
     # get last line of log file
@@ -415,14 +463,25 @@ KTRANS_MIN_THRESHOLD = 0.00001
 ktrans_wm = nib.load(str(dir) + '/Ktrans_wm.nii.gz')
 ktrans_wm_data = ktrans_wm.get_fdata()
 # mean_wm = np.mean(ktrans_wm_data[ktrans_wm_data > 0])*1000
-median_wm = np.median(ktrans_wm_data[ktrans_wm_data > KTRANS_MIN_THRESHOLD])*1000
-std_wm = np.std(ktrans_wm_data[ktrans_wm_data > KTRANS_MIN_THRESHOLD])*1000
+ktrans_median_wm = np.median(ktrans_wm_data[ktrans_wm_data > KTRANS_MIN_THRESHOLD])*1000
+ktrans_std_wm = np.std(ktrans_wm_data[ktrans_wm_data > KTRANS_MIN_THRESHOLD])*1000
 
 ktrans_gm = nib.load(str(dir) + '/Ktrans_gm.nii.gz')
 ktrans_gm_data = ktrans_gm.get_fdata()
 # mean_gm = np.mean(ktrans_gm_data[ktrans_gm_data > 0])*1000
-median_gm = np.median(ktrans_gm_data[ktrans_gm_data > KTRANS_MIN_THRESHOLD])*1000
-std_gm = np.std(ktrans_gm_data[ktrans_gm_data > KTRANS_MIN_THRESHOLD])*1000
+ktrans_median_gm = np.median(ktrans_gm_data[ktrans_gm_data > KTRANS_MIN_THRESHOLD])*1000
+ktrans_std_gm = np.std(ktrans_gm_data[ktrans_gm_data > KTRANS_MIN_THRESHOLD])*1000
+
+# get T1 map median wm and gm
+T1_wm = nib.load(str(dir) + '/T1_wm.nii.gz')
+T1_wm_data = T1_wm.get_fdata()
+T1_wm_median = np.median(T1_wm_data[T1_wm_data > 0])
+T1_wm_std = np.std(T1_wm_data[T1_wm_data > 0])
+
+T1_gm = nib.load(str(dir) + '/T1_gm.nii.gz')
+T1_gm_data = T1_gm.get_fdata()
+T1_gm_median = np.median(T1_gm_data[T1_gm_data > 0])
+T1_gm_std = np.std(T1_gm_data[T1_gm_data > 0])
 
 # MNI space registration
 fsl_dir = os.environ['FSLDIR']
@@ -444,11 +503,8 @@ data = {
     'Commit': 'Commit: ' + commit_hash,
     'Institute': 'Institute: ' + institute,
     'Machine': 'Machine: ' + manufacturer + ' ' + MR_machine_model + ' ' + str(field_strength) + 'T',
-    'ktrans': dir + '/figures/ktrans.svg',
-    'image_path1': dir + '/dceAIF_fitting.png',
+    'ktrans': os.path.join(dir, 'figures/ktrans.svg'),
     'image_alt1': 'Missing image',
-    'image_path2': dir + '/dce_timecurves.png',
-    'image_alt2': 'My image2',
     'Dimensions': 'Dimensions: ' + str(dimensions),
     'Voxel_Size': 'Voxel Size: ' + str(voxel_size),
     'Overlay': dir + '/figures/overlay.svg',
@@ -460,9 +516,14 @@ data = {
     'T1_TR': 'TR: ' + str(TR) + 'ms',
     'T1_FAs': 'FAs: ' + FA_str,
     'T1_GPU': str(GPU_T1),
+    'T1_wm_median': 'T1 wm median: ' + str(round(T1_wm_median, 4)),
+    'T1_wm_std': 'T1 wm std: ' + str(round(T1_wm_std, 4)),
+    'T1_gm_median': 'T1 gm median: ' + str(round(T1_gm_median, 4)),
+    'T1_gm_std': 'T1 gm std: ' + str(round(T1_gm_std, 4)),
     'T1_map': dir + '/figures/t1_map.svg',
     'displacements' : dir + '/figures/displacements.svg',
     'AIF_mask': dir + '/figures/DCE_mc_mask.svg',
+    'AIF_metric' : "AIF \"Ultimate\" Metric: " + str(aif_metric),
     'AIF_curve': dir + '/figures/DCE_mc_curve.svg',
     'AIF_overlay': dir + '/figures/AIF_overlay.svg',
     'AIF_graph': dir + '/figures/AIF_graph.svg',
@@ -475,6 +536,7 @@ data = {
     'Hematocrit' : 'Hematocrit: ' + str(hematocrit),
     'SNR_Threshold' : 'SNR Threshold: ' + str(snr_threshold),
     'Relaxivity' : 'Relaxivity: ' + str(relaxivity) + '/mM/sec',
+    'T1_blood' : 'Blood T1: ' + str(blood_t1) + 's',
     'A_last_line' : str(A_last_line),
     'Time_Resolution' : 'Time Resolution: ' + str(time_resolution) + 's',
     'R_squared_fit' : 'R squared of AIF fit (fitted): ' + str(r2_aif_fit),
@@ -488,11 +550,11 @@ data = {
     'ktrans_zeros' : dir + '/figures/T1_Ktrans_zeros.png',
     'ktrans_analysis' : dir + '/figures/T1_Ktrans_analysis.png',
     'ktrans_wm_mean' : 'Mean wm Ktrans: ' + str(round(mean_wm, 4)),
-    'ktrans_wm_median' : 'Median wm Ktrans: ' + str(round(median_wm, 4)),
-    'ktrans_wm_std' : 'Std wm Ktrans: ' + str(round(std_wm, 4)),
+    'ktrans_wm_median' : 'Median wm Ktrans: ' + str(round(ktrans_median_wm, 4)),
+    'ktrans_wm_std' : 'Std wm Ktrans: ' + str(round(ktrans_std_wm, 4)),
     'ktrans_gm_mean' : 'Mean gm Ktrans: ' + str(round(mean_gm, 4)),
-    'ktrans_gm_median' : 'Median gm Ktrans: ' + str(round(median_gm, 4)),
-    'ktrans_gm_std' : 'Std gm Ktrans: ' + str(round(std_gm, 4)),
+    'ktrans_gm_median' : 'Median gm Ktrans: ' + str(round(ktrans_median_gm, 4)),
+    'ktrans_gm_std' : 'Std gm Ktrans: ' + str(round(ktrans_std_gm, 4)),
     'MNI_img' : dir + '/figures/MNI152_T1_1mm_brain.svg',
     'MNI_T1w' : dir + '/figures/t1w_MNI.svg',
     'MNI_Ktrans' : dir + '/figures/ktrans_MNI.svg',

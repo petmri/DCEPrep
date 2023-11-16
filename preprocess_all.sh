@@ -3,6 +3,7 @@ shopt -s extglob
 # FSL, Matlab, ROCKETSHIP + parametric_scripts, ANTS, and Python are required
 # Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
 # variables
+COMPARISON_MODE=0
 EN_Z_NORM=0
 EN_BIAS1=0
 EN_BIAS2=0
@@ -24,7 +25,7 @@ prog=0
 successes=0
 
 # options
-while getopts ":d:bBAZfhcmst" options; do
+while getopts ":d:bBAZfhcC::mst" options; do
 	case "${options}" in
 		A)
 			USE_AUTO_AIF=1
@@ -35,12 +36,21 @@ while getopts ":d:bBAZfhcmst" options; do
 		B)	
 			EN_BIAS2=1
 			;;
+		C)
+			COMPARISON_MODE=1
+			OUTPUT_DIR=${OPTARG}
+			;;
 		c)
 			clean=1
 			;;
 		d)
 			DATA_DIR=${OPTARG}
-			LOG_FILE=$DATA_DIR/preprocessing_log.txt
+			if [ ${DATA_DIR::-1} == "/" ]
+				then
+				DATA_DIR=${DATA_DIR::-1}
+			fi
+			DATE=$(date +%Y-%m-%d)
+			LOG_FILE=$DATA_DIR/preprocessing_log_$DATE.txt
 			;;
 		f)
 			USE_FREESURFER=1
@@ -52,7 +62,8 @@ while getopts ":d:bBAZfhcmst" options; do
 			echo "-b: enable first round of bias field corrections"
 			echo "-B: enable second round of bias field corrections, post-Z-norm if enabled"
 			echo "-c: clean generated files prior to processing"
-			echo "-d: specify main data directory containing all subject folders"
+			echo "-C [dir_path]: enable comparison mode, which will output all files to the specified directory within each timepoint"
+			echo "-d [dir_path]: specify main data directory containing all subject folders"
 			echo "-f: use freesurfer for registration (seems to cut off top of cortical region for most subjects, works perfectly for one site)"
 			echo "-h: display this message"
 			echo "-m: enable motion correction"
@@ -104,12 +115,23 @@ for dir in */*_timepoint/; do
 done
 # Run bias correction on VFA data 
 # ------------------------------
-rm -f preprocessing_log.txt
+# rm -f preprocessing_log.txt
 for dir in */*_timepoint/; do
-	date >> preprocessing_log.txt
+	dir=$DATA_DIR/${dir::-1}
+	date >> $LOG_FILE
 	echo "Preprocessing ${dir}..."
 	((current++))
 	cd $dir || exit 1
+	gzip -f $dir/DCE.nii &> /dev/null
+	if [ $COMPARISON_MODE -eq 1 ]
+		then
+		if [ ! -d "$OUTPUT_DIR" ]
+			then
+			mkdir -p "$OUTPUT_DIR"
+		fi
+		cd "$OUTPUT_DIR" || exit 1
+		cp $dir/*.json .
+	fi
 	SUBJECT_TP_PATH=$(pwd)
 
 	if [ $SKIP_IF_SUCCESS -eq 1 ]
@@ -117,13 +139,13 @@ for dir in */*_timepoint/; do
 		if [ -f "DCE_mc_bfc_norm.nii" ]
 			then
 			echo "Skipping ${dir} because it has already been processed." >> $LOG_FILE
-			cd ../..
+			cd $DATA_DIR
 			continue
 		fi
 	fi
 
 	# get list of VFAs
-	VFA_LIST=($(ls -1 *.nii | grep -v "DCE.nii" | grep -v "T1.nii" | grep -v "aif.nii"))
+	VFA_LIST=($(ls -1 $dir/*.nii | grep -v "$dir/DCE.nii.gz" | grep -v "$dir/T1.nii" | grep -v "$dir/aif.nii"))
 	# sort VFAs
 	VFA_LIST=($(printf '%s\n' "${VFA_LIST[@]}" | grep -o -E '[0-9]+.nii'| sort -n))
 	echo "Found ${#VFA_LIST[@]} VFAs: ${VFA_LIST[@]}"
@@ -132,14 +154,14 @@ for dir in */*_timepoint/; do
 	if [ ${#VFA_LIST[@]} -eq 0 ]
 		then
 		echo "$dir No VFAs found! Skipping timepoint..." >> $LOG_FILE
-		cd ../..
+		cd $DATA_DIR
 		continue
 	fi
 
-	if [ ! -f "2.nii" ] || [ ! -f "5.nii" ] || [ ! -f "10.nii" ] || [ ! -f "12.nii" ] || [ ! -f "15.nii" ] || [ ! -f "DCE.nii" ] || [ ! -f "T1.nii" ]
+	if [ ! -f "$dir/2.nii" ] || [ ! -f "$dir/5.nii" ] || [ ! -f "$dir/10.nii" ] || [ ! -f "$dir/12.nii" ] || [ ! -f "$dir/15.nii" ] || [ ! -f "$dir/DCE.nii.gz" ] || [ ! -f "$dir/T1.nii" ]
 		then
-		echo "$dir Base file(s) missing! Expected VFAs 2.nii, 5.nii, 10.nii, 12.nii, 15.nii, DCE.nii, and T1.nii (MP-RAGE). Skipping timepoint..." >> $LOG_FILE
-		cd ../..
+		echo "$dir Base file(s) missing! Expected VFAs 2.nii, 5.nii, 10.nii, 12.nii, 15.nii, DCE.nii.gz, and T1.nii (MP-RAGE). Skipping timepoint..." >> $LOG_FILE
+		cd $DATA_DIR
 		continue
 	fi
 	
@@ -148,7 +170,7 @@ for dir in */*_timepoint/; do
 		echo Cleaning folder...
         # rm -f !(2.nii|5.nii|10.nii|12.nii|15.nii|DCE.nii|aif.nii|T1.nii|*.json)
 		# remove all files except for the VFA list, DCE, AIF, T1, and json files
-		rm -dfr !([0-9]*.nii|DCE.nii|aif.nii|T1.nii|*.json)
+		rm -dfr !([0-9]*.nii|DCE.nii.gz|aif.nii|T1.nii|*.json)
 		rm *BFC*
     fi
 	
@@ -161,11 +183,11 @@ for dir in */*_timepoint/; do
 		if [ nvidia-smi ]
 			then
 			# about 15 min
-			hd-bet -i T1.nii &> /dev/null
+			hd-bet -i $dir/T1.nii -o $SUBJECT_TP_PATH/T1_bet &> /dev/null
 			mETA=$(echo "scale=0;  $SECONDS * 34 * ($count - $current + 1) / 60" | bc -l)
 		else
 			# 2-3 hours
-			hd-bet -i T1.nii -device cpu &> /dev/null
+			hd-bet -i $dir/T1.nii -o $SUBJECT_TP_PATH/T1_bet -device cpu &> /dev/null
 			mETA=$(echo "scale=0;  $SECONDS * 2 * ($count - $current + 1) / 60" | bc -l)
 		fi
 	fi
@@ -177,11 +199,11 @@ for dir in */*_timepoint/; do
 	#echo Motion correcting dynamic images...
 	if [ $EN_MOTION_CORR -eq 1 ]
 		then
-		mcflirt -in DCE.nii -refvol 'DCE.nii[1]' -cost mutualinfo -report -plots -o DCE_mc.nii &> /dev/null
+		mcflirt -in $dir/DCE.nii.gz -refvol '${dir}/DCE.nii.gz[1]' -cost mutualinfo -report -plots -o DCE_mc.nii &> /dev/null
 		if [ ! -f "DCE_mc.nii.gz" ]
 			then
 				echo $dir "Missing motion corrected DCE file." >> $LOG_FILE
-				cd ../..
+				cd $DATA_DIR
 				fail=1
 				continue
 		else
@@ -190,8 +212,7 @@ for dir in */*_timepoint/; do
 			echo -e "\e[1;33m$max\e[0m" >> $LOG_FILE
 		fi
 	else
-		cp DCE.nii DCE_mc.nii
-		gzip -f DCE_mc.nii
+		cp $dir/DCE.nii.gz DCE_mc.nii.gz
 	fi
 	fslmerge -n 1 ref_rep.nii DCE_mc.nii &> /dev/null
 	gunzip -f ref_rep.nii.gz
@@ -200,7 +221,7 @@ for dir in */*_timepoint/; do
 	antsRegistration --verbose 0 --dimensionality 3 --float 0 \
 		--collapse-output-transforms 1 --output [ T1_dyn,T1_dynWarped.nii.gz ] \
 		--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
-		--transform Rigid[ 0.1 ] --metric MI[ ref_rep.nii,T1.nii,1,32,Regular,0.25 ] \
+		--transform Rigid[ 0.1 ] --metric MI[ ref_rep.nii,${dir}/T1.nii,1,32,Regular,0.25 ] \
 		--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
 
 	# VFA -> dynamic registration
@@ -209,7 +230,7 @@ for dir in */*_timepoint/; do
 		antsRegistration --verbose 0 --dimensionality 3 --float 0 \
 			--collapse-output-transforms 1 --output [ ${VFA}_dyn,${VFA}_dynWarped.nii.gz ] \
 			--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
-			--transform Rigid[ 0.1 ] --metric MI[ ref_rep.nii,${VFA}.nii,1,32,Regular,0.25 ] \
+			--transform Rigid[ 0.1 ] --metric MI[ ref_rep.nii,${dir}/${VFA}.nii,1,32,Regular,0.25 ] \
 			--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
 		mv ${VFA}_dynWarped.nii.gz ${VFA}_dyn.nii.gz
 	}
@@ -313,7 +334,7 @@ for dir in */*_timepoint/; do
 		if [ ! -f "${VFA_NUMS[0]}_BFC_Z.nii" ]
 			then
 				echo $dir "Missing Z-normalized VFA files. Z-norm likely failed due to non-existent inputs." >> $LOG_FILE
-				cd ../..
+				cd $DATA_DIR
 				fail=1
 				continue
 		fi
@@ -361,7 +382,7 @@ for dir in */*_timepoint/; do
 	if [ ! -f "VFA.nii.gz" ]
 		then
 			echo "$dir missing VFA file. Component files may have failed." >> $LOG_FILE
-			cd ../..
+			cd $DATA_DIR
 			fail=1
 			continue
 	fi
@@ -381,7 +402,7 @@ for dir in */*_timepoint/; do
 	# if [ ! -f "VFA.nii" ]
 	# 	then
 	# 		echo $dir "Missing VFA file. Motion correction may have failed." >> $LOG_FILE
-	# 		cd ../..
+	# 		cd $DATA_DIR
 	# 		fail=1
 	# 		continue
 	# fi
@@ -399,15 +420,14 @@ for dir in */*_timepoint/; do
 	if [ ! -f "T1_map_t1_fa_fit_VFA.nii" ]
 		then
 			echo $dir "Missing T1 map file. T1 mapping may have failed." >> $LOG_FILE
-			cd ../..
+			cd $DATA_DIR
 			fail=1
 			continue
 	fi
 
-
 	if [ $T1_ONLY -eq 1 ]
 		then
-		cd ../..
+		cd $DATA_DIR
 		continue
 	fi
 	
@@ -417,7 +437,6 @@ for dir in */*_timepoint/; do
 	
 	# Align T1 map with Dynamic data
 	# ------------------------------
-
 	#prog=$(echo "scale=2;  $prog + .55 / $count" | bc -l)
 	#echo -ne "ANTSREG T1->DCE[=======================>                          ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
@@ -427,8 +446,6 @@ for dir in */*_timepoint/; do
 	antsApplyTransforms -i T1_bet_mask.nii.gz -r ref_rep.nii -t T1_dyn0GenericAffine.mat -o T1_bet_mask_dyn_pv.nii &> /dev/null
 	fslmaths T1_bet_mask_dyn_pv.nii -thr 1 -bin T1_bet_mask_dyn.nii.gz &> /dev/null
 	rm T1_bet_mask_dyn_pv.nii
-	# rm T1_bet_mask_dynInverseWarped.nii.gz
-	# rm T1_bet_mask_dyn0GenericAffine.mat
 	prog=$(echo "scale=2;  $prog + 0.55 / $count" | bc -l)
 	ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 	echo -ne "FAST DCE REP 1 [========================>                         ] $prog% ($current/$count) ~$ETA min remaining \r"
@@ -441,7 +458,7 @@ for dir in */*_timepoint/; do
 		# run AutoAIF
 		# conda activate tf
 		python3 $AUTO_AIF_PATH/main_vif.py --mode inference --input_path $PWD/DCE_mc.nii.gz --save_output_path $PWD \
-			--model_weight_path /media/network_mriphysics/USC-PPG/AI_training/weights/good_ones?/run2_fullMAE/model_weight.h5 \
+			--model_weight_path /media/network_mriphysics/USC-PPG/AI_training/weights/good_ones?/rg_10-13/model_weight.h5 \
 			--save_image 1 &> /dev/null
 		# conda deactivate
 		# rename output
@@ -534,46 +551,10 @@ for dir in */*_timepoint/; do
 	fi
 	
 	# align existing white matter mask to dynamic images and re-binarize
-	#flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -init T1toDCE.mat -applyxfm -o T1_wm_mask_dyn.nii
-	# flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -2D -o T1_wm_mask_dyn.nii &> /dev/null
-	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_wm_mask.nii.gz T1_wm_mask_dyn.nii.gz
-	#antsRegistrationSyN.sh -d 3 -t r -f ref_rep.nii -m T1_wm_mask.nii.gz -o T1_wm_mask_dyn
-	# if [ $USE_FREESURFER -eq 1 ] || [ $dir == "203450/1st_timepoint/" ]
-	# 	then
-	# 	flirt -in T1_wm_mask.nii.gz -ref ref_rep.nii -2D -o T1_wm_mask_dyn_pv.nii &> /dev/null
-	# else
 	antsApplyTransforms -i T1_wm_mask.nii.gz -r ref_rep.nii -t T1_bet_dyn0GenericAffine.mat -o T1_wm_mask_dyn_pv.nii &> /dev/null
-	# fi
-	#mv T1_wm_mask_dynWarped.nii.gz T1_wm_mask_dyn.nii.gz
-	# fslmaths T1_wm_mask_dyn_pv.nii -thr 0.9 -bin T1_wm_mask_dyn.nii.gz &> /dev/null
-	
-	#fslmaths T1_wm_mask_dynWarped.nii -thr 0.7 -bin T1_wm_mask_dyn.nii
-	#bash $SCRIPT_PATH/tktregistration.sh ref_rep.nii T1_bet_mask.nii.gz T1_bet_mask_dyn.nii.gz
-	#fslmaths 15_wm_mask_dyn.nii.gz -thr 1.7 -bin 15_wm_mask_dyn.nii
-	#rm T1_wm_mask_dynInverseWarped.nii.gz
-	#rm T1_wm_mask_dyn0GenericAffine.mat
-
-	# if first slice is all 0, replace it with masked second slice
-	# fslroi T1_wm_mask.nii.gz first_wm_slice.nii.gz 0 -1 0 -1 0 1
-	# fslroi T1_wm_mask.nii.gz last_wm_slice.nii.gz 0 -1 0 -1 -1 1
-
-	# # get sum of first slice
-	# sum=$(fslstats first_wm_slice.nii.gz -V | awk '{print $2}')
-	# # convert sum to int
-	# sum=${sum%.*}
-	# # if sum is 0, replace first slice with second slice
-	# if [ $sum -lt 1 ]
-	# 	then
-	# 	fslroi T1_wm_mask.nii.gz second_wm_slice.nii.gz 0 -1 0 -1 1 1
-	# 	fslroi T1_wm_mask.nii.gz T1_wm_mask.nii.gz 0 -1 0 -1 1 -1
-	# 	fslroi T1_wm_mask.nii.gz T1_wm_mask.nii.gz 0 -1 0 -1 0 -1
-	# 	fslmerge -z T1_wm_mask.nii.gz second_wm_slice.nii.gz T1_wm_mask.nii.gz
-	# 	rm first_wm_slice.nii.gz second_wm_slice.nii.gz
-	# fi
 	
 	# apply wm mask to all DCE images
 	fslmaths DCE_mc_bfc.nii -mas T1_wm_mask.nii.gz DCE_mc_bfc_wm.nii.gz &> /dev/null
-
 
 	# normalize dynamic images
 	# ------------------------------
@@ -584,11 +565,12 @@ for dir in */*_timepoint/; do
 	else
 		cp DCE_mc_bfc.nii DCE_mc_bfc_norm.nii
 	fi
+	gzip -f DCE_mc_bfc_norm.nii
 
-	if [ ! -f "DCE_mc_bfc_norm.nii" ]
+	if [ ! -f "DCE_mc_bfc_norm.nii.gz" ]
 		then
 			echo $dir "Missing normalized DCE file." >> $LOG_FILE
-			cd ../..
+			cd $DATA_DIR
 			fail=1
 			continue
 	fi
@@ -597,7 +579,7 @@ for dir in */*_timepoint/; do
 	prog=$(echo "scale=2;  $prog + .6 / $count" | bc -l)
 	echo -ne "SUBJ COMPLETED [==================================================] $prog% ($current/$count) ~$ETA min remaining \r"
 
-	cd ../../
+	cd $DATA_DIR
 	echo $dir preprocessing complete! >> $LOG_FILE
 	let successes++
 done

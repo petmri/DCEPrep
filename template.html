@@ -187,7 +187,12 @@
     <!-- <p>check for T1 ROCKETSHIP params</p> -->
     <li>{{ T1_TR }}</li>
     <li>{{ T1_FAs }}</li>
+    <li>{{ T1_blood }}</li>
     <li>{{ T1_GPU }}</li>
+    <li>{{ T1_wm_median }}</li>
+    <li>{{ T1_wm_std }}</li>
+    <li>{{ T1_gm_median }}</li>
+    <li>{{ T1_gm_std }}</li>
     <img src="{{ T1_map }}" alt="{{ image_alt1 }}" width="75%"></img>
     <!-- <p>T1 wm/gm graphs</p> -->
     <h2 id="MCFLIRT">MCFLIRT Displacements</h2>
@@ -197,6 +202,7 @@
     <img src="{{ AIF_curve }}" alt="AutoAIF img missing" width="50%"></img>
     <br>
     <img src="{{ AIF_overlay }}" width="50%"></img>
+    <p>{{ AIF_metric }}</p>
     <img src="{{ AIF_graph }}" width="50%"></img>
     <h2 id="T1w_dyn">Registrations to Dynamic Space</h2>
     <img src="{{ t1w_bet_dyn }}" alt="{{ image_alt1 }}"></img>

@@ -3,22 +3,35 @@
 # FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, ANTS, and Python are required
 # Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
 # control variables
+COMPARISON_MODE=0
 EN_BIAS1=0
 fail=0
 count=0
 successes=0
 USE_FREESURFER=0
 SKIP_IF_SUCCESS=0
+PURGE_INTERMEDIATES=1
+GIGA_PURGE=0
+shopt -s extglob
 
 # options
-while getopts ":d:bfhs" options; do
+while getopts ":d:bC::fhs" options; do
 	case "${options}" in
 		b)
 			EN_BIAS1=1
 			;;
+		C)
+			COMPARISON_MODE=1
+			OUTPUT_DIR=${OPTARG}
+			;;
 		d)
 			DATA_DIR=${OPTARG}
-			LOG_FILE=$DATA_DIR/dce_log.txt
+			if [ ${DATA_DIR::-1} == "/" ]
+				then
+				DATA_DIR=${DATA_DIR::-1}
+			fi
+			date=$(date +%Y-%m-%d)
+			LOG_FILE=$DATA_DIR/dce_log_$date.txt
 			;;
 		f)
 			USE_FREESURFER=1
@@ -28,6 +41,7 @@ while getopts ":d:bfhs" options; do
 			echo "The data must be preprocessed with \`preprocess_all.sh\` before running this script."
 			echo "The input is \`DCE_bfc_norm.nii\`. The output is mainly the DCE outputs (Ktrans maps) and QC graphs."
 			echo "-b: enable first round of bias field corrections"
+			echo "-C: enable comparison mode. Specify output directory."
 			echo "-d: specify main data directory containing all subject folders"
 			echo "-h: display this message"
 			exit 0
@@ -59,12 +73,17 @@ else
 fi
 cd $DATA_DIR || exit 1
 
-rm dce_log.txt
+# rm dce_log.txt
 for dir in */*_timepoint/; do
+	dir=$DATA_DIR/${dir::-1}
 	date >> dce_log.txt
 	echo "DCE processing ${dir}..."
 	((count++))
 	cd $dir || exit 1
+	if [ $COMPARISON_MODE -eq 1 ]
+		then
+		cd "$OUTPUT_DIR" || exit 1
+	fi
 	SUBJECT_TP_PATH=$(pwd)
 
 	if [ $SKIP_IF_SUCCESS -eq 1 ]
@@ -72,14 +91,14 @@ for dir in */*_timepoint/; do
 		if [ -f "case_report.html" ]
 			then
 			echo "Skipping $dir because it has already been processed." >> $LOG_FILE
-			cd ../..
+			cd $DATA_DIR
 			continue
 		fi
 	fi
-	if [ ! -f "DCE_mc_bfc_norm.nii" ]
+	if [ ! -f "DCE_mc_bfc_norm.nii.gz" ]
 		then
 		echo Missing input file. Make sure the data has been preprocessed. Skipping $dir... >> $LOG_FILE
-		cd ../..
+		cd $DATA_DIR
 		fail=1
 		continue
 	fi
@@ -88,11 +107,12 @@ for dir in */*_timepoint/; do
 	# ------------------------------
 	echo Begin DCE processing...
 	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; run_dce_auto('$SUBJECT_TP_PATH/'); exit;"
+	# gzip -f dcedynamicCt.nii
 	if [ ! -f "dce_patlak_fit_Ktrans.nii" ]
 		then
 			echo $dir "Missing Ktrans maps. DCE failed or inputs were not generated. Hopefully message below is relevant." >> $LOG_FILE
 			tail -1 A_dceR1info.log >> $LOG_FILE
-			cd ../..
+			cd $DATA_DIR
 			fail=1
 			continue
 	fi
@@ -138,16 +158,23 @@ for dir in */*_timepoint/; do
 	fslmaths bozo2.nii -thr 0 bozo2.nii
 	
 	flirt -in DCE_mc.nii.gz -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -omat DCE2MNI.mat -out DCE_MNI_FSL.nii.gz
-	flirt -in T1.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out t1w_MNI.nii.gz -bins 256 -cost mutualinfo -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear
+	flirt -in $dir/T1.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out t1w_MNI.nii.gz -bins 256 -cost mutualinfo -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear
 	flirt -in dce_patlak_fit_Ktrans.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out ktrans_2_MNI.nii.gz -init DCE2MNI.mat -applyxfm
 	python3 $SCRIPT_PATH/ktrans_report.py $SUBJECT_TP_PATH
-	python3 $SCRIPT_PATH/case_report.py $SUBJECT_TP_PATH
-	cd ../../
+	python3 $SCRIPT_PATH/case_report.py $dir $SUBJECT_TP_PATH
+	if [ $PURGE_INTERMEDIATES -eq 1 ] && [ $COMPARISON_MODE -eq 1 ]
+		then
+		rm -f !(Ktrans_*|T1_gm*|T1_wm*|T1_csf*|*_patlak_fit*.nii|case_report.html|*_MNI.nii.gz|*fit_VFA.nii|figures|dce*.png)
+	elif [ $GIGA_PURGE -eq 1 ]
+		then
+		rm -f !(case_report.html|figures)
+	fi
+	cd $DATA_DIR
 	echo $dir processing complete! >> $LOG_FILE
 	((successes++))
 done
 
-python3 $SCRIPT_PATH/population_report.py $DATA_DIR
+python3 $SCRIPT_PATH/population_report.py $DATA_DIR $OUTPUT_DIR
 ((failures=count-successes))
 echo "Completed DCE processing for $count subjects." >> $LOG_FILE
 echo $successes subjects succeeded >> $LOG_FILE

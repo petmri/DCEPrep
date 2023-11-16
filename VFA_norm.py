@@ -139,14 +139,14 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
             # else:
             #     mu.append(gaussian_params[i][4])
             
-            if gaussian_params[i]['A1'] > gaussian_params[i]['A2']:
+            if gaussian_params[i]['A1'] > gaussian_params[i]['A2'] and gaussian_params[i]['mu1'] > 0 and gaussian_params[i]['mu1'] > gaussian_params[i]['mu2']:
                 mu.append(gaussian_params[i]['mu1'])
             else:
                 mu.append(gaussian_params[i]['mu2'])
 
             # print("mu " + str(mu[i]))
             # print("SLICE: " + str(i + 1))
-            # print("mu: " + str(gaussian_params[i]['mu1']) + " " + str(gaussian_params[i]['mu2']))
+            # print("mu1 and mu2: " + str(gaussian_params[i]['mu1']) + " " + str(gaussian_params[i]['mu2']))
             # print("A: " + str(gaussian_params[i]['A1']) + " " + str(gaussian_params[i]['A2']))
             # print("sigma: " + str(gaussian_params[i]['sigma1']) + " " + str(gaussian_params[i]['sigma2']))
 
@@ -238,6 +238,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
         z_index = list(z_index)[0]
 
     mri_final = np.transpose(mri_final, (x_index, y_index, z_index))
+    mri_final = mri_final.astype(np.float32)
     final_img = nib.Nifti1Image(mri_final, mri.affine)
     path3 = file_dir + '/' + str(num) + '_BFC_Z.nii'
     nib.save(final_img, path3)

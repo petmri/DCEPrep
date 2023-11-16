@@ -153,6 +153,35 @@
         <!-- <li>{{ Institute }}</li>
         <li>{{ Machine }}</li> -->
     </ul>
+    <h2>T1 stats</h2>
+    <ul>
+        <li>White matter mean: {{ T1_wm_mean }}</li>
+        <li>White matter median: {{ T1_wm_median }}</li>
+        <li>White matter stdev: {{ T1_wm_std }}</li>
+        <li>White matter 5th%: {{ T1_wm_5th_percentile }}</li>
+        <li>White matter 95th% {{ T1_wm_95th_percentile }} </li>
+        <li>Gray matter mean: {{ T1_gm_mean }}</li>
+        <li>Gray matter median: {{ T1_gm_median }}</li>
+        <li>Gray matter stdev: {{ T1_gm_std }}</li>
+        <li>Gray matter 5th%: {{ T1_gm_5th_percentile }}</li>
+        <li>Gray matter 95th% {{ T1_gm_95th_percentile }} </li>
+    </ul>
+    <h2>AIF stats</h2>
+    <ul>
+        <li>AIFitness mean: {{ AIFitness_mean }}</li>
+        <li>AIFitness median: {{ AIFitness_median }}</li>
+        <li>AIFitness stdev: {{ AIFitness_std }}</li>
+        <li>AIFitness 5th%: {{ AIFitness_5th_percentile }}</li>
+        <li>mmol mean: {{ aif_mmol_mean }}</li>
+        <li>mmol median: {{ aif_mmol_median }}</li>
+        <li>mmol stdev: {{ aif_mmol_std }}</li>
+        <li>mmol 5th%: {{ aif_mmol_5th_percentile }}</li>
+        <li>mmol 95th% {{ aif_mmol_95th_percentile }}</li>
+    </ul>
+    <div class="image-container">
+        <img src="{{ AIFitness_histogram }}" alt="missing AIFitness histogram"/>
+        <img src="{{ aif_mmol_histogram }}" alt="missing aif mmol histogram"/>
+    </div>
     <h2>Ktrans stats (10^-3/min)</h2>
     <ul>
         <li>White matter mean median: {{ wm_mean }}</li>
@@ -162,7 +191,7 @@
         <li>Gray matter median median: {{ gm_median }}</li>
         <li>Gray matter stdev median: {{ gm_std }}</li>
     </ul>
-    <h2>Histogram</h2>
+    <h2>Ktrans Histogram</h2>
     <div class="image-container">
         <img src="{{ wm_histogram }}" alt="missing white matter histogram"/>
         <img src="{{ gm_histogram }}" alt="missing gray matter histogram"/>
