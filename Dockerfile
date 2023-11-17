@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM nvidia/cuda:12.0.0-base-ubuntu22.04
+FROM nvidia/cuda:12.2.2-cudnn8-runtime-ubuntu22.04
 
 
 # # modified from fmriprep (https://github.com/nipreps/fmriprep/blob/master/Dockerfile)
@@ -36,29 +36,6 @@ RUN apt-get update && \
 ENV DEBIAN_FRONTEND="noninteractive" \
     LANG="en_US.UTF-8" \
     LC_ALL="en_US.UTF-8"
-
-# Installing freesurfer
-COPY docker/files/freesurfer7.3-exclude.txt /usr/local/etc/freesurfer7.3-exclude.txt
-RUN curl -sSL https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.3.2/freesurfer-linux-ubuntu22_amd64-7.3.2.tar.gz \
-    | tar zxv --no-same-owner -C /opt --exclude-from=/usr/local/etc/freesurfer7.3-exclude.txt
-
-# Simulate SetUpFreeSurfer.sh
-ENV FSL_DIR="/opt/fsl-6.0.5.2" \
-    OS="Linux" \
-    FS_OVERRIDE=0 \
-    FIX_VERTEX_AREA="" \
-    FSF_OUTPUT_FORMAT="nii.gz" \
-    FREESURFER_HOME="/opt/freesurfer"
-ENV SUBJECTS_DIR="$FREESURFER_HOME/subjects" \
-    FUNCTIONALS_DIR="$FREESURFER_HOME/sessions" \
-    MNI_DIR="$FREESURFER_HOME/mni" \
-    LOCAL_DIR="$FREESURFER_HOME/local" \
-    MINC_BIN_DIR="$FREESURFER_HOME/mni/bin" \
-    MINC_LIB_DIR="$FREESURFER_HOME/mni/lib" \
-    MNI_DATAPATH="$FREESURFER_HOME/mni/data"
-ENV PERL5LIB="$MINC_LIB_DIR/perl5/5.8.5" \
-    MNI_PERL5LIB="$MINC_LIB_DIR/perl5/5.8.5" \
-    PATH="$FREESURFER_HOME/bin:$FREESURFER_HOME/tktools:$MINC_BIN_DIR:$PATH"
 
 # FSL 6.0.5.2
 RUN apt-get update -qq \
