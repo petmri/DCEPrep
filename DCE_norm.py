@@ -125,7 +125,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
         print("Using Gaussian fitting to normalize DCE")
         mu = []
         for i in range(slice_num):            
-            if gaussian_params[i]['A1'] > gaussian_params[i]['A2'] and gaussian_params[i]['mu1'] > 0 and gaussian_params[i]['mu1'] > gaussian_params[i]['mu2']:
+            if gaussian_params[i]['A1'] > gaussian_params[i]['A2'] and gaussian_params[i]['mu1'] > 0 and gaussian_params[i]['mu1'] > gaussian_params[i]['mu2'] and gaussian_params[i]['mu1'] < 1500:
                 mu.append(gaussian_params[i]['mu1'])
             else:
                 mu.append(gaussian_params[i]['mu2'])

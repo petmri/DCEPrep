@@ -139,16 +139,16 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
             # else:
             #     mu.append(gaussian_params[i][4])
             
-            if gaussian_params[i]['A1'] > gaussian_params[i]['A2'] and gaussian_params[i]['mu1'] > 0 and gaussian_params[i]['mu1'] > gaussian_params[i]['mu2']:
+            if gaussian_params[i]['A1'] > gaussian_params[i]['A2'] and gaussian_params[i]['mu1'] > 0 and gaussian_params[i]['mu1'] > gaussian_params[i]['mu2'] and gaussian_params[i]['mu1'] < 1500:
                 mu.append(gaussian_params[i]['mu1'])
             else:
                 mu.append(gaussian_params[i]['mu2'])
 
-            # print("mu " + str(mu[i]))
-            # print("SLICE: " + str(i + 1))
-            # print("mu1 and mu2: " + str(gaussian_params[i]['mu1']) + " " + str(gaussian_params[i]['mu2']))
-            # print("A: " + str(gaussian_params[i]['A1']) + " " + str(gaussian_params[i]['A2']))
-            # print("sigma: " + str(gaussian_params[i]['sigma1']) + " " + str(gaussian_params[i]['sigma2']))
+            print("mu " + str(mu[i]))
+            print("SLICE: " + str(i + 1))
+            print("mu1 and mu2: " + str(gaussian_params[i]['mu1']) + " " + str(gaussian_params[i]['mu2']))
+            print("A: " + str(gaussian_params[i]['A1']) + " " + str(gaussian_params[i]['A2']))
+            print("sigma: " + str(gaussian_params[i]['sigma1']) + " " + str(gaussian_params[i]['sigma2']))
 
         mean_mu = mean(mu)
         # print("mean_mu: " + str(mean_mu))
