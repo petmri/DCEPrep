@@ -78,7 +78,8 @@ for dir in */*_timepoint/; do
 	cd $dir || exit 1
 	if [ $COMPARISON_MODE -eq 1 ]
 		then
-		cd "$OUTPUT_DIR" || exit 1
+		echo "Comparison mode enabled. Processing in $OUTPUT_DIR..." >> $LOG_FILE
+		cd "$OUTPUT_DIR" || echo "ERROR: $OUTPUT_DIR does not exist. Preprocess first or check the name and try again." >> $LOG_FILE
 	fi
 	SUBJECT_TP_PATH=$(pwd)
 
@@ -160,10 +161,10 @@ for dir in */*_timepoint/; do
 	python3 $SCRIPT_PATH/case_report.py $dir $SUBJECT_TP_PATH
 	if [ $PURGE_INTERMEDIATES -eq 1 ] && [ $COMPARISON_MODE -eq 1 ]
 		then
-		rm -f !(Ktrans_*|T1_gm*|T1_wm*|T1_csf*|*_patlak_fit*.nii|case_report.html|*_MNI.nii.gz|*fit_VFA.nii|figures|dce*.png)
+		rm -f !(Ktrans_*|T1_gm*|T1_wm*|T1_csf*|*_patlak_fit*.nii|case_report.html|*_MNI.nii.gz|*fit_VFA.nii|figures|dce*.png|*.log)
 	elif [ $GIGA_PURGE -eq 1 ]
 		then
-		rm -f !(case_report.html|figures)
+		rm -f !(case_report.html|figures|*.log)
 	fi
 	cd $DATA_DIR
 	echo $dir processing complete! >> $LOG_FILE

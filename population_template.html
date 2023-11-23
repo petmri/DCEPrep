@@ -160,6 +160,7 @@
         <li>White matter stdev: {{ T1_wm_std }}</li>
         <li>White matter 5th%: {{ T1_wm_5th_percentile }}</li>
         <li>White matter 95th% {{ T1_wm_95th_percentile }} </li>
+        <br>
         <li>Gray matter mean: {{ T1_gm_mean }}</li>
         <li>Gray matter median: {{ T1_gm_median }}</li>
         <li>Gray matter stdev: {{ T1_gm_std }}</li>
@@ -172,6 +173,7 @@
         <li>AIFitness median: {{ AIFitness_median }}</li>
         <li>AIFitness stdev: {{ AIFitness_std }}</li>
         <li>AIFitness 5th%: {{ AIFitness_5th_percentile }}</li>
+        <br>
         <li>mmol mean: {{ aif_mmol_mean }}</li>
         <li>mmol median: {{ aif_mmol_median }}</li>
         <li>mmol stdev: {{ aif_mmol_std }}</li>
@@ -192,6 +194,10 @@
         <li>Gray matter stdev median: {{ gm_std }}</li>
     </ul>
     <h2>Ktrans Histogram</h2>
+    <ul>
+        <li>wm outliers (> 5): {{ ktrans_wm_outliers }}</li>
+        <li>gm outliers (> 5): {{ ktrans_gm_outliers }}</li>
+    </ul>
     <div class="image-container">
         <img src="{{ wm_histogram }}" alt="missing white matter histogram"/>
         <img src="{{ gm_histogram }}" alt="missing gray matter histogram"/>

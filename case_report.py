@@ -377,20 +377,6 @@ try:
                     time_resolution = match.group()
                 else:
                     is_target_line = False
-
-    # now get R^2 from log file
-    r_squared = None
-    is_target_line = False
-    with open(str(dir) + '/B_dcefitted_R1info.log', 'r') as f:
-        for line in f:
-            if "User selected time resolution (sec)" in line:
-                is_target_line = True
-            elif is_target_line:
-                match = re.search(r'(\d+)(.*)\d*', line)
-                if match:
-                    r_squared = match.group()
-                else:
-                    is_target_line = False
     RUNB_log = True
 except Exception as e:
     print("Error getting DCE RUNB parameters from B_dcefitted_R1info.log")
@@ -523,7 +509,7 @@ data = {
     'T1_map': dir + '/figures/t1_map.svg',
     'displacements' : dir + '/figures/displacements.svg',
     'AIF_mask': dir + '/figures/DCE_mc_mask.svg',
-    'AIF_metric' : "AIF \"Ultimate\" Metric: " + str(aif_metric),
+    'AIF_metric' : "AIFitness: " + str(aif_metric),
     'AIF_curve': dir + '/figures/DCE_mc_curve.svg',
     'AIF_overlay': dir + '/figures/AIF_overlay.svg',
     'AIF_graph': dir + '/figures/AIF_graph.svg',

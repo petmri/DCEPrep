@@ -122,6 +122,7 @@ for dir in */*_timepoint/; do
 		then
 		if [ ! -d "$OUTPUT_DIR" ]
 			then
+			echo "Comparison mode enabled. Creating output directory $OUTPUT_DIR..." >> $LOG_FILE
 			mkdir -p "$OUTPUT_DIR"
 		fi
 		cd "$OUTPUT_DIR" || exit 1

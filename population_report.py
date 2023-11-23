@@ -11,7 +11,10 @@ import subprocess
 from sys import argv
 
 dir = argv[1]
-output_dir = argv[2]
+try:
+    output_dir = argv[2]
+except:
+    output_dir = ""
 
 # Load MRI population data dict with keys as subject IDs and values as gm and wm data
 population_data = {}
@@ -21,6 +24,8 @@ subjects = os.listdir(dir)
 subjects = [subject for subject in subjects if os.path.isdir(os.path.join(dir, subject))]
 
 count = 0
+wm_outliers = []
+gm_outliers = []
 for subject_id in subjects:
     # list _timepoint directories in subject directory
     for timepoint in os.listdir(os.path.join(dir, subject_id)):
@@ -59,31 +64,47 @@ for subject_id in subjects:
                             gm_median = float(lines[i].split()[-1][:-6])
                             # gm_std = float(lines[i + 1].split(':')[-1][:-6])
                         # read aif metric from html file
-                        if "AIF \"Ultimate\" Metric:" in line:
+                        if "AIFitness" in line:
                             aif_metric = line.split(":")[-1].strip()[:-4]
                             # population_aif_metric.append(round(float(aif_metric), 4))
                             if float(aif_metric) > 130:
                                 print(subject_id + "_" + timepoint + " has an aif_metric of " + str(aif_metric) + "!")
-                        if wm_median > 3:
+                        if wm_median > 5:
                             print(subject_id + "_" + timepoint + " has a wm_median of " + str(wm_median) + "!")
-                        if gm_median > 3:
+                            wm_outliers.append(subject_id + "_" + timepoint)
+                        if gm_median > 5:
                             print(subject_id + "_" + timepoint + " has a gm_median of " + str(gm_median) + "!")
+                            gm_outliers.append(subject_id + "_" + timepoint)
             except Exception as e:
+                print("Error reading " + filename)
                 print(e)
                 continue
-            # open matlab matrix file
-            B_mat = os.path.join(dir, subject_id, timepoint, output_dir, "B_dcefitted_R1info.mat")
-            with h5py.File(B_mat, 'r') as f:
-                aif_mmol = f['Bdata']['CpROI']
 
-                # convert to list instead of list of lists
-                aif_mmol = [item for sublist in aif_mmol for item in sublist]
-
-                # take last 33% of aif
-                aif_mmol = aif_mmol[int(len(aif_mmol) * 0.66):]
-                if np.mean(aif_mmol) > 3:
-                    print(subject_id + "_" + timepoint + " has an aif_mmol of " + str(aif_mmol) + "!")
-                aif_mmol = np.mean(aif_mmol)
+            # read lines after "AIF mmol:"
+            aif_mmol = []
+            B_log = os.path.join(dir, subject_id, timepoint, output_dir, "B_dcefitted_R1info.log")
+            with open(B_log, 'r') as f:
+                for line in f:
+                    if "AIF mmol:" in line:
+                        aif_mmol = f.readlines()
+                        # find index of line after last numbers ("MAT results saved to: \n")
+                        lastline = aif_mmol.index("MAT results saved to: \n")
+                        aif_mmol = aif_mmol[:lastline-1]
+                        # remove \n and \t
+                        aif_mmol = [i[2:-2] for i in aif_mmol]
+                        # split each item into list
+                        aif_mmol = [i.split() for i in aif_mmol]
+                        # unite all lists into one
+                        aif_mmol = [item for sublist in aif_mmol for item in sublist]
+                        # convert to float
+                        aif_mmol = [float(i) for i in aif_mmol]
+                        # take last 33% of aif
+                        aif_mmol = aif_mmol[int(len(aif_mmol) * 0.66):]
+                        # convert to numpy array
+                        aif_mmol = np.array(aif_mmol)
+                        # take mean
+                        aif_mmol = np.mean(aif_mmol)
+                        break
 
             entry = subject_id + "_" + timepoint
             population_data[entry] = {
@@ -100,25 +121,30 @@ for subject_id in subjects:
                 "gm_median": gm_median,
                 # "gm_std": gm_std
             }
-AIFitness_mean = np.mean([population_data[entry]["aif_metric"] for entry in population_data])
-AIFitness_median = np.median([population_data[entry]["aif_metric"] for entry in population_data])
-AIFitness_std = np.std([population_data[entry]["aif_metric"] for entry in population_data])
-AIFitness_5th_percentile = np.percentile([population_data[entry]["aif_metric"] for entry in population_data], 5)
+AIFitness_values = [float(population_data[entry]["aif_metric"]) for entry in population_data]
+AIFitness_mean = np.mean(AIFitness_values)
+AIFitness_median = np.median(AIFitness_values)
+AIFitness_std = np.std(AIFitness_values)
+AIFitness_5th_percentile = np.percentile(AIFitness_values, 5)
+
 aif_mmol_mean = np.mean([population_data[entry]["aif_mmol"] for entry in population_data])
 aif_mmol_median = np.median([population_data[entry]["aif_mmol"] for entry in population_data])
 aif_mmol_std = np.std([population_data[entry]["aif_mmol"] for entry in population_data])
 aif_mmol_5th_percentile = np.percentile([population_data[entry]["aif_mmol"] for entry in population_data], 5)
 aif_mmol_95th_percentile = np.percentile([population_data[entry]["aif_mmol"] for entry in population_data], 95)
+
 T1_wm_mean = np.mean([population_data[entry]["T1_wm_median"] for entry in population_data])
 T1_wm_median = np.median([population_data[entry]["T1_wm_median"] for entry in population_data])
 T1_wm_std = np.std([population_data[entry]["T1_wm_median"] for entry in population_data])
 T1_wm_5th_percentile = np.percentile([population_data[entry]["T1_wm_median"] for entry in population_data], 5)
 T1_wm_95th_percentile = np.percentile([population_data[entry]["T1_wm_median"] for entry in population_data], 95)
+
 T1_gm_mean = np.mean([population_data[entry]["T1_gm_median"] for entry in population_data])
 T1_gm_median = np.median([population_data[entry]["T1_gm_median"] for entry in population_data])
 T1_gm_std = np.std([population_data[entry]["T1_gm_median"] for entry in population_data])
 T1_gm_5th_percentile = np.percentile([population_data[entry]["T1_gm_median"] for entry in population_data], 5)
 T1_gm_95th_percentile = np.percentile([population_data[entry]["T1_gm_median"] for entry in population_data], 95)
+
 wm_mean = np.mean([population_data[entry]["wm_median"] for entry in population_data])
 wm_median = np.median([population_data[entry]["wm_median"] for entry in population_data])
 wm_std = np.std([population_data[entry]["wm_median"] for entry in population_data])
@@ -126,19 +152,30 @@ gm_mean = np.mean([population_data[entry]["gm_median"] for entry in population_d
 gm_median = np.median([population_data[entry]["gm_median"] for entry in population_data])
 gm_std = np.std([population_data[entry]["gm_median"] for entry in population_data])
 
+# if no outliers, set to "None"
+if len(wm_outliers) == 0:
+    wm_outliers = "None"
+if len(gm_outliers) == 0:
+    gm_outliers = "None"
+
 # make AIFitness histogram
-plt.hist(population_aif_metric, bins=30)
-plt.title("AIFitness")
+plt.hist(AIFitness_values, bins=30)
+plt.title("AIFitness Median")
 plt.xlabel("AIFitness")
-aifitness_histogram_path = os.path.join(dir, "aifitness_histogram.png")
+aifitness_histogram_path = os.path.join(dir, output_dir + "aifitness_histogram.png")
 plt.savefig(aifitness_histogram_path, bbox_inches='tight')
 plt.close()
 
 # make aif_mmol histogram
-plt.hist(population_aif_mmol_nopeak, bins=30)
-plt.title("AIF mmol")
+aif_mmol_histogram = []
+for entry in population_data.keys():
+    aif_mmol_histogram.append(population_data[entry]["aif_mmol"])
+
+# plot histogram
+plt.hist(aif_mmol_histogram, bins=30)
+plt.title("AIF mmol (mean of last 1/3)")
 plt.xlabel("AIF mmol")
-aif_mmol_histogram_path = os.path.join(dir, "aif_mmol_histogram.png")
+aif_mmol_histogram_path = os.path.join(dir, output_dir + "aif_mmol_histogram.png")
 plt.savefig(aif_mmol_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -148,10 +185,10 @@ for entry in population_data.keys():
     wm_histogram.append(population_data[entry]["wm_median"])
 
 # plot histogram
-plt.hist(wm_histogram, bins=30)
+plt.hist(wm_histogram, bins=50, range=(0, 5))
 plt.title("White Matter Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-ktrans_wm_histogram_path = os.path.join(dir, "wm_histogram.png")
+ktrans_wm_histogram_path = os.path.join(dir, output_dir + "wm_histogram.png")
 plt.savefig(ktrans_wm_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -161,10 +198,12 @@ for entry in population_data.keys():
     gm_histogram.append(population_data[entry]["gm_median"])
 
 # plot histogram
-plt.hist(gm_histogram, bins=30)
+plt.hist(gm_histogram, bins=50, range=(0, 5))
 plt.title("Gray Matter Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-ktrans_gm_histogram_path = os.path.join(dir, "gm_histogram.png")
+ktrans_gm_histogram_path = os.path.join(dir, output_dir + "gm_histogram.png")
+# save range of histogram for later use
+gm_histogram_range = plt.xlim()
 plt.savefig(ktrans_gm_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -228,6 +267,8 @@ data = {
     'gm_mean': gm_mean,
     'gm_median': gm_median,
     'gm_std': gm_std,
+    'ktrans_wm_outliers': wm_outliers,
+    'ktrans_gm_outliers': gm_outliers,
     'wm_histogram': ktrans_wm_histogram_path,
     'gm_histogram': ktrans_gm_histogram_path
 }
