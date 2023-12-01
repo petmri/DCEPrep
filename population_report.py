@@ -70,11 +70,13 @@ for subject_id in subjects:
                             if float(aif_metric) > 130:
                                 print(subject_id + "_" + timepoint + " has an aif_metric of " + str(aif_metric) + "!")
                         if wm_median > 5:
-                            print(subject_id + "_" + timepoint + " has a wm_median of " + str(wm_median) + "!")
-                            wm_outliers.append(subject_id + "_" + timepoint)
+                            if subject_id + "_" + timepoint not in wm_outliers:
+                                print(subject_id + "_" + timepoint + " has a wm_median of " + str(wm_median) + "!")
+                                wm_outliers.append(subject_id + "_" + timepoint)
                         if gm_median > 5:
-                            print(subject_id + "_" + timepoint + " has a gm_median of " + str(gm_median) + "!")
-                            gm_outliers.append(subject_id + "_" + timepoint)
+                            if subject_id + "_" + timepoint not in gm_outliers:
+                                print(subject_id + "_" + timepoint + " has a gm_median of " + str(gm_median) + "!")
+                                gm_outliers.append(subject_id + "_" + timepoint)
             except Exception as e:
                 print("Error reading " + filename)
                 print(e)

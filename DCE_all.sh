@@ -155,7 +155,12 @@ for dir in */*_timepoint/; do
 	fslmaths bozo2.nii -thr 0 bozo2.nii
 	
 	flirt -in DCE_mc.nii.gz -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -omat DCE2MNI.mat -out DCE_MNI_FSL.nii.gz
-	flirt -in $dir/T1.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out t1w_MNI.nii.gz -bins 256 -cost mutualinfo -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -interp trilinear
+	# flirt -in $dir/T1.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out t1w_MNI.nii.gz
+	antsRegistration --verbose 0 --dimensionality 3 --float 0 --collapse-output-transforms 1 \
+		--output [ t1w_MNI,t1w_MNI.nii.gz ] --interpolation Linear --use-histogram-matching 0 \
+		--winsorize-image-intensities [ 0.005,0.995 ] --transform Affine[ 0.1 ] \
+		--metric MI[ $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz,T1_bet.nii.gz,1,32,Regular,0.25 ] \
+		--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
 	flirt -in dce_patlak_fit_Ktrans.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out ktrans_2_MNI.nii.gz -init DCE2MNI.mat -applyxfm
 	python3 $SCRIPT_PATH/ktrans_report.py $SUBJECT_TP_PATH
 	python3 $SCRIPT_PATH/case_report.py $dir $SUBJECT_TP_PATH
