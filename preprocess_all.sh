@@ -49,7 +49,12 @@ while getopts ":d:bBAZfhcC::mst" options; do
 				DATA_DIR=${DATA_DIR::-1}
 			fi
 			DATE=$(date +%Y-%m-%d)
-			LOG_FILE=$DATA_DIR/preprocessing_log_$DATE.txt
+			# make log directory if it doesn't exist
+			if [ ! -d "$DATA_DIR/logs" ]
+				then
+				mkdir -p "$DATA_DIR/logs"
+			fi
+			LOG_FILE=$DATA_DIR/logs/preprocessing_log_$DATE.txt
 			;;
 		h)
 			echo "This script runs through all subject folders of a specified main data directory, preprocessing every folder ending in '_timepoint'."
@@ -132,7 +137,7 @@ for dir in */*_timepoint/; do
 
 	if [ $SKIP_IF_SUCCESS -eq 1 ]
 		then
-		if [ -f "DCE_mc_bfc_norm.nii" ]
+		if [ -f "DCE_mc_bfc_norm.nii.gz" ] || [ -f "case_report.html" ]
 			then
 			echo "Skipping ${dir} because it has already been processed." >> $LOG_FILE
 			cd $DATA_DIR
@@ -155,8 +160,17 @@ for dir in */*_timepoint/; do
 	fi
 
 	if [ ! -f "$dir/2.nii" ] || [ ! -f "$dir/5.nii" ] || [ ! -f "$dir/10.nii" ] || [ ! -f "$dir/12.nii" ] || [ ! -f "$dir/15.nii" ] || [ ! -f "$dir/DCE.nii.gz" ] || [ ! -f "$dir/T1.nii" ]
-		then
-		echo "$dir Base file(s) missing! Expected VFAs 2.nii, 5.nii, 10.nii, 12.nii, 15.nii, DCE.nii.gz, and T1.nii (MP-RAGE). Skipping timepoint..." >> $LOG_FILE
+	then
+		missing_files=""
+		[ ! -f "$dir/2.nii" ] && missing_files+=" 2.nii"
+		[ ! -f "$dir/5.nii" ] && missing_files+=" 5.nii"
+		[ ! -f "$dir/10.nii" ] && missing_files+=" 10.nii"
+		[ ! -f "$dir/12.nii" ] && missing_files+=" 12.nii"
+		[ ! -f "$dir/15.nii" ] && missing_files+=" 15.nii"
+		[ ! -f "$dir/DCE.nii.gz" ] && missing_files+=" DCE.nii.gz"
+		[ ! -f "$dir/T1.nii" ] && missing_files+=" T1.nii"
+
+		echo "$dir Base file(s) missing! Missing file(s):$missing_files. Skipping timepoint..." >> "$LOG_FILE"
 		cd $DATA_DIR
 		continue
 	fi
@@ -383,27 +397,11 @@ for dir in */*_timepoint/; do
 			continue
 	fi
 	
-	# motion correction of VFA
-	# ------------------------------
-	# if [ $EN_MOTION_CORR -eq 1 ]
-	# 	then
-	# 	mcflirt -in VFA.nii.gz -refvol 'VFA.nii.gz[0]' -cost mutualinfo -report -verbose -plots -o VFA_mc.nii &> /dev/null
-	# else
-	# 	cp VFA.nii.gz VFA_mc.nii.gz
-	# fi
 	prog=$(echo "scale=2;  $prog + .5 / $count" | bc -l)
 	echo -ne "MAKE T1 MAPS   [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
 	gunzip -f VFA.nii.gz
 	
-	# if [ ! -f "VFA.nii" ]
-	# 	then
-	# 		echo $dir "Missing VFA file. Motion correction may have failed." >> $LOG_FILE
-	# 		cd $DATA_DIR
-	# 		fail=1
-	# 		continue
-	# fi
-
-	# T1 mapping where the input image is 'VFA.motioncorrected.nii'
+	# T1 mapping where the input image is 'VFA.nii'
 	# ------------------------------
 	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; \
 		addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; \
@@ -492,8 +490,9 @@ for dir in */*_timepoint/; do
 			for i in {1..8}
 			do
 				# name file with rep_interval*i
-				fslmerge -n $((rep_interval*i-1)) rep_$((rep_interval*i-1)).nii DCE_mc_masked.nii &> /dev/null
+				fslmerge -n $((rep_interval*i-1)) rep_$((rep_interval*i-1)).nii DCE_mc_masked.nii & &> /dev/null
 			done
+			wait
 
 			DCE_FAST () {
 				local i=$1

@@ -66,4 +66,4 @@ Options: `-d: specify main data directory (required)`
 Example call: `./DCE_all -d /media/network_mriphysics/USC-PPG/data -b`
 1. Run DCE (ROCKETSHIP)
 2. Create, align, and apply gray matter and CSF masks 
-3. Run QC scripts `auto_analysis.py` and `report.py`
+3. Run QC scripts `ktrans_analysis.py` and `report.py`

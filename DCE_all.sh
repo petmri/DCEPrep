@@ -9,7 +9,7 @@ fail=0
 count=0
 successes=0
 SKIP_IF_SUCCESS=0
-PURGE_INTERMEDIATES=1
+PURGE_INTERMEDIATES=0
 GIGA_PURGE=0
 shopt -s extglob
 
@@ -30,7 +30,7 @@ while getopts ":d:bC::fhs" options; do
 				DATA_DIR=${DATA_DIR::-1}
 			fi
 			date=$(date +%Y-%m-%d)
-			LOG_FILE=$DATA_DIR/dce_log_$date.txt
+			LOG_FILE=$DATA_DIR/logs/dce_log_$date.txt
 			;;
 		h)
 			echo "This script runs through all subject folders of a specified main data directory, processing every folder ending in '_timepoint'."
@@ -72,7 +72,7 @@ cd $DATA_DIR || exit 1
 # rm dce_log.txt
 for dir in */*_timepoint/; do
 	dir=$DATA_DIR/${dir::-1}
-	date >> dce_log.txt
+	date >> $LOG_FILE
 	echo "DCE processing ${dir}..."
 	((count++))
 	cd $dir || exit 1
@@ -92,7 +92,7 @@ for dir in */*_timepoint/; do
 			continue
 		fi
 	fi
-	if [ ! -f "DCE_mc_bfc_norm.nii.gz" ]
+	if [ ! -f "DCE_mc_bfc_norm.nii.gz" ] && [ ! -f "DCE_mc_bfc_norm.nii" ]
 		then
 		echo Missing input file. Make sure the data has been preprocessed. Skipping $dir... >> $LOG_FILE
 		cd $DATA_DIR
@@ -104,7 +104,8 @@ for dir in */*_timepoint/; do
 	# ------------------------------
 	echo Begin DCE processing...
 	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; run_dce_auto('$SUBJECT_TP_PATH/'); exit;"
-	# gzip -f dcedynamicCt.nii
+	# move images into figures folder
+	mv dce*.png figures/
 	if [ ! -f "dce_patlak_fit_Ktrans.nii" ]
 		then
 			echo $dir "Missing Ktrans maps. DCE failed or inputs were not generated. Hopefully message below is relevant." >> $LOG_FILE
@@ -118,18 +119,14 @@ for dir in */*_timepoint/; do
 	# ------------------------------
 	
 	# Align then re-binarize gm mask
-	# antsRegistrationSyN.sh -d 3 -t t -f ref_rep.nii -m segmented_t1_seg_1.nii.gz -o T1_gm_mask_dyn
 	antsApplyTransforms -i segmented_t1_seg_1.nii.gz -r ref_rep.nii -t T1_dyn0GenericAffine.mat -o T1_gm_mask_dyn_pv.nii &> /dev/null
 	fslmaths T1_gm_mask_dyn_pv.nii -thr 0.9 -bin T1_gm_mask.nii
 	rm T1_gm_mask_dyn_pv.nii
 	
 	# Align CSF mask
-	#flirt -in 15_csf.nii.gz -ref ref_rep.nii -out 15_csf_mask_dyn.nii.gz -init t12dcevol.mat -applyxfm
 	antsApplyTransforms -i segmented_t1_seg_0.nii.gz -r ref_rep.nii -t T1_dyn0GenericAffine.mat -o T1_csf_mask_dyn_pv.nii &> /dev/null
 	fslmaths T1_csf_mask_dyn_pv.nii -thr 0.9 -bin T1_csf_mask.nii
 	rm T1_csf_mask_dyn_pv.nii
-
-	#fslmaths 15_csf_mask_dyn.nii.gz -thr 20 -bin 15_csf_mask_dyn.nii
 	
 	# Apply masks to T1 map
 	fslmaths T1_map_t1_fa_fit_VFA.nii -mas T1_wm_mask.nii T1_wm.nii
@@ -142,7 +139,7 @@ for dir in */*_timepoint/; do
 	fslmaths dce_patlak_fit_Ktrans.nii -mas T1_csf_mask.nii Ktrans_csf.nii
 	
 	# registration QC
-	python3 $SCRIPT_PATH/auto_analysis.py $SUBJECT_TP_PATH
+	python3 $SCRIPT_PATH/ktrans_analysis.py $SUBJECT_TP_PATH
 	
 	fslmaths T1_wm_mask.nii.gz -add 2000 huh.nii
 	fslmaths huh.nii.gz -thr 2001 huh.nii
