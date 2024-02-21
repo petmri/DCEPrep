@@ -69,7 +69,7 @@ Example call: `./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/GIGA_DAT
 14. **DCE Z-axis Normalization** using double gaussian fitting `DCE_norm.py`
 
 ### `DCE_all.sh`
-Inputs: `DCE_bfc_norm.nii` `aif.nii` `t1_map_fixed_use_me.nii.gz`
+Inputs: `DCE_mc_bfc_norm.nii.gz` `aif.nii` `T1_map_t1_fa_fit_VFA.nii` `T1_bet_mask_dyn.nii.gz`
 
 Outputs: Ktrans maps, QC reports (overview being `report.png`)
 
