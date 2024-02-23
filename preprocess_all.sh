@@ -63,11 +63,11 @@ while getopts ":d:bBAZfhcC::mst" options; do
 			echo "-b: enable first round of bias field corrections"
 			echo "-B: enable second round of bias field corrections, post-Z-norm if enabled"
 			echo "-c: clean generated files prior to processing"
-			echo "-C [dir_path]: enable comparison mode, which will output all files to the specified directory within each timepoint"
+			echo "-C [name]: enable comparison mode, which will output all files to the specified directory within each timepoint"
 			echo "-d [dir_path]: specify main data directory containing all subject folders"
 			echo "-h: display this message"
 			echo "-m: enable motion correction"
-			echo "-s: skip processing if DCE input file already exists"
+			echo "-s: skip preprocessing if DCE input file already exists"
 			echo "-t: only run up to T1 mapping"
 			echo "-Z: enable Z-slice normalization"
 			exit 0
@@ -115,7 +115,6 @@ for dir in */*_timepoint/; do
 done
 # Run bias correction on VFA data 
 # ------------------------------
-# rm -f preprocessing_log.txt
 for dir in */*_timepoint/; do
 	dir=$DATA_DIR/${dir::-1}
 	date >> $LOG_FILE
@@ -140,6 +139,7 @@ for dir in */*_timepoint/; do
 		if [ -f "DCE_mc_bfc_norm.nii.gz" ] || [ -f "case_report.html" ]
 			then
 			echo "Skipping ${dir} because it has already been processed." >> $LOG_FILE
+			let successes++
 			cd $DATA_DIR
 			continue
 		fi
@@ -304,19 +304,6 @@ for dir in */*_timepoint/; do
 		# fslmaths 10.nii -mas T1_bet_mask.nii.gz 10_bfc.nii &> /dev/null
 		# fslmaths 12.nii -mas T1_bet_mask.nii.gz 12_bfc.nii &> /dev/null
 		# fslmaths 15.nii -mas T1_bet_mask.nii.gz 15_bfc.nii &> /dev/null
-
-		
-		# echo "Skipping BFC... but still segmenting one VFA for matter masks"
-		# fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o 15_masked.nii &> /dev/null
-		# rm 15_bfc_mixeltype.nii.gz &> /dev/null
-		# rm 15_bfc_pve_0.nii.gz &> /dev/null
-		# rm 15_bfc_pve_1.nii.gz &> /dev/null
-		# rm 15_bfc_pve_2.nii.gz &> /dev/null
-		# rm 15_bfc_pveseg.nii.gz &> /dev/null
-		# rm 15_bfc_seg.nii.gz &> /dev/null
-		
-		# threshold and binarize wm mask
-		#fslmaths 15_bfc_seg.nii.gz -thr 3 -uthr 3 15_wm.nii
 		
 		# apply wm mask to all VFAs
 		# fslmaths 2_bfc.nii -mas T1_wm_mask.nii.gz 2_bfc_wm.nii &> /dev/null
@@ -377,7 +364,6 @@ for dir in */*_timepoint/; do
 		then
 		#echo Concatenating Z-norm\'d images
 		# concatenates VFA images in one 4D VFA.nii.gz image
-		# echo ${VFA_NUMS[@]/%/_BFC_Z.nii.gz}
 		fslmerge -t VFA.nii.gz ${VFA_NUMS[@]/%/_BFC_Z.nii.gz}
 
 	elif [ $EN_BIAS1 -eq 1 ]
@@ -447,7 +433,6 @@ for dir in */*_timepoint/; do
 	if [ $USE_AUTO_AIF -eq 1 ]
 		then
 		# find AutoAIF path
-		# AUTO_AIF_PATH=$(find $HOME -type d -name main_vif.py)
 		AUTO_AIF_PATH=$(find $HOME -name '*main_vif.py' -printf '%h\n' -quit || find / -name '*main_vif.py' -printf '%h\n' -quit) &> /dev/null
 		# run AutoAIF
 		# conda activate tf
@@ -546,7 +531,7 @@ for dir in */*_timepoint/; do
 	fi
 	
 	# align existing white matter mask to dynamic images and re-binarize
-	antsApplyTransforms -i T1_wm_mask.nii.gz -r ref_rep.nii -t T1_bet_dyn0GenericAffine.mat -o T1_wm_mask_dyn_pv.nii &> /dev/null
+	# antsApplyTransforms -i T1_wm_mask.nii.gz -r ref_rep.nii -t T1_dyn0GenericAffine.mat -o T1_wm_mask_dyn_pv.nii &> /dev/null
 	
 	# apply wm mask to all DCE images
 	fslmaths DCE_mc_bfc.nii -mas T1_wm_mask.nii.gz DCE_mc_bfc_wm.nii.gz &> /dev/null

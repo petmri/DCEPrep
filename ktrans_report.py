@@ -21,14 +21,14 @@ except:
 
 analysis = mpimg.imread(str(dir) + '/figures/T1_Ktrans_analysis.png')
 zeros = mpimg.imread(str(dir) + '/figures/T1_Ktrans_zeros.png')
-aif_curve = mpimg.imread(str(dir) + '/dceAIF_fitting.png')
-timecurves = mpimg.imread(str(dir) + '/dce_timecurves.png')
+aif_curve = mpimg.imread(str(dir) + '/figures/dceAIF_fitting.png')
+timecurves = mpimg.imread(str(dir) + '/figures/dce_timecurves.png')
 plots = []
 plots.append(mpimg.imread(str(dir) + '/figures/T1_Ktrans_zeros.png'))
 plots.append(mpimg.imread(str(dir) + '/figures/displacements.png'))
 curves = []
-curves.append(mpimg.imread(str(dir) + '/dceAIF_fitting.png'))
-curves.append(mpimg.imread(str(dir) + '/dce_timecurves.png'))
+curves.append(mpimg.imread(str(dir) + '/figures/dceAIF_fitting.png'))
+curves.append(mpimg.imread(str(dir) + '/figures/dce_timecurves.png'))
 ktrans = nib.load(str(dir) + '/dce_patlak_fit_Ktrans.nii')
 try:
     json_file = open(str(dir) + '/DCE.json')

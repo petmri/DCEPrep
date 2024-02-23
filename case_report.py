@@ -96,9 +96,11 @@ except Exception as e:
 
 # get subject id
 subject_id = dir.split('/')[-2]
-
-# get timepoint
 timepoint = dir.split('/')[-1]
+if subject_id.endswith('_timepoint'):
+    subject_id = dir.split('/')[-3]
+    # get timepoint
+    timepoint = dir.split('/')[-2]
 
 # get institute from DCE.json
 try:
@@ -119,12 +121,12 @@ except Exception as e:
 
 try:
     # brain mask
-    plotting.plot_roi(str(dir) + '/T1_bet_mask.nii.gz', bg_img=str(tp_dir)+'/T1.nii', vmin=0, vmax=1, dim=-1, cmap='gray', output_file=str(dir)+'/figures/t1w_mask.svg', annotate=False, colorbar=False, draw_cross=False, title='mask')
+    plotting.plot_roi(str(dir) + '/T1_bet_mask.nii.gz', bg_img=str(tp_dir)+'/T1.nii', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=-1, cmap='gray', output_file=str(dir)+'/figures/t1w_mask.svg', colorbar=False, draw_cross=False, title='mask')
 
     # T1w segmentation
-    plotting.plot_anat(str(tp_dir) + '/T1.nii', cmap='gray', output_file=str(dir)+'/figures/t1w.svg', dim=-1, annotate=False, colorbar=False, draw_cross=False)
-    plotting.plot_roi(str(dir) + '/segmented_t1_seg_2.nii.gz', bg_img=str(tp_dir)+'/T1.nii', vmin=0, vmax=1, dim=0, cmap='gray', output_file=str(dir)+'/figures/t1w_wm.svg', annotate=False, colorbar=False, draw_cross=False, title='wm')
-    plotting.plot_roi(str(dir) + '/segmented_t1_seg_1.nii.gz', bg_img=str(tp_dir)+'/T1.nii', vmin=0, vmax=1, dim=0, cmap='gray', output_file=str(dir)+'/figures/t1w_gm.svg', annotate=False, colorbar=False, draw_cross=False, title='gm')
+    plotting.plot_anat(str(tp_dir) + '/T1.nii', cmap='gray', output_file=str(dir)+'/figures/t1w.svg', cut_coords=(-20, 0, -15), dim=-1, colorbar=False, draw_cross=False)
+    plotting.plot_roi(str(dir) + '/segmented_t1_seg_2.nii.gz', bg_img=str(tp_dir)+'/T1.nii', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=0, cmap='gray', output_file=str(dir)+'/figures/t1w_wm.svg', colorbar=False, draw_cross=False, title='wm')
+    plotting.plot_roi(str(dir) + '/segmented_t1_seg_1.nii.gz', bg_img=str(tp_dir)+'/T1.nii', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=0, cmap='gray', output_file=str(dir)+'/figures/t1w_gm.svg', colorbar=False, draw_cross=False, title='gm')
 except Exception as e:
     print("Error plotting T1w segmentation")
     print(e)
@@ -298,6 +300,9 @@ plt.ylabel('Signal intensity / Baseline')
 plt.savefig(str(dir)+'/figures/AIF_graph.svg', bbox_inches='tight')
 plt.close()
 
+# save AIF values to file
+np.savetxt(str(dir) + '/AIF_values.txt', aif_curve_ratio)
+
 # plot AIF overlay
 plt.figure(figsize=(15,5), dpi=250)
 plt.subplot(1,2,1)
@@ -344,7 +349,6 @@ hematocrit_pattern = r"User selected hematocit \(0 to 1.0\):\s+(\d+\.\d+)"
 snr_threshold_pattern = r"User selected SNR threshold for AIF:\s+(\d+)"
 relaxivity_pattern = r"User selected contrast agent R1 relaxivity \(/mM/sec\):\s+(\d+\.\d+)"
 steady_state_pattern = r"User selected end of steady state time \(image number\):\s+(-?\d+)"
-blood_t1_pattern = r"Average Filtered AIF T1: (\d+)"
 
 DCE_tr = extract_value(tr_pattern, log_text)
 DCE_fa = extract_value(fa_pattern, log_text)
@@ -352,13 +356,18 @@ hematocrit = extract_value(hematocrit_pattern, log_text)
 snr_threshold = extract_value(snr_threshold_pattern, log_text)
 relaxivity = extract_value(relaxivity_pattern, log_text)
 steady_state = extract_value(steady_state_pattern, log_text)
-blood_t1 = extract_value(blood_t1_pattern, log_text)
+blood_t1_pattern = "Average Filtered AIF T1: "
 
 if RUNA_log:
     # get last line of log file
     with open(dir + '/A_dceR1info.log', 'r') as file:
+        match = False
         for line in file:
-            pass
+            if line[:-1] == blood_t1_pattern:
+                match = True
+            elif match:
+                blood_t1 = line[:-1]
+                match = False
         A_last_line = line
 else:
     A_last_line = 'Failed to load RUNA log'
@@ -473,9 +482,9 @@ T1_gm_std = np.std(T1_gm_data[T1_gm_data > 0])
 fsl_dir = os.environ['FSLDIR']
 # print(fsl_dir)
 try:
-    plotting.plot_anat(fsl_dir + '/data/standard/MNI152_T1_1mm.nii.gz', title='MNI152_T1_1mm', output_file=dir + '/figures/MNI152_T1_1mm.svg', annotate=False, colorbar=False, draw_cross=False)
-    plotting.plot_anat(dir + '/t1w_MNI.nii.gz', title='t1w_MNI', output_file=dir + '/figures/t1w_MNI.svg', annotate=False, colorbar=False, draw_cross=False)
-    plotting.plot_anat(dir + '/ktrans_2_MNI.nii.gz', title='ktrans_MNI', vmin=0, vmax=0.009, output_file=dir + '/figures/Ktrans_MNI.svg', annotate=False, colorbar=False, draw_cross=False)
+    plotting.plot_anat(os.path.dirname(os.path.realpath(__file__)) + '/MNI152_T1_1mm_brain.nii.gz', title='MNI152_T1_1mm_brain', output_file=dir + '/figures/MNI152_T1_1mm_brain.svg', colorbar=False, draw_cross=False)
+    plotting.plot_anat(dir + '/t1w_MNIWarped.nii.gz', title='t1w_MNI', cut_coords=(2, -1, 20), output_file=dir + '/figures/t1w_MNI.svg', colorbar=False, draw_cross=False)
+    plotting.plot_anat(dir + '/Ktrans_MNI.nii.gz', title='ktrans_MNI', cut_coords=(2, -1, 20), vmin=0, vmax=0.001, output_file=dir + '/figures/Ktrans_MNI.svg', colorbar=False, draw_cross=False)
 except Exception as e:
     print("Error plotting MNI space registration")
     print(e)
@@ -489,16 +498,16 @@ data = {
     'Commit': 'Commit: ' + commit_hash,
     'Institute': 'Institute: ' + institute,
     'Machine': 'Machine: ' + manufacturer + ' ' + MR_machine_model + ' ' + str(field_strength) + 'T',
-    'ktrans': os.path.join(dir, 'figures/ktrans.svg'),
+    'ktrans': 'figures/ktrans.svg',
     'image_alt1': 'Missing image',
     'Dimensions': 'Dimensions: ' + str(dimensions),
     'Voxel_Size': 'Voxel Size: ' + str(voxel_size),
-    'Overlay': dir + '/figures/overlay.svg',
-    'T1w': dir + '/figures/t1w.svg',
-    'T1w_mask': dir + '/figures/t1w_mask.svg',
-    'T1w_gm': dir + '/figures/t1w_gm.svg',
-    'T1w_wm': dir + '/figures/t1w_wm.svg',
-    'T1w_to_VFA': dir + '/figures/t1w_to_vfa.svg',
+    'Overlay': 'figures/overlay.svg',
+    'T1w': 'figures/t1w.svg',
+    'T1w_mask': 'figures/t1w_mask.svg',
+    'T1w_gm': 'figures/t1w_gm.svg',
+    'T1w_wm': 'figures/t1w_wm.svg',
+    'T1w_to_VFA': 'figures/t1w_to_vfa.svg',
     'T1_TR': 'TR: ' + str(TR) + 'ms',
     'T1_FAs': 'FAs: ' + FA_str,
     'T1_GPU': str(GPU_T1),
@@ -506,17 +515,17 @@ data = {
     'T1_wm_std': 'T1 wm std: ' + str(round(T1_wm_std, 4)),
     'T1_gm_median': 'T1 gm median: ' + str(round(T1_gm_median, 4)),
     'T1_gm_std': 'T1 gm std: ' + str(round(T1_gm_std, 4)),
-    'T1_map': dir + '/figures/t1_map.svg',
-    'displacements' : dir + '/figures/displacements.svg',
-    'AIF_mask': dir + '/figures/DCE_mc_mask.svg',
+    'T1_map': 'figures/t1_map.svg',
+    'displacements' : 'figures/displacements.svg',
+    'AIF_mask': 'figures/DCE_mc_mask.svg',
     'AIF_metric' : "AIFitness: " + str(aif_metric),
-    'AIF_curve': dir + '/figures/DCE_mc_curve.svg',
-    'AIF_overlay': dir + '/figures/AIF_overlay.svg',
-    'AIF_graph': dir + '/figures/AIF_graph.svg',
-    't1w_bet_dyn' : dir + '/figures/t1bet_to_dyn.svg',
-    't1w_wm_dyn' : dir + '/figures/t1wm_to_dyn.svg',
-    't1w_gm_dyn' : dir + '/figures/t1gm_to_dyn.svg',
-    'Z_DCE' : dir + '/figures/DCE_mc_bfc_norm.svg',
+    'AIF_curve': 'figures/DCE_mc_curve.svg',
+    'AIF_overlay': 'figures/AIF_overlay.svg',
+    'AIF_graph': 'figures/AIF_graph.svg',
+    't1w_bet_dyn' : 'figures/t1bet_to_dyn.svg',
+    't1w_wm_dyn' : 'figures/t1wm_to_dyn.svg',
+    't1w_gm_dyn' : 'figures/t1gm_to_dyn.svg',
+    'Z_DCE' : 'figures/DCE_mc_bfc_norm.svg',
     'DCE_TR' : 'Repetition Time: ' + str(DCE_tr) + 's',
     'DCE_FA' : 'Flip Angle: ' + str(DCE_fa) + '°',
     'Hematocrit' : 'Hematocrit: ' + str(hematocrit),
@@ -528,28 +537,28 @@ data = {
     'R_squared_fit' : 'R squared of AIF fit (fitted): ' + str(r2_aif_fit),
     'R_squared_raw' : 'R squared of AIF fit (raw): ' + str(r2_raw_values),
     'B_last_line' : str(B_last_line),
-    'DCE_AIF_fit' : dir + '/dceAIF_fitting.png',
-    'DCE_AIF_timecurve' : dir + '/dce_timecurves.png',
+    'DCE_AIF_fit' : 'figures/dceAIF_fitting.png',
+    'DCE_AIF_timecurve' : 'figures/dce_timecurves.png',
     'DCE_model' : 'Model: Patlak',
     'GPU_DCE' : str(GPU_DCE),
     'DCE_elapsed_time' : 'Elapsed time: ' + str(dce_elapsed_time) + 's',
-    'ktrans_zeros' : dir + '/figures/T1_Ktrans_zeros.png',
-    'ktrans_analysis' : dir + '/figures/T1_Ktrans_analysis.png',
+    'ktrans_zeros' : 'figures/T1_Ktrans_zeros.png',
+    'ktrans_analysis' : 'figures/T1_Ktrans_analysis.png',
     'ktrans_wm_mean' : 'Mean wm Ktrans: ' + str(round(mean_wm, 4)),
     'ktrans_wm_median' : 'Median wm Ktrans: ' + str(round(ktrans_median_wm, 4)),
     'ktrans_wm_std' : 'Std wm Ktrans: ' + str(round(ktrans_std_wm, 4)),
     'ktrans_gm_mean' : 'Mean gm Ktrans: ' + str(round(mean_gm, 4)),
     'ktrans_gm_median' : 'Median gm Ktrans: ' + str(round(ktrans_median_gm, 4)),
     'ktrans_gm_std' : 'Std gm Ktrans: ' + str(round(ktrans_std_gm, 4)),
-    'MNI_img' : dir + '/figures/MNI152_T1_1mm_brain.svg',
-    'MNI_T1w' : dir + '/figures/t1w_MNI.svg',
-    'MNI_Ktrans' : dir + '/figures/ktrans_MNI.svg',
+    'MNI_img' : 'figures/MNI152_T1_1mm_brain.svg',
+    'MNI_T1w' : 'figures/t1w_MNI.svg',
+    'MNI_Ktrans' : 'figures/ktrans_MNI.svg',
 }
 
 # insert VFAs into template
 for i in range(len(FAs)):
     data['FA_' + str(i+1)] = 'FA ' + str(FAs[i])
-    data['Z_' + str(i+1)] = dir + '/figures/' + str(FAs[i]) + '_BFC_Z.svg'
+    data['Z_' + str(i+1)] = 'figures/' + str(FAs[i]) + '_BFC_Z.svg'
 
 output = template.render(data)
 

@@ -9,6 +9,7 @@ fail=0
 count=0
 successes=0
 SKIP_IF_SUCCESS=0
+USE_FREESURFER=0
 PURGE_INTERMEDIATES=0
 GIGA_PURGE=0
 shopt -s extglob
@@ -31,15 +32,21 @@ while getopts ":d:bC::fhs" options; do
 			fi
 			date=$(date +%Y-%m-%d)
 			LOG_FILE=$DATA_DIR/logs/dce_log_$date.txt
+			if [ ! -d "$DATA_DIR/logs" ]
+				then
+				mkdir $DATA_DIR/logs
+			fi
 			;;
 		h)
 			echo "This script runs through all subject folders of a specified main data directory, processing every folder ending in '_timepoint'."
 			echo "The data must be preprocessed with \`preprocess_all.sh\` before running this script."
-			echo "The input is \`DCE_bfc_norm.nii\`. The output is mainly the DCE outputs (Ktrans maps) and QC graphs."
+			echo "The input is \`DCE_bfc_norm.nii.gz\`. The output is mainly the DCE outputs (Ktrans maps) and QC reports."
+			echo "If everything goes well, the script will output a case report for each subject and a population report for the entire dataset."
 			echo "-b: enable first round of bias field corrections"
 			echo "-C: enable comparison mode. Specify output directory."
 			echo "-d: specify main data directory containing all subject folders"
 			echo "-h: display this message"
+			echo "-s: skip subjects that have already been processed"
 			exit 0
 			;;
 		s)
@@ -151,14 +158,25 @@ for dir in */*_timepoint/; do
 	fslmaths ref_rep.nii -sub huh2.nii.gz bozo2.nii
 	fslmaths bozo2.nii -thr 0 bozo2.nii
 	
-	flirt -in DCE_mc.nii.gz -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -omat DCE2MNI.mat -out DCE_MNI_FSL.nii.gz
+	# flirt -in DCE_mc.nii.gz -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -omat DCE2MNI.mat -out DCE_MNI_FSL.nii.gz
 	# flirt -in $dir/T1.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out t1w_MNI.nii.gz
-	antsRegistration --verbose 0 --dimensionality 3 --float 0 --collapse-output-transforms 1 \
-		--output [ t1w_MNI,t1w_MNI.nii.gz ] --interpolation Linear --use-histogram-matching 0 \
-		--winsorize-image-intensities [ 0.005,0.995 ] --transform Affine[ 0.1 ] \
-		--metric MI[ $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz,T1_bet.nii.gz,1,32,Regular,0.25 ] \
-		--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
-	flirt -in dce_patlak_fit_Ktrans.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out ktrans_2_MNI.nii.gz -init DCE2MNI.mat -applyxfm
+	# antsRegistration --verbose 0 --dimensionality 3 --float 0 --collapse-output-transforms 1 \
+	# 	--output [ DCE_MPRAGE,DCE_MPRAGE.nii.gz ] --interpolation Linear --use-histogram-matching 0 \
+	# 	--winsorize-image-intensities [ 0.005,0.995 ] --transform Affine[ 0.1 ] \
+	# 	--metric MI[ T1_bet.nii.gz,DCE_mc.nii.gz,1,32,Regular,0.25 ] \
+	# 	--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
+	# antsRegistrationSyNQuick.sh -d 3 -f T1.nii -m DCE_mc.nii.gz -o DCE_MNI -n 8
+	# antsRegistrationSyNQuick.sh -d 3 -f $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -m T1_bet.nii.gz -o t1w_MNI -n 8
+	# antsApplyTransforms -i ref_rep.nii -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t t1w_MNI1Warp.nii.gz -t t1w_MNI0GenericAffine.mat -t [T1_dyn0GenericAffine.mat, 1] -o DCE_mc_MNI.nii.gz
+	# antsRegistration --verbose 0 --dimensionality 3 --float 0 --collapse-output-transforms 1 \
+	# 	--output [ t1w_MNI,t1w_MNI.nii.gz ] --interpolation Linear --use-histogram-matching 0 \
+	# 	--winsorize-image-intensities [ 0.005,0.995 ] --transform SyN[ 0.1 ] \
+	# 	--metric MI[ $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz,T1_bet.nii.gz,1,32,Regular,0.25 ] \
+	# 	--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
+	# antsApplyTransforms -i dce_patlak_fit_Ktrans.nii -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t t1w_MNI1Warp.nii.gz -t t1w_MNI0GenericAffine.mat -t [T1_dyn0GenericAffine.mat, 1] -o Ktrans_MNI.nii.gz
+	# antsApplyTransforms -i dce_patlak_fit_vp.nii -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t t1w_MNI1Warp.nii.gz -t t1w_MNI0GenericAffine.mat -t [T1_dyn0GenericAffine.mat, 1] -o vp_MNI.nii.gz
+
+	# flirt -in dce_patlak_fit_Ktrans.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out ktrans_2_MNI.nii.gz -init DCE2MNI.mat -applyxfm
 	python3 $SCRIPT_PATH/ktrans_report.py $SUBJECT_TP_PATH
 	python3 $SCRIPT_PATH/case_report.py $dir $SUBJECT_TP_PATH
 	if [ $PURGE_INTERMEDIATES -eq 1 ] && [ $COMPARISON_MODE -eq 1 ]
@@ -173,7 +191,7 @@ for dir in */*_timepoint/; do
 	((successes++))
 done
 
-python3 $SCRIPT_PATH/population_report.py $DATA_DIR $OUTPUT_DIR
+python3 $SCRIPT_PATH/population_report.py $DATA_DIR $OUTPUT_DIR $ROCKETSHIP_PATH
 ((failures=count-successes))
 echo "Completed DCE processing for $count subjects." >> $LOG_FILE
 echo $successes subjects succeeded >> $LOG_FILE
