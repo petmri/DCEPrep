@@ -437,7 +437,7 @@ for dir in */*_timepoint/; do
 		# run AutoAIF
 		# conda activate tf
 		python3 $AUTO_AIF_PATH/main_vif.py --mode inference --input_path $PWD/DCE_mc.nii.gz --save_output_path $PWD \
-			--model_weight_path $SCRIPT_PATH/model_weight.h5 \
+			--model_weight_path $AUTO_AIF_PATH/model_weight.h5 \
 			--save_image 1 &> /dev/null
 		# conda deactivate
 		# rename output
