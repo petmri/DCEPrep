@@ -8,133 +8,250 @@
     ],
     "descriptions": [
         {
-            "dataType": "anat",
+            "datatype": "anat",
+            "suffix": "T1",
             "modalityLabel": "T1w",
             "criteria": {
-                "SeriesDescription": "*MPRAGE*[!_ND]",
-                "ImageType": [
-                    "ORIGINAL",
-                    "PRIMARY",
-                    "M",
-                    "NORM",
-                    "DIS2D"
-                ]
+                "SeriesDescription": "*MPRAGE*"
             },
             "sidecarChanges": {
                 "ProtocolName": "T1"
             }
         },
         {
-            "dataType": "anat",
-            "modalityLabel": "DCE",
+            "datatype": "anat",
+            "suffix": "T1",
+            "modalityLabel": "T1w",
             "criteria": {
-                "SeriesDescription": "DCE BBB",
-                "ImageType": [
-                    "ORIGINAL",
-                    "PRIMARY",
-                    "M",
-                    "ND"
-                ]
+                "SeriesDescription": "*FSPGR*"
             },
             "sidecarChanges": {
-                "ProtocolName": "DCE",
-                "TemporalResolution": "15.290000"
+                "ProtocolName": "T1"
             }
         },
         {
-            "dataType": "anat",
-            "modalityLabel": "VFA4",
+            "datatype": "anat",
+            "suffix": "T1",
+            "modalityLabel": "T1w",
             "criteria": {
-                "SeriesDescription": "T1Map_p2_anatomical_FLIP1",
-                "ImageType": [
-                    "ORIGINAL",
-                    "PRIMARY",
-                    "M",
-                    "ND"
-                ]
+                "SeriesDescription": "*mprage*"
             },
             "sidecarChanges": {
-                "ProtocolName": "T1Map_p2_anatomical_FLIP1"
+                "ProtocolName": "T1"
             }
         },
         {
-            "dataType": "anat",
-            "modalityLabel": "VFA2",
+            "datatype": "dce",
+            "suffix": "DCE",
             "criteria": {
-                "SeriesDescription": "t1_vibe_cor_dyn_2_waterext",
-                "ImageType": [
-                    "ORIGINAL",
-                    "PRIMARY",
-                    "M",
-                    "ND"
-                ]
+                "SeriesDescription": "*DCE*"
             },
             "sidecarChanges": {
-                "ProtocolName": "t1_vibe_cor_dyn_2_waterext"
             }
         },
         {
-            "dataType": "anat",
-            "modalityLabel": "VFA2",
+            "datatype": "dce",
+            "suffix": "DCE",
             "criteria": {
-                "SeriesDescription": "T1 Hippo MAP FA02-Chui Law Vasc.",
-                "ImageType": [
-                    "ORIGINAL",
-                    "PRIMARY",
-                    "M",
-                    "ND"
-                ]
+                "SeriesDescription": "*_dyn"
             },
             "sidecarChanges": {
-                "ProtocolName": "T1 Hippo MAP FA02-Chui Law Vasc."
             }
         },
         {
-            "dataType": "anat",
-            "modalityLabel": "VFA11",
+            "datatype": "dce",
+            "suffix": "DCE",
             "criteria": {
-                "SeriesDescription": "T1Map_p2_anatomical_FLIP2",
-                "ImageType": [
-                    "ORIGINAL",
-                    "PRIMARY",
-                    "M",
-                    "ND"
-                ]
+                "SeriesDescription": "*dynamic_waterext"
             },
             "sidecarChanges": {
-                "ProtocolName": "T1Map_p2_anatomical_FLIP2"
             }
         },
         {
-            "dataType": "anat",
-            "modalityLabel": "VFA17",
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-01",
             "criteria": {
-                "SeriesDescription": "T1Map_p2_anatomical_FLIP3",
-                "ImageType": [
-                    "ORIGINAL",
-                    "PRIMARY",
-                    "M",
-                    "ND"
-                ]
+                "SeriesDescription": "*FA02*",
+                "FlipAngle": "2"
             },
             "sidecarChanges": {
-                "ProtocolName": "T1Map_p2_anatomical_FLIP3"
             }
         },
         {
-            "dataType": "anat",
-            "modalityLabel": "VFA23",
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-01",
             "criteria": {
-                "SeriesDescription": "T1Map_p2_anatomical_FLIP4",
-                "ImageType": [
-                    "ORIGINAL",
-                    "PRIMARY",
-                    "M",
-                    "ND"
-                ]
+                "SeriesDescription": "*dyn_2*",
+                "FlipAngle": "2"
             },
             "sidecarChanges": {
-                "ProtocolName": "T1Map_p2_anatomical_FLIP4"
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-01",
+            "criteria": {
+                "SeriesDescription": "*tra_flip_2deg*",
+                "FlipAngle": "2"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-02",
+            "criteria": {
+                "SeriesDescription": "*FA05*",
+                "FlipAngle": "5"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-02",
+            "criteria": {
+                "SeriesDescription": "*dyn_5*",
+                "FlipAngle": "5"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-02",
+            "criteria": {
+                "SeriesDescription": "*tra_flip_5deg*",
+                "FlipAngle": "5"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-03",
+            "criteria": {
+                "SeriesDescription": "*FA10*",
+                "FlipAngle": "10"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-03",
+            "criteria": {
+                "SeriesDescription": "*dyn_10*",
+                "FlipAngle": "10"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-03",
+            "criteria": {
+                "SeriesDescription": "*tra_flip_10deg*",
+                "FlipAngle": "10"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-04",
+            "criteria": {
+                "SeriesDescription": "*FA12*",
+                "FlipAngle": "12"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-04",
+            "criteria": {
+                "SeriesDescription": "*dyn_12*",
+                "FlipAngle": "12"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-03",
+            "criteria": {
+                "SeriesDescription": "*tra_flip_12deg*",
+                "FlipAngle": "12"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-05",
+            "criteria": {
+                "SeriesDescription": "*FA15*",
+                "FlipAngle": "15"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-05",
+            "criteria": {
+                "SeriesDescription": "*dyn_15*",
+                "FlipAngle": "15"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-05",
+            "criteria": {
+                "SeriesDescription": "*tra_flip_15deg*",
+                "FlipAngle": "15"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-06",
+            "criteria": {
+                "SeriesDescription": "*FA20*",
+                "FlipAngle": "20"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-07",
+            "criteria": {
+                "SeriesDescription": "*FA25*",
+                "FlipAngle": "25"
+            },
+            "sidecarChanges": {
             }
         }
     ]
