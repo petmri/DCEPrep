@@ -62,8 +62,8 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     if GAUSSFIT:
         # get histogram of each wm slice
         for i in range(slice_num):
-            a = np.where(wm_data[:, :, i] > 0)
-            hist, bins = np.histogram(wm_data[:,:,i][a].flatten(), bins=100)
+            a = np.where(wm_data[:, :, i, :] > 0)
+            hist, bins = np.histogram(wm_data[:,:,i,:][a].flatten(), bins=100)
 
             def double_gaussian(x, A1, mu1, sigma1, A2, mu2, sigma2):
                 return (
@@ -73,7 +73,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
 
             # Initial guess for the parameters
             # count voxels within 1 std of mean
-            area = np.count_nonzero(wm_data[:,:,i][a])
+            area = np.count_nonzero(wm_data[:,:,i,:][a])
 
             # prepare for gaussian fitting
             bin_width = bins[1] - bins[0]
@@ -84,18 +84,18 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
             if area == 0:
                 # just get from next slice
                 if i == slice_num - 1:
-                    a = np.where(wm_data[:,:,i-1] > 0)
-                    area = np.count_nonzero(wm_data[:,:,i-1][a])
-                    amp_guess = area / pstdev(wm_data[:,:,i-1][a]) * 0.3989 * bin_width
-                    params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i-1], sigma1=pstdev(wm_data[:,:,i-1][a]), A2=amp_guess, mu2=median(wm_data[:,:,i-1][a]), sigma2=pstdev(wm_data[:,:,i-1][a]))
+                    a = np.where(wm_data[:,:,i-1,:] > 0)
+                    area = np.count_nonzero(wm_data[:,:,i-1,:][a])
+                    amp_guess = area / pstdev(wm_data[:,:,i-1,:][a]) * 0.3989 * bin_width
+                    params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i-1], sigma1=pstdev(wm_data[:,:,i-1,:][a]), A2=amp_guess, mu2=median(wm_data[:,:,i-1,:][a]), sigma2=pstdev(wm_data[:,:,i-1,:][a]))
                 else:
-                    a = np.where(wm_data[:,:,i+1] > 0)
-                    area = np.count_nonzero(wm_data[:,:,i+1][a])
-                    amp_guess = area / pstdev(wm_data[:,:,i+1][a]) * 0.3989 * bin_width
-                    params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i+1], sigma1=pstdev(wm_data[:,:,i+1][a]), A2=amp_guess, mu2=median(wm_data[:,:,i+1][a]), sigma2=pstdev(wm_data[:,:,i+1][a]))
+                    a = np.where(wm_data[:,:,i+1,:] > 0)
+                    area = np.count_nonzero(wm_data[:,:,i+1,:][a])
+                    amp_guess = area / pstdev(wm_data[:,:,i+1,:][a]) * 0.3989 * bin_width
+                    params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i+1], sigma1=pstdev(wm_data[:,:,i+1,:][a]), A2=amp_guess, mu2=median(wm_data[:,:,i+1,:][a]), sigma2=pstdev(wm_data[:,:,i+1,:][a]))
             else:
-                amp_guess = area / pstdev(wm_data[:,:,i][a]) * 0.3989 * bin_width
-                params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i], sigma1=pstdev(wm_data[:,:,i][a]), A2=amp_guess, mu2=median(wm_data[:,:,i][a]), sigma2=pstdev(wm_data[:,:,i][a]))
+                amp_guess = area / pstdev(wm_data[:,:,i,:][a]) * 0.3989 * bin_width
+                params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i], sigma1=pstdev(wm_data[:,:,i,:][a]), A2=amp_guess, mu2=median(wm_data[:,:,i,:][a]), sigma2=pstdev(wm_data[:,:,i,:][a]))
                     
             result = model.fit(hist, params, x=bins[:-1])
             gaussian_params.append(result.best_values)
@@ -113,11 +113,11 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
             plt.ylabel("Frequency")
 
             # make hist directory if it doesn't exist
-            hist_dir = file_dir + '/figures/hist'
+            hist_dir = file_dir + '/../figures/hist'
             Path(hist_dir).mkdir(parents=True, exist_ok=True)
 
             # Save the figure
-            path1 = file_dir + '/figures/hist/DCE_' + str(i+1) + '_hist.png'
+            path1 = file_dir + '/../figures/hist/DCE_' + str(i+1) + '_hist.png'
             plt.savefig(path1)
             plt.close()
 
@@ -138,8 +138,8 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
         mean_mu = mean(mu)
         for i in range(slice_num):
             scale_factor = mean_mu / mu[i]
-            mri_final[:, :, i] *= scale_factor
-            wm_final[:, :, i] *= scale_factor
+            mri_final[:, :, i, :] *= scale_factor
+            wm_final[:, :, i, :] *= scale_factor
 
     elif POLYFIT is True:
         print("Using Polynomial fitting to normalize " + mri_file1)
@@ -202,7 +202,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     ax.set_title("DCE Slice Normalization")
     ax.legend()
 
-    path2 = file_dir +'/figures/DCE_mc_bfc_norm.svg'   #THE STRING IN THE END CONTAINS THE FILE NAME OF THE GRAPHS GENERATED
+    path2 = 'figures/' + mri_file1.split('desc-bfc_DCE')[0].split('/')[-1] + 'desc-bfcz_DCE.svg'   #THE STRING IN THE END CONTAINS THE FILE NAME OF THE GRAPHS GENERATED
     plt.savefig(path2, bbox_inches='tight')
     plt.close()
 
@@ -223,17 +223,17 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     mri_final = np.transpose(mri_final, (x_index, y_index, z_index, 3))
     mri_final = mri_final.astype(np.float32)
     final_img = nib.Nifti1Image(mri_final, mri.affine)
-    path3 = file_dir + '/DCE_mc_bfc_norm.nii'  #THE STRING IN THE END CONTAINS THE FILE NAME OF THE NORMALIZED NIFTI IMAGE GENERATED
+    path3 = mri_file1.split('desc-bfc_DCE')[0] + 'desc-bfcz_DCE.nii'  #THE STRING IN THE END CONTAINS THE FILE NAME OF THE NORMALIZED NIFTI IMAGE GENERATED
     nib.save(final_img, path3)
 
 
 dir = Path(sys.argv[1])     # takes timepoint directory as argument
 files_in_dir = dir.iterdir()
 for file in files_in_dir:
-    if str(file).endswith('mc_bfc.nii') or str(file).endswith('mc_bfc.nii.gz'):
+    if str(file).endswith('desc-bfc_DCE.nii') or str(file).endswith('desc-bfc_DCE.nii.gz'):
         file1 = str(file)
-        mask_file = file1.split('.', 1)
-        mask_file = mask_file[0] + '_wm.nii'
+        mask_file = file1.split('desc-bfc_DCE', 1)[0]
+        mask_file = mask_file + 'seg-WM_DCE.nii'
 
         try:
             normalize(file1, mask_file + ".gz", str(dir))

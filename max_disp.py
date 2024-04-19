@@ -3,6 +3,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import nibabel as nib
 import numpy as np
+from math import sqrt
 from numpy.core.multiarray import unravel_index
 from numpy.lib.function_base import corrcoef
 from sklearn.linear_model import LinearRegression
@@ -10,12 +11,22 @@ from statistics import mean
 
 
 dir = sys.argv[1]
-mc_params = np.loadtxt(dir + "/DCE_mc.nii.par", dtype = float)
-mc_params[:,0:3] = mc_params[:,0:3]*50
+prefix = sys.argv[2]
+mc_params = np.loadtxt(dir + "/" + prefix + "_desc-hmc_DCE.nii.par", dtype=float)
+mc_params[:,0:3] = mc_params[:,0:3]*70
 max_i = np.abs(mc_params).argmax()
 max_disp_i = unravel_index(max_i, mc_params.shape)
 max_disp = str(mc_params[max_disp_i])
 param_num = max_disp_i[1]
+# get max displacement of 3d transformation
+vector_max_disp = np.zeros(64)
+# for i in range(64):
+#     vector_max_disp[i] = np.linalg.norm(mc_params[i], axis=0)
+# vector_max_disp = np.abs(vector_max_disp).max()
+for i in range(64):
+    vector_max_disp = sqrt((mc_params[i,3]+mc_params[i,0])**2 + (mc_params[i,4]+mc_params[i,1])**2 + (mc_params[i,5]+mc_params[i,2])**2)
+vector_max_disp = np.abs(vector_max_disp).max()
+vector_max_disp_i = np.abs(mc_params).argmax(axis=0)[param_num]+1
 
 if param_num < 4:
     param_type = "rot_"
@@ -28,8 +39,8 @@ elif param_num % 3 == 1:
     param_type = param_type + 'y'
 elif param_num % 3 == 2:
     param_type = param_type + 'z'
-    
-print("Max displacement of " + max_disp + " mm at time slice " + str(max_disp_i[0] + 1) + "/64, parameter " + str(param_num) + " (" + param_type + ")")
+
+print("Max displacement: " + str(vector_max_disp) + "mm at frame " + str(vector_max_disp_i) + "/64")
 
 fig, ax = plt.subplots(figsize=(10, 6))
 colors = ['k', 'b', 'g', 'm', 'y', 'c']
@@ -41,15 +52,16 @@ for i in range(len(mc_params[0,:])):
 plt.legend()
 plt.grid()
 plt.ylabel("Displacement (mm)")
-plt.xlabel("Slice #")
+plt.xlabel("")
 plt.ylim([-2.5, 2.5])
-plt.text(len(mc_params[:,0])/2, 2, "max displacement: " + max_disp + "mm")
-plt.text(len(mc_params[:,0])/2, 1.8, "param: " + param_type)
-path = dir + '/figures/displacements.svg'
+plt.text(len(mc_params[:,0])/3, 2, "Max vector displacement: " + str(round(vector_max_disp,4)) + "mm")
+plt.text(len(mc_params[:,0])/3, 1.8, "Frame: " + str(vector_max_disp_i) + "/64")
+# plt.text(len(mc_params[:,0])/2, 1.8, "param: " + param_type)
+path = dir + '/../figures/displacements.svg'
 plt.savefig(path, bbox_inches='tight')
 
 # save as png too
-plt.savefig(dir + '/figures/displacements.png', bbox_inches='tight')
+plt.savefig(dir + '/../figures/displacements.png', bbox_inches='tight')
 
 ## PART 2 - Correlation
 # dce = nib.load(dir + '/DCE.nii')

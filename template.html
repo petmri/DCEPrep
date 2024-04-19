@@ -119,7 +119,7 @@
                 <a href="#Preprocessing">Preprocessing</a>
                 <ul class="dropdown">
                     <li><a href="#T1w_masks">T1w Masks</a></li>
-                    <li><a href="#T1w_to_VFA">T1w->VFA</a></li>
+                    <li><a href="#T1w_to_DCEref">T1w->DCEref</a></li>
                     <li><a href="#VFA_Z-norm">VFA Z</a></li>
                     <li><a href="#T1_map">T1 Map</a></li>
                     <li><a href="#MCFLIRT">MCFLIRT</a></li>
@@ -152,7 +152,7 @@
         <li>{{ Machine }}</li>
     </ul>
     <h2>Ktrans (/min)</h2>
-    <img src="{{ ktrans }}" alt="{{ ELYOUEL }}" width="1600" alt="{{ image_alt1 }}"></img>
+    <img src="{{ ktrans }}" alt="{{ ELYOUEL }}" width="90%" alt="{{ image_alt1 }}"></img>
     <h1 id="Preprocessing">Preprocessing</h1>
     <h2>Anatomical Info</h2>
     <li>{{ Dimensions }}</li>
@@ -170,8 +170,8 @@
         <img id="image1gm" src="{{ T1w }}" alt="{{ image_alt1 }}">
         <img id="image2gm" src="{{ T1w_gm }}" alt="{{ image_alt2 }}">
     </div>
-    <h2 id="T1w_to_VFA">T1w Registration to VFA Space</h2>
-    <img src="{{ T1w_to_VFA }}" alt="{{ image_alt1 }}"></img>
+    <h2 id="T1w_to_DCEref">T1w Registration to DCEref Space</h2>
+    <img src="{{ T1w_to_DCEref }}" alt="{{ image_alt1 }}"></img>
     <h2 id="VFA_Z-norm">VFA Z-Normalization</h2>
     <h3> {{ FA_1 }} </h3>
     <img src="{{ Z_1 }}" alt="{{ image_alt1 }}" width="1000"></img>
@@ -255,15 +255,15 @@
         <img src="{{ ktrans_zeros }}" alt="{{ image_alt1 }}" width="800"></img>
         <img src="{{ ktrans_analysis }}" alt="{{ image_alt1 }}" width="800"></img>
     </div>
-    <h2 id="MNI">MNI Registration</h2>
+    <!-- <h2 id="MNI">MNI Registration</h2>
     <div id="image-container-3" class="image-container">
         <img id="MNI_std" src="{{ MNI_img }}" alt="{{ image_alt1 }}" width="800"></img>
         <img id="T1w_MNI" src="{{ MNI_T1w }}" alt="{{ image_alt1 }}" width="800"></img>
-    </div>
-    <div id="image-container-3" class="image-container">
+    </div> -->
+    <!-- <div id="image-container-3" class="image-container">
         <img id="MNI_std" src="{{ MNI_img }}" alt="{{ image_alt1 }}" width="800"></img>
         <img id="Ktrans_MNI" src="{{ MNI_Ktrans }}" alt="{{ image_alt1 }}" width="800"></img>
-    </div>
+    </div> -->
     <h2 id="Placement">Placement in Population</h2>
     <img src="placeholder_wm" alt="to be inserted post-population report" width="800"></img>
     <img src="placeholder_gm" alt="to be inserted post-population report" width="800"></img>

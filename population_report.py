@@ -1,4 +1,5 @@
 import jinja2
+import json
 import os
 import matplotlib.pyplot as plt
 import nibabel as nib
@@ -9,24 +10,35 @@ import subprocess
 from sys import argv
 
 dir = argv[1]
-try:
-    output_dir = argv[2]
-except:
-    output_dir = ""
+dceprep_dir = argv[1] + "/dceprep"
+# try:
+#     output_dir = argv[2]
+# except:
+#     output_dir = ""
 
-try:
-    ROCKETSHIP_dir = argv[3]
-except IndexError:
-    ROCKETSHIP_dir = argv[2]
-    output_dir = ""
+# try:
+#     ROCKETSHIP_dir = argv[3]
+# except IndexError:
+ROCKETSHIP_dir = argv[2]
+#     output_dir = ""
 
 # Load MRI population data dict with keys as subject IDs and values as gm and wm data
 population_data = {}
 # list directories in dir
-dir_list = os.listdir(dir)
+if not os.path.isdir(dceprep_dir):
+    print("Directory does not exist, trying current working directory")
+    dir_list = os.listdir(os.getcwd())
+else:
+    dir_list = os.listdir(dceprep_dir)
 # filter out non-directories
-subjects = [subject for subject in dir_list if os.path.isdir(os.path.join(dir, subject)) and not subject.startswith("figures") and not subject.startswith("logs")]
+subjects = [subject for subject in dir_list if os.path.isdir(os.path.join(dceprep_dir, subject)) and not subject.startswith("figures") and not subject.startswith("logs")]
 subjects.sort()
+# use text file list for subjects, format is subject date timepoint
+# get list of subjects
+# subjects = [f"sub-{line.split(' ')[0]}" for line in open(os.path.join(dir, "../code/CBF_list.txt"), "r").readlines()]
+# get list of timepoints
+# timepoints = [line.split(" ")[2][:-1] for line in open(os.path.join(dir, "../code/CBF_list.txt"), "r").readlines()]
+# print(timepoints)
 # go into each subject directory and count number of successful_timepoints
 # for subject_id in subjects:
 #     # list _timepoint directories in subject directory
@@ -71,10 +83,11 @@ total_timepoints = []
 successful_timepoints = []
 aif_curves = []
 for subject_id in subjects:
+# for subject_id, timepoint in zip(subjects, timepoints):
     # if subject_id in subject_list:
     # list _timepoint directories in subject directory
-    for timepoint in os.listdir(os.path.join(dir, subject_id)):
-        aif_metric = 0
+    for timepoint in os.listdir(os.path.join(dceprep_dir, subject_id)):
+        AIFitness = 0
         T1_wm_median = 0
         T1_wm_std = 0
         T1_gm_median = 0
@@ -85,13 +98,15 @@ for subject_id in subjects:
         gm_mean = 0
         gm_median = 0
         gm_std = 0
-        # print(subject_id + "_" + timepoint)
-        if timepoint.endswith("_timepoint"):
-            total_timepoints.append(subject_id + '/' + timepoint + "/" + output_dir)
+        if timepoint.startswith("ses-"):
+            # total_timepoints.append(subject_id + '/' + timepoint + "/" + output_dir)
+            total_timepoints.append(subject_id + '/' + timepoint)
             # read AIF curve by applying aif.nii to dce.nii
             try:
-                dce = os.path.join(dir, subject_id, timepoint, output_dir, "DCE_mc_bfc_norm.nii.gz")
-                aif = os.path.join(dir, subject_id, timepoint, output_dir, "aif.nii")
+                # dce = os.path.join(dir, subject_id, timepoint, output_dir, "DCE_mc_bfc_norm.nii.gz")
+                # aif = os.path.join(dir, subject_id, timepoint, output_dir, "aif.nii")
+                dce = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-bfcz_DCE.nii.gz")
+                aif = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-AIF_T1map.nii.gz")
                 # load files
                 dce_img = nib.load(dce)
                 aif_img = nib.load(aif)
@@ -124,6 +139,9 @@ for subject_id in subjects:
                 # line up curve peaks
                 max_index = np.argmax(intensities)
                 intensities = np.roll(intensities, -max_index+2)
+                if intensities.shape[0] < 40:
+                    mean_last_7 = np.mean(intensities[-7:])
+                    intensities = np.pad(intensities, (0, 40-intensities.shape[0]), 'constant', constant_values=(mean_last_7))
                 aif_curves.append(intensities[0:40])
             except Exception as e:
                 print("Error reading DCE or AIF for", subject_id, timepoint)
@@ -131,7 +149,8 @@ for subject_id in subjects:
                 continue
 
             # read wm and gm data from html file
-            filename = os.path.join(dir, subject_id, timepoint, output_dir, "case_report.html")
+            # filename = os.path.join(dir, subject_id, timepoint, output_dir, "case_report.html")
+            filename = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-casereport.html")
             try:
                 with open(filename, "r") as f:
                     lines = f.readlines()
@@ -154,10 +173,12 @@ for subject_id in subjects:
                             # gm_std = float(lines[i + 1].split(':')[-1][:-6])
                         # read aif metric from html file
                         if "AIFitness" in line:
-                            aif_metric = line.split(":")[-1].strip()[:-4]
-                            # population_aif_metric.append(round(float(aif_metric), 4))
-                            if float(aif_metric) > 130:
-                                print(subject_id + "_" + timepoint + " has an aif_metric of " + str(aif_metric) + "!")
+                            AIFitness = line.split(":")[-1].strip()[:-4]
+                            AIFitness = float(AIFitness)
+                            AIFitness = round(AIFitness, 4)
+                            # population_AIFitness.append(round(float(AIFitness), 4))
+                            if float(AIFitness) > 130:
+                                print(subject_id + "_" + timepoint + " has an AIFitness of " + str(AIFitness) + "!")
                         if wm_median > 5:
                             if subject_id + "_" + timepoint not in wm_outliers:
                                 print(subject_id + "_" + timepoint + " has a wm_median of " + str(wm_median) + "!")
@@ -174,12 +195,13 @@ for subject_id in subjects:
                 T1_blood = -1
                 wm_median = -1
                 gm_median = -1
-                aif_metric = -1
+                AIFitness = -1
                 # continue
 
             # read lines after "AIF mmol:"
             aif_mmol = []
-            B_log = os.path.join(dir, subject_id, timepoint, output_dir, "B_dcefitted_R1info.log")
+            # B_log = os.path.join(dir, subject_id, timepoint, output_dir, "B_dcefitted_R1info.log")
+            B_log = os.path.join(dceprep_dir, subject_id, timepoint, "dce/B_dcefitted_R1info.log")
             try:
                 with open(B_log, 'r') as f:
                     for line in f:
@@ -210,26 +232,66 @@ for subject_id in subjects:
                 print("Error reading " + B_log)
                 print(e)
                 aif_mmol = -1
-            # get manufacturer, field strength, and machine from json
-            json_file = os.path.join(dir, subject_id, timepoint, output_dir, "DCE.json")
+            # get max_disp from {prefix}_desc-hmcmaxdisp.txt
+            max_disp_path = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-hmc_maxdisp.txt")
+            try:
+                with open(max_disp_path, 'r') as f:
+                    for line in f:
+                        if "Max displacement" in line:
+                            max_disp = line.split(":")[-1].strip()
+                            max_disp = max_disp.split("mm")[0]
+                            max_disp = float(max_disp)
+                            break
+            except Exception as e:
+                print("Error reading " + max_disp_path)
+                print(e)
+                max_disp = -1
+            # get fields we want from json
+            # json_file = os.path.join(dir, subject_id, timepoint, output_dir, "DCE.json")
+            json_file = os.path.join(dir, "../rawdata", subject_id, timepoint, f"dce/{subject_id}_{timepoint}_DCE.json")
             try:
                 with open(json_file, 'r') as f:
-                    for line in f:
-                        if "\"Manufacturer\":" in line:
-                            manufacturer = line.split(":")[-1].strip()[1:-2]
-                        if "MagneticFieldStrength" in line:
-                            field_strength = line.split(":")[-1].strip()[0] + "T"
-                        if "ManufacturersModelName" in line:
-                            machine = line.split(":")[-1].strip()[1:-2]
-                        if "InstitutionName" in line:
-                            institution = line.split(":")[-1].strip()[1:-2]
+                    data = json.load(f)
+                    manufacturer = data.get("Manufacturer", "json field error")
+                    field_strength = data.get("MagneticFieldStrength", "json field error")
+                    machine = data.get("ManufacturersModelName", "json field error")
+                    institution = data.get("InstitutionName", "json field error")
+                    date = data.get("AcquisitionDateTime", "json field error").split("T")[0]
+                    if date != "json field error":
+                        date = datetime.datetime.strptime(date, "%Y-%m-%d").strftime("%m/%d/%Y")
+                        date = datetime.datetime.strptime(date, "%m/%d/%Y")
+                    sex = data.get("PatientSex", "json field error")
+                    age = data.get("PatientAge", "json field error")
+                    if "ReceiveCoilName" in data:
+                        coil = data.get("ReceiveCoilName", "json field error")
+                    else:
+                        coil = data.get("CoilString", "json field error")
+                    scan_options = data.get("ScanOptions", "json field error")
+                    TE = data.get("EchoTime", "json field error")
+                    flip_angle = data.get("FlipAngle", "json field error")
+                    if "RepetitionTimeExcitation" in data:
+                        TR = data.get("RepetitionTimeExcitation", "json field error")
+                        time_resolution = data.get("RepetitionTime", "json field error")
+                    else:
+                        TR = data.get("RepetitionTime", "json field error")
+                        time_resolution = "not in header"
             except Exception as e:
                 print("Error reading " + json_file)
                 print(e)
-                manufacturer = "json error"
-                field_strength = "json error"
-                machine = "json error"
-                institution = "json error"
+                manufacturer = "json read error"
+                field_strength = "json read error"
+                machine = "json read error"
+                institution = "json read error"
+                date = "json read error"
+                sex = "json read error"
+                age = "json read error"
+                coil = "json read error"
+                scan_options = "json read error"
+                TE = "json read error"
+                flip_angle = "json read error"
+                TR = "json read error"
+                time_resolution = "json read error"
+            n_reps = dce.shape[-1]
 
             # get MNI region stats
             # read ktrans map
@@ -237,7 +299,8 @@ for subject_id in subjects:
             # ktrans_map = nib.load(ktrans_map)
             # ktrans_map = ktrans_map.get_fdata()
             try:
-                ktrans_map = os.path.join(dir, subject_id, timepoint, output_dir, "dce_patlak_fit_Ktrans.nii")
+                # ktrans_map = os.path.join(dir, subject_id, timepoint, output_dir, "dce_patlak_fit_Ktrans.nii")
+                ktrans_map = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_Ktrans.nii")
                 ktrans_map = nib.load(ktrans_map)
                 ktrans_map = ktrans_map.get_fdata()
             except:
@@ -305,12 +368,116 @@ for subject_id in subjects:
             # atlas = ktrans_map_hippo
             # atlas = atlas[:,110,:]
             try:
-                wmparc = os.path.join(dir, subject_id, timepoint, output_dir, "wmparc_dyn.nii.gz")
-                wmparc = nib.load(wmparc)
+                # wmparc = os.path.join(dir, subject_id, timepoint, output_dir, "wmparc_dyn.nii.gz")
+                prefix = f"{subject_id}_{timepoint}"
+                wmparc_path = os.path.join(dir, 'dceprep', subject_id, timepoint, f"anat/{prefix}_space-DCEref_desc-wmparc.nii.gz")
+                # if not os.path.isfile(wmparc_path):
+                    # convert from mgz to nii and register to DCE
+                wmparc = nib.load(wmparc_path)
                 wmparc = wmparc.get_fdata()
+                # read wmparc stats from tsv
+                wmparc_stats = os.path.join(dir, 'freesurfer', subject_id, timepoint, f"stats/wmparc.stats")
+                with open(wmparc_stats, 'r') as f:
+                    for _ in range(64):
+                        next(f)
+                    lines = f.readlines()
+                    lines_split = [line.replace('#','').strip().split() for line in lines]
+                    # remove # from beginning of each line
+
+                    df_wmparc = pd.DataFrame(lines_split)
+                    df_wmparc = df_wmparc.apply(pd.to_numeric, errors='ignore')
+                    df_wmparc = df_wmparc.set_index(df_wmparc.iloc[:, 0])
+                    # drop first column
+                    df_wmparc = df_wmparc.drop(df_wmparc.columns[0], axis=1)
+                    # make first row the column names
+                    df_wmparc.columns = df_wmparc.iloc[0].shift(-1)
+                    # drop first row
+                    df_wmparc = df_wmparc.drop(df_wmparc.index[0])
+                
+                aseg_stats = os.path.join(dir, 'freesurfer', subject_id, timepoint, f"stats/aseg.stats")
+                with open(aseg_stats, 'r') as f:
+                    for _ in range(78):
+                        next(f)
+                    lines = f.readlines()
+                    lines_split = [line.replace('#','').strip().split() for line in lines]
+                    # remove # from beginning of each line
+
+                    df_aseg = pd.DataFrame(lines_split)
+                    df_aseg = df_aseg.apply(pd.to_numeric, errors='ignore')
+                    df_aseg = df_aseg.set_index(df_aseg.iloc[:, 0])
+                    # drop first column
+                    df_aseg = df_aseg.drop(df_aseg.columns[0], axis=1)
+                    # make first row the column names
+                    df_aseg.columns = df_aseg.iloc[0].shift(-1)
+                    # drop first row
+                    df_aseg = df_aseg.drop(df_aseg.index[0])
+
+                lh_aparc_stats = os.path.join(dir, 'freesurfer', subject_id, timepoint, f"stats/lh.aparc.stats")
+                with open(lh_aparc_stats, 'r') as f:
+                    for _ in range(60):
+                        next(f)
+                    lines = f.readlines()
+                    lines_split = [line.replace('#','').strip().split() for line in lines]
+                    # remove # from beginning of each line
+
+                    df_lh_aparc = pd.DataFrame(lines_split)
+                    df_lh_aparc = df_lh_aparc.apply(pd.to_numeric, errors='ignore')
+                    df_lh_aparc = df_lh_aparc.set_index(df_lh_aparc.iloc[:, 0])
+                    # drop first column
+                    # df_lh_aparc = df_lh_aparc.drop(df_lh_aparc.columns[0], axis=1)
+                    # make first row the column names
+                    df_lh_aparc.columns = df_lh_aparc.iloc[0].shift(-1)
+                    # drop first row
+                    df_lh_aparc = df_lh_aparc.drop(df_lh_aparc.index[0])
+                
+                rh_aparc_stats = os.path.join(dir, 'freesurfer', subject_id, timepoint, f"stats/rh.aparc.stats")
+                with open(rh_aparc_stats, 'r') as f:
+                    for _ in range(60):
+                        next(f)
+                    lines = f.readlines()
+                    lines_split = [line.replace('#','').strip().split() for line in lines]
+                    # remove # from beginning of each line
+
+                    df_rh_aparc = pd.DataFrame(lines_split)
+                    df_rh_aparc = df_rh_aparc.apply(pd.to_numeric, errors='ignore')
+                    df_rh_aparc = df_rh_aparc.set_index(df_rh_aparc.iloc[:, 0])
+                    # drop first column
+                    # df_rh_aparc = df_rh_aparc.drop(df_rh_aparc.columns[0], axis=1)
+                    # make first row the column names
+                    df_rh_aparc.columns = df_rh_aparc.iloc[0].shift(-1)
+                    # drop first row
+                    df_rh_aparc = df_rh_aparc.drop(df_rh_aparc.index[0])
+
+                # assign regional volumes to variables
+                # hippo_vol = df_aseg['StructName']
+                hippo_vol = df_aseg.loc[df_aseg['StructName'] == 'Left-Hippocampus', 'Volume_mm3'].values[0]
+                phg_vol = df_wmparc.loc[df_wmparc['StructName'] == 'wm-lh-parahippocampal', 'Volume_mm3'].values[0] + df_wmparc.loc[df_wmparc['StructName'] == 'wm-rh-parahippocampal', 'Volume_mm3'].values[0]
+                putamen_vol = df_aseg.loc[df_aseg['StructName'] == 'Left-Putamen', 'Volume_mm3'].values[0] + df_aseg.loc[df_aseg['StructName'] == 'Right-Putamen', 'Volume_mm3'].values[0]
+                pallidum_vol = df_aseg.loc[df_aseg['StructName'] == 'Left-Pallidum', 'Volume_mm3'].values[0] + df_aseg.loc[df_aseg['StructName'] == 'Right-Pallidum', 'Volume_mm3'].values[0]
+                thalamus_vol = df_aseg.loc[df_aseg['StructName'] == 'Left-Thalamus', 'Volume_mm3'].values[0] + df_aseg.loc[df_aseg['StructName'] == 'Right-Thalamus', 'Volume_mm3'].values[0]
+                caudate_vol = df_aseg.loc[df_aseg['StructName'] == 'Left-Caudate', 'Volume_mm3'].values[0] + df_aseg.loc[df_aseg['StructName'] == 'Right-Caudate', 'Volume_mm3'].values[0]
+                amygdala_vol = df_aseg.loc[df_aseg['StructName'] == 'Left-Amygdala', 'Volume_mm3'].values[0] + df_aseg.loc[df_aseg['StructName'] == 'Right-Amygdala', 'Volume_mm3'].values[0]
+                entorhinal_cortex_vol = df_lh_aparc.loc[df_lh_aparc['StructName'] == 'entorhinal', 'GrayVol'].values[0] + df_rh_aparc.loc[df_rh_aparc['StructName'] == 'entorhinal', 'GrayVol'].values[0]
+                fusiform_gyrus_cortex_vol = df_lh_aparc.loc[df_lh_aparc['StructName'] == 'fusiform', 'GrayVol'].values[0] + df_rh_aparc.loc[df_rh_aparc['StructName'] == 'fusiform', 'GrayVol'].values[0]
+                fusiform_gyrus_wm_vol = df_wmparc.loc[df_wmparc['StructName'] == 'wm-lh-fusiform', 'Volume_mm3'].values[0] + df_wmparc.loc[df_wmparc['StructName'] == 'wm-rh-fusiform', 'Volume_mm3'].values[0]
+                insula_wm_vol = df_wmparc.loc[df_wmparc['StructName'] == 'wm-lh-insula', 'Volume_mm3'].values[0] + df_wmparc.loc[df_wmparc['StructName'] == 'wm-rh-insula', 'Volume_mm3'].values[0]
+                superior_temporal_cortex_vol = df_lh_aparc.loc[df_lh_aparc['StructName'] == 'superiortemporal', 'GrayVol'].values[0] + df_rh_aparc.loc[df_rh_aparc['StructName'] == 'superiortemporal', 'GrayVol'].values[0]
+
             except Exception as e:
-                print("Error reading " + wmparc)
+                print("Error reading " + wmparc_path)
                 print(e)
+                hippo_vol = -1
+                phg_vol = -1
+                putamen_vol = -1
+                pallidum_vol = -1
+                thalamus_vol = -1
+                caudate_vol = -1
+                amygdala_vol = -1
+                entorhinal_cortex_vol = -1
+                fusiform_gyrus_cortex_vol = -1
+                fusiform_gyrus_wm_vol = -1
+                insula_wm_vol = -1
+                superior_temporal_cortex_vol = -1
                 continue
             HIPPO_INDICES = np.where((wmparc == L_HIPPO) | (wmparc == R_HIPPO) & (ktrans_map > KTRANS_MIN_THRESHOLD))
             PHG_INDICES = np.where((wmparc == L_PHG) | (wmparc == R_PHG) & (ktrans_map > KTRANS_MIN_THRESHOLD))
@@ -550,10 +717,11 @@ for subject_id in subjects:
             # Ktrans_Insula_WM_std = np.std(Ktrans_Insula_WM)
             # Ktrans_Superior_temporal_cortex_std = np.std(Ktrans_Superior_temporal_cortex)
             
-            successful_timepoints.append(subject_id + '/' + timepoint + "/" + output_dir)
+            # successful_timepoints.append(subject_id + '/' + timepoint + "/" + output_dir)
+            successful_timepoints.append(f'{subject_id}/{timepoint}')   
             entry = subject_id + "_" + timepoint
             population_data[entry] = {
-                "aif_metric": aif_metric,
+                "AIFitness": AIFitness,
                 "aif_mmol": aif_mmol,
                 "T1_wm_median": T1_wm_median,
                 # T1_wm_std: T1_wm_std,
@@ -565,11 +733,22 @@ for subject_id in subjects:
                 # "wm_std": wm_std,
                 # "gm_mean": gm_mean,
                 "gm_median": gm_median,
-                # "gm_std": gm_std
-                "manufacturer": manufacturer,
-                "field_strength": field_strength,
-                "machine": machine,
-                "institution": institution,
+                # "gm_std": gm_std,
+                "max_disp": max_disp,
+                "Manufacturer": manufacturer,
+                "Field_strength": field_strength,
+                "Machine": machine,
+                "Institution": institution,
+                "Date": date,
+                "Sex" : sex,
+                "Age": age,
+                "Coil": coil,
+                "Scan_options": scan_options,
+                "TE": TE,
+                "Time_resolution": time_resolution,
+                "Flip_angle": flip_angle,
+                "TR": TR,
+                "n_reps": n_reps,
                 "Ktrans_Hippo_median": Ktrans_Hippo_median,
                 "Ktrans_PhG_median": Ktrans_PhG_median,
                 "Ktrans_Putamen_median": Ktrans_Putamen_median,
@@ -582,10 +761,22 @@ for subject_id in subjects:
                 "Ktrans_Fusiform_gyrus_WM_median": Ktrans_Fusiform_gyrus_WM_median,
                 "Ktrans_Insula_WM_median": Ktrans_Insula_WM_median,
                 "Ktrans_Superior_temporal_cortex_median": Ktrans_Superior_temporal_cortex_median,
+                "hippo_vol": hippo_vol,
+                "phg_vol": phg_vol,
+                "putamen_vol": putamen_vol,
+                "pallidum_vol": pallidum_vol,
+                "thalamus_vol": thalamus_vol,
+                "caudate_vol": caudate_vol,
+                "amygdala_vol": amygdala_vol,
+                "entorhinal_cortex_vol": entorhinal_cortex_vol,
+                "fusiform_gyrus_cortex_vol": fusiform_gyrus_cortex_vol,
+                "fusiform_gyrus_wm_vol": fusiform_gyrus_wm_vol,
+                "insula_wm_vol": insula_wm_vol,
+                "superior_temporal_cortex_vol": superior_temporal_cortex_vol
             }
 
 try:
-    AIFitness_values = [float(population_data[entry]["aif_metric"]) for entry in population_data]
+    AIFitness_values = [float(population_data[entry]["AIFitness"]) for entry in population_data]
     AIFitness_mean = np.mean(AIFitness_values)
     AIFitness_median = np.median(AIFitness_values)
     AIFitness_std = np.std(AIFitness_values)
@@ -773,8 +964,8 @@ if len(gm_outliers) == 0:
     gm_outliers = "None"
 
 # make figures directory if it doesn't exist
-if not os.path.exists(os.path.join(dir, "figures/")):
-    os.makedirs(os.path.join(dir, "figures/"))
+if not os.path.exists(os.path.join("figures/")):
+    os.makedirs(os.path.join("figures/"))
 
 # make T1 blood histogram
 T1_blood_histogram = []
@@ -785,7 +976,8 @@ for entry in population_data.keys():
 plt.hist(T1_blood_histogram, bins=30)
 plt.title("T1 Blood")
 plt.xlabel("T1 Blood")
-T1_blood_histogram_path = os.path.join(dir, "figures/", output_dir + "T1_blood_histogram.png")
+# T1_blood_histogram_path = os.path.join("../figures/", output_dir + "T1_blood_histogram.png")
+T1_blood_histogram_path = os.path.join("../figures/", "T1_blood_histogram.png")
 plt.savefig(T1_blood_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -793,7 +985,8 @@ plt.close()
 plt.hist(AIFitness_values, bins=30)
 plt.title("AIFitness Median")
 plt.xlabel("AIFitness")
-aifitness_histogram_path = os.path.join(dir, "figures/", output_dir + "aifitness_histogram.png")
+# aifitness_histogram_path = os.path.join("../figures/", output_dir + "aifitness_histogram.png")
+aifitness_histogram_path = os.path.join("../figures/", "aifitness_histogram.png")
 plt.savefig(aifitness_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -806,7 +999,8 @@ for entry in population_data.keys():
 plt.hist(aif_mmol_histogram, bins=30)
 plt.title("AIF mmol (mean of last 1/3)")
 plt.xlabel("AIF mmol")
-aif_mmol_histogram_path = os.path.join(dir, "figures/", output_dir + "aif_mmol_histogram.png")
+# aif_mmol_histogram_path = os.path.join("../figures/", output_dir + "aif_mmol_histogram.png")
+aif_mmol_histogram_path = os.path.join("../figures/", "aif_mmol_histogram.png")
 plt.savefig(aif_mmol_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -819,7 +1013,8 @@ for entry in population_data.keys():
 plt.hist(wm_histogram, bins=50, range=(0, 5))
 plt.title("White Matter Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-ktrans_wm_histogram_path = os.path.join(dir, "figures/", output_dir + "wm_histogram.png")
+# ktrans_wm_histogram_path = os.path.join("../figures/", output_dir + "wm_histogram.png")
+ktrans_wm_histogram_path = os.path.join("../figures/", "wm_histogram.png")
 plt.savefig(ktrans_wm_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -832,7 +1027,8 @@ for entry in population_data.keys():
 plt.hist(gm_histogram, bins=50, range=(0, 5))
 plt.title("Gray Matter Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-ktrans_gm_histogram_path = os.path.join(dir, "figures/", output_dir + "gm_histogram.png")
+# ktrans_gm_histogram_path = os.path.join("../figures/", output_dir + "gm_histogram.png")
+ktrans_gm_histogram_path = os.path.join("../figures/", "gm_histogram.png")
 # save range of histogram for later use
 gm_histogram_range = plt.xlim()
 plt.savefig(ktrans_gm_histogram_path, bbox_inches='tight')
@@ -848,7 +1044,8 @@ plt.fill_between(np.arange(0, len(avg_curve)), avg_curve - np.std(aif_curves, ax
 plt.xlabel('Time (s)')
 plt.ylabel('Normalized Intensity')
 plt.title('AIF Curves')
-aif_avg_curve_path = os.path.join(dir, "figures/", output_dir + "aif_avg_curve.png")
+# aif_avg_curve_path = os.path.join("../figures/", output_dir + "aif_avg_curve.png")
+aif_avg_curve_path = os.path.join("../figures/", "aif_avg_curve.png")
 plt.savefig(aif_avg_curve_path, bbox_inches='tight', dpi=300)  # Increase dpi for higher resolution
 plt.close()
 
@@ -966,7 +1163,7 @@ for entry in population_data.keys():
     whole_superior_temporal_cortex_histogram.append(population_data[entry]["Ktrans_Superior_temporal_cortex_median"])
 
 # make figures directory
-# figures_dir = os.path.join(dir, "figures")
+# figures_dir = os.path.join("figures")
 # if not os.path.exists(figures_dir):
 #     os.makedirs(figures_dir)
 
@@ -974,196 +1171,208 @@ for entry in population_data.keys():
 # plt.hist(rPhG_L_histogram, bins=50, range=(0, 5))
 # plt.title("Left Rostral Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# rPhG_L_histogram_path = os.path.join(dir, "figures/", output_dir + "rPhG_L_histogram.png")
+# rPhG_L_histogram_path = os.path.join("../figures/", output_dir + "rPhG_L_histogram.png")
 # plt.savefig(rPhG_L_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(rPhG_R_histogram, bins=50, range=(0, 5))
 # plt.title("Right Rostral Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# rPhG_R_histogram_path = os.path.join(dir, "figures/", output_dir + "rPhG_R_histogram.png")
+# rPhG_R_histogram_path = os.path.join("../figures/", output_dir + "rPhG_R_histogram.png")
 # plt.savefig(rPhG_R_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(cPhG_L_histogram, bins=50, range=(0, 5))
 # plt.title("Left Caudal Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# cPhG_L_histogram_path = os.path.join(dir, "figures/", output_dir + "cPhG_L_histogram.png")
+# cPhG_L_histogram_path = os.path.join("../figures/", output_dir + "cPhG_L_histogram.png")
 # plt.savefig(cPhG_L_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(cPhG_R_histogram, bins=50, range=(0, 5))
 # plt.title("Right Caudal Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# cPhG_R_histogram_path = os.path.join(dir, "figures/", output_dir + "cPhG_R_histogram.png")
+# cPhG_R_histogram_path = os.path.join("../figures/", output_dir + "cPhG_R_histogram.png")
 # plt.savefig(cPhG_R_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(lateral_PPHC_L_histogram, bins=50, range=(0, 5))
 # plt.title("Left Lateral Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# lateral_PPHC_L_histogram_path = os.path.join(dir, "figures/", output_dir + "lateral_PPHC_L_histogram.png")
+# lateral_PPHC_L_histogram_path = os.path.join("../figures/", output_dir + "lateral_PPHC_L_histogram.png")
 # plt.savefig(lateral_PPHC_L_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(lateral_PPHC_R_histogram, bins=50, range=(0, 5))
 # plt.title("Right Lateral Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# lateral_PPHC_R_histogram_path = os.path.join(dir, "figures/", output_dir + "lateral_PPHC_R_histogram.png")
+# lateral_PPHC_R_histogram_path = os.path.join("../figures/", output_dir + "lateral_PPHC_R_histogram.png")
 # plt.savefig(lateral_PPHC_R_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(ECPhG_L_histogram, bins=50, range=(0, 5))
 # plt.title("Left Entorhinal Cortex and Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# ECPhG_L_histogram_path = os.path.join(dir, "figures/", output_dir + "ECPhG_L_histogram.png")
+# ECPhG_L_histogram_path = os.path.join("../figures/", output_dir + "ECPhG_L_histogram.png")
 # plt.savefig(ECPhG_L_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(ECPhG_R_histogram, bins=50, range=(0, 5))
 # plt.title("Right Entorhinal Cortex and Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# ECPhG_R_histogram_path = os.path.join(dir, "figures/", output_dir + "ECPhG_R_histogram.png")
+# ECPhG_R_histogram_path = os.path.join("../figures/", output_dir + "ECPhG_R_histogram.png")
 # plt.savefig(ECPhG_R_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(TIPhG_L_histogram, bins=50, range=(0, 5))
 # plt.title("Left Temporal Inferior Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# TIPhG_L_histogram_path = os.path.join(dir, "figures/", output_dir + "TIPhG_L_histogram.png")
+# TIPhG_L_histogram_path = os.path.join("../figures/", output_dir + "TIPhG_L_histogram.png")
 # plt.savefig(TIPhG_L_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(TIPhG_R_histogram, bins=50, range=(0, 5))
 # plt.title("Right Temporal Inferior Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# TIPhG_R_histogram_path = os.path.join(dir, "figures/", output_dir + "TIPhG_R_histogram.png")
+# TIPhG_R_histogram_path = os.path.join("../figures/", output_dir + "TIPhG_R_histogram.png")
 # plt.savefig(TIPhG_R_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(THPhG_L_histogram, bins=50, range=(0, 5))
 # plt.title("Left Temporal Inferior Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# THPhG_L_histogram_path = os.path.join(dir, "figures/", output_dir + "THPhG_L_histogram.png")
+# THPhG_L_histogram_path = os.path.join("../figures/", output_dir + "THPhG_L_histogram.png")
 # plt.savefig(THPhG_L_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(THPhG_R_histogram, bins=50, range=(0, 5))
 # plt.title("Right Temporal Inferior Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# THPhG_R_histogram_path = os.path.join(dir, "figures/", output_dir + "THPhG_R_histogram.png")
+# THPhG_R_histogram_path = os.path.join("../figures/", output_dir + "THPhG_R_histogram.png")
 # plt.savefig(THPhG_R_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(rHipp_L_histogram, bins=50, range=(0, 5))
 # plt.title("Left Rostral Hippocampus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# rHipp_L_histogram_path = os.path.join(dir, "figures/", output_dir + "rHipp_L_histogram.png")
+# rHipp_L_histogram_path = os.path.join("../figures/", output_dir + "rHipp_L_histogram.png")
 # plt.savefig(rHipp_L_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(rHipp_R_histogram, bins=50, range=(0, 5))
 # plt.title("Right Rostral Hippocampus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# rHipp_R_histogram_path = os.path.join(dir, "figures/", output_dir + "rHipp_R_histogram.png")
+# rHipp_R_histogram_path = os.path.join("../figures/", output_dir + "rHipp_R_histogram.png")
 # plt.savefig(rHipp_R_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(cHipp_L_histogram, bins=50, range=(0, 5))
 # plt.title("Left Caudal Hippocampus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# cHipp_L_histogram_path = os.path.join(dir, "figures/", output_dir + "cHipp_L_histogram.png")
+# cHipp_L_histogram_path = os.path.join("../figures/", output_dir + "cHipp_L_histogram.png")
 # plt.savefig(cHipp_L_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(cHipp_R_histogram, bins=50, range=(0, 5))
 # plt.title("Right Caudal Hippocampus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# cHipp_R_histogram_path = os.path.join(dir, "figures/", output_dir + "cHipp_R_histogram.png")
+# cHipp_R_histogram_path = os.path.join("../figures/", output_dir + "cHipp_R_histogram.png")
 # plt.savefig(cHipp_R_histogram_path, bbox_inches='tight')
 # plt.close()
 
 plt.hist(whole_hippo_histogram, bins=50, range=(0, 5))
 plt.title("Whole Hippocampus Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-whole_hippo_histogram_path = os.path.join(dir, "figures/", output_dir + "whole_hippo_histogram.png")
+# whole_hippo_histogram_path = os.path.join("../figures/", output_dir + "whole_hippo_histogram.png")
+whole_hippo_histogram_path = os.path.join("../figures/", "whole_hippo_histogram.png")
 plt.savefig(whole_hippo_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_phg_histogram, bins=50, range=(0, 5))
 plt.title("Whole Parahippocampal Gyrus Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-whole_phg_histogram_path = os.path.join(dir, "figures/", output_dir + "whole_phg_histogram.png")
+# whole_phg_histogram_path = os.path.join("../figures/", output_dir + "whole_phg_histogram.png")
+whole_phg_histogram_path = os.path.join("../figures/", "whole_phg_histogram.png")
 plt.savefig(whole_phg_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_putamen_histogram, bins=50, range=(0, 5))
 plt.title("Whole Putamen Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-whole_putamen_histogram_path = os.path.join(dir, "figures/", output_dir + "whole_putamen_histogram.png")
+# whole_putamen_histogram_path = os.path.join("../figures/", output_dir + "whole_putamen_histogram.png")
+whole_putamen_histogram_path = os.path.join("../figures/", "whole_putamen_histogram.png")
 plt.savefig(whole_putamen_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_pallidum_histogram, bins=50, range=(0, 5))
 plt.title("Whole Pallidum Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-whole_pallidum_histogram_path = os.path.join(dir, "figures/", output_dir + "whole_pallidum_histogram.png")
+# whole_pallidum_histogram_path = os.path.join("../figures/", output_dir + "whole_pallidum_histogram.png")
+whole_pallidum_histogram_path = os.path.join("../figures/", "whole_pallidum_histogram.png")
 plt.savefig(whole_pallidum_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_thalamus_histogram, bins=50, range=(0, 5))
 plt.title("Whole Thalamus Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-whole_thalamus_histogram_path = os.path.join(dir, "figures/", output_dir + "whole_thalamus_histogram.png")
+# whole_thalamus_histogram_path = os.path.join("../figures/", output_dir + "whole_thalamus_histogram.png")
+whole_thalamus_histogram_path = os.path.join("../figures/", "whole_thalamus_histogram.png")
 plt.savefig(whole_thalamus_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_caudate_histogram, bins=50, range=(0, 5))
 plt.title("Whole Caudate Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-whole_caudate_histogram_path = os.path.join(dir, "figures/", output_dir + "whole_caudate_histogram.png")
+# whole_caudate_histogram_path = os.path.join("../figures/", output_dir + "whole_caudate_histogram.png")
+whole_caudate_histogram_path = os.path.join("../figures/", "whole_caudate_histogram.png")
 plt.savefig(whole_caudate_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_amygdala_histogram, bins=50, range=(0, 5))
 plt.title("Whole Amygdala Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-whole_amygdala_histogram_path = os.path.join(dir, "figures/", output_dir + "whole_amygdala_histogram.png")
+# whole_amygdala_histogram_path = os.path.join("../figures/", output_dir + "whole_amygdala_histogram.png")
+whole_amygdala_histogram_path = os.path.join("../figures/", "whole_amygdala_histogram.png")
 plt.savefig(whole_amygdala_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_entorhinal_cortex_histogram, bins=50, range=(0, 5))
 plt.title("Whole Entorhinal Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-whole_entorhinal_cortex_histogram_path = os.path.join(dir, "figures/", output_dir + "whole_entorhinal_cortex_histogram.png")
+# whole_entorhinal_cortex_histogram_path = os.path.join("../figures/", output_dir + "whole_entorhinal_cortex_histogram.png")
+whole_entorhinal_cortex_histogram_path = os.path.join("../figures/", "whole_entorhinal_cortex_histogram.png")
 plt.savefig(whole_entorhinal_cortex_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_fusiform_gyrus_cortex_histogram, bins=50, range=(0, 5))
 plt.title("Whole Fusiform Gyrus Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-whole_fusiform_gyrus_cortex_histogram_path = os.path.join(dir, "figures/", output_dir + "whole_fusiform_gyrus_cortex_histogram.png")
+# whole_fusiform_gyrus_cortex_histogram_path = os.path.join("../figures/", output_dir + "whole_fusiform_gyrus_cortex_histogram.png")
+whole_fusiform_gyrus_cortex_histogram_path = os.path.join("../figures/", "whole_fusiform_gyrus_cortex_histogram.png")
 plt.savefig(whole_fusiform_gyrus_cortex_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_fusiform_gyrus_WM_histogram, bins=50, range=(0, 5))
 plt.title("Whole Fusiform Gyrus WM Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-whole_fusiform_gyrus_WM_histogram_path = os.path.join(dir, "figures/", output_dir + "whole_fusiform_gyrus_WM_histogram.png")
+# whole_fusiform_gyrus_WM_histogram_path = os.path.join("../figures/", output_dir + "whole_fusiform_gyrus_WM_histogram.png")
+whole_fusiform_gyrus_WM_histogram_path = os.path.join("../figures/", "whole_fusiform_gyrus_WM_histogram.png")
 plt.savefig(whole_fusiform_gyrus_WM_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_insula_WM_histogram, bins=50, range=(0, 5))
 plt.title("Whole Insula WM Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-whole_insula_WM_histogram_path = os.path.join(dir, "figures/", output_dir + "whole_insula_WM_histogram.png")
+# whole_insula_WM_histogram_path = os.path.join("../figures/", output_dir + "whole_insula_WM_histogram.png")
+whole_insula_WM_histogram_path = os.path.join("../figures/", "whole_insula_WM_histogram.png")
 plt.savefig(whole_insula_WM_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_superior_temporal_cortex_histogram, bins=50, range=(0, 5))
 plt.title("Whole Superior Temporal Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-whole_superior_temporal_cortex_histogram_path = os.path.join(dir, "figures/", output_dir + "whole_superior_temporal_cortex_histogram.png")
+# whole_superior_temporal_cortex_histogram_path = os.path.join("../figures/", output_dir + "whole_superior_temporal_cortex_histogram.png")
+whole_superior_temporal_cortex_histogram_path = os.path.join("../figures/", "whole_superior_temporal_cortex_histogram.png")
 plt.savefig(whole_superior_temporal_cortex_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1199,38 +1408,71 @@ manufacturers = {}
 field_strengths = {}
 machines = {}
 institutions = {}
-for entry in population_data.keys():
-    manufacturer = population_data[entry]["manufacturer"]
-    field_strength = population_data[entry]["field_strength"]
-    machine = population_data[entry]["machine"]
-    institution = population_data[entry]["institution"]
-    if manufacturer in manufacturers.keys():
-        manufacturers[manufacturer] += 1
-    else:
-        manufacturers[manufacturer] = 1
-    if field_strength in field_strengths.keys():
-        field_strengths[field_strength] += 1
-    else:
-        field_strengths[field_strength] = 1
-    if machine in machines.keys():
-        machines[machine] += 1
-    else:
-        machines[machine] = 1
-    if institution in institutions.keys():
-        institutions[institution] += 1
-    else:
-        institutions[institution] = 1
+try:
+    for entry in population_data.keys():
+        manufacturer = population_data[entry]["Manufacturer"]
+        field_strength = population_data[entry]["Field_strength"]
+        machine = population_data[entry]["Machine"]
+        institution = population_data[entry]["Institution"]
+        if manufacturer in manufacturers.keys():
+            manufacturers[manufacturer] += 1
+        else:
+            manufacturers[manufacturer] = 1
+        if field_strength in field_strengths.keys():
+            field_strengths[field_strength] += 1
+        else:
+            field_strengths[field_strength] = 1
+        if machine in machines.keys():
+            machines[machine] += 1
+        else:
+            machines[machine] = 1
+        if institution in institutions.keys():
+            institutions[institution] += 1
+        else:
+            institutions[institution] = 1
+except Exception as e:
+    print("Error in getting manufacturer, field strength, machine, and institution data.")
+    print(e)
 
 successful_timepoints = list(set(successful_timepoints))
 successful_timepoints.sort()
 # num_timepoints = len(successful_timepoints)
 # remove output_dir from successful_timepoints
-cases = [timepoint.replace(output_dir, "") for timepoint in successful_timepoints]
+cases = [timepoint for timepoint in successful_timepoints]
+successful_links = []
+for timepoint in successful_timepoints:
+    subject = timepoint.split('/')[0]
+    session = timepoint.split('/')[1]
+    successful_links.append(f"{timepoint}/reports/{subject}_{session}_desc-casereport.html")
 # get failed cases from total_timepoints not in successful_timepoints
-failed_cases = [timepoint.replace(output_dir, "") for timepoint in total_timepoints if timepoint not in successful_timepoints]
+failed_cases = [timepoint for timepoint in total_timepoints if timepoint not in successful_timepoints]
 # get links for each failed case's directory
-failed_links = [os.path.join(dir, case) + str(output_dir) for case in failed_cases]
+failed_links = [os.path.join(dceprep_dir, case) for case in failed_cases]
 
+# get flagged cases 
+flagged_cases = []
+flagged_links = []
+MOTION_THRESHOLD = 2
+AIFITNESS_THRESHOLD = 85
+for case in successful_timepoints:
+    entry = case.replace('/', '_')
+    flag_str = ""
+    subject = case.split('/')[0]
+    session = case.split('/')[1]
+    save_name = f"{case}/reports/{subject}_{session}_desc-casereport.html"
+    if population_data[entry]['max_disp'] > MOTION_THRESHOLD:
+        flag_str += "motion"
+        save_name += "#MCFLIRT"
+    if population_data[entry]['AIFitness'] < AIFITNESS_THRESHOLD:
+        if flag_str != "":
+            flag_str += ", "
+        flag_str += "AIFitness"
+        if not save_name[-1].endswith("MCFLIRT"):
+            save_name += "#AIF"
+    if flag_str != "":
+        flagged_cases.append(f'{case} ({flag_str})')
+        flagged_links.append(save_name)
+print(flagged_cases, flagged_links)
 # read ROCKETSHIP preference file
 with open(ROCKETSHIP_dir + "/script_preferences.txt", "r") as f:
     lines = f.readlines()
@@ -1253,16 +1495,30 @@ with open(ROCKETSHIP_dir + "/script_preferences.txt", "r") as f:
             pref_end_t = line.split("= ")[1].strip()
         elif "time_resolution =" in line:
             pref_timeres = line.split("= ")[1].strip()
+        elif "tofts = 1" in line:
+            DCE_model = "Tofts"
+        elif "ex_tofts = 1" in line:
+            DCE_model = "Tofts Extended"
+        elif "patlak = 1" in line:
+            DCE_model = "Patlak"
+        elif "tissue_uptake = 1" in line:
+            DCE_model = "Tissue Uptake"
+        elif "two_cxm = 1" in line:
+            DCE_model = "Two Compartment Exchange"
 
 data = {
     'Subjects' : subjects,
-    'base_url': dir,
-    'Links': successful_timepoints,
+    # 'base_url': dceprep_dir,
+    'Links': successful_links,
     'Failed_links': failed_links,
     'Cases': cases,
     'Failed_cases': failed_cases,
-    'Combo': zip(successful_timepoints, cases),
+    'Flagged_cases': flagged_cases,
+    'Combo': zip(successful_links, cases),
     'Failed_combo': zip(failed_links, failed_cases),
+    'Motion_threshold': MOTION_THRESHOLD,
+    'AIFitness_threshold': AIFITNESS_THRESHOLD,
+    'Flagged_combo': zip(flagged_links, flagged_cases),
     'Subject_count': len(subjects),
     'Successes': str(len(population_data)) + '/' + str(len(total_timepoints)) + ' (' + str(round((len(population_data) / len(total_timepoints)) * 100, 2)) + '%)',
     'Date': date,
@@ -1280,6 +1536,7 @@ data = {
     'pref_start_t': pref_start_t,
     'pref_end_t': pref_end_t,
     'pref_timeres': pref_timeres,
+    'pref_model': DCE_model,
     'T1_wm_mean': round(T1_wm_mean, 4),
     'T1_wm_median': round(T1_wm_median, 4),
     'T1_wm_std': round(T1_wm_std, 4),
@@ -1461,55 +1718,101 @@ data = {
 
 output = template.render(data)
 
+# make reports directory if it doesn't exist
+if not os.path.exists(dir + '/reports'):
+    os.makedirs(dir + '/reports')
+
 # write html to file
-with open(dir + '/population_report' + output_dir + '.html', 'w') as f:
+with open(dir + '/reports/population_report.html', 'w') as f:
     f.write(output)
 
-print('Report generated in ' + dir + '/population_report.html')
+print('Report generated in ' + dir + '/reports/population_report.html')
 
 # add apoe and cdr fields to population_data
 # get apoe and cdr values from /media/network_mriphysics/USC-PPG/GIGA_DATA/Ararat_CBF_cases_better_format.xlsx
 # read in excel file, second sheet "Sheet2"
-df = pd.read_excel('/media/network_mriphysics/USC-PPG/GIGA_DATA/Ararat_CBF_cases_better_format.xlsx', sheet_name="Sheet2")
+df = pd.read_excel('/media/network_mriphysics/USC-PPG/bids_test/dce_available_3524_ac.xlsx', sheet_name="main")
 
 # get apoe and cdr values for each subject
 for subject in population_data.keys():
     # get subject's ID
     subject_id = subject.split("_")[0]
+    subject_id = subject_id.split("-")[1]
     # get subject's timepoint
     timepoint = subject.split("_")[1]
     # get subject's apoe and cdr values
+    if subject_id.startswith("4") or subject_id.startswith("3"):
+        # insert underscore after 1st character
+        subject_id = subject_id[:1] + "_" + subject_id[1:]
     try:
-        apoe = df.loc[df['ID'] == int(subject_id), 'apoebin'].values[0]
-        cdr = df.loc[df['ID'] == int(subject_id), 'CDR'].values[0]
+        apoe = df.loc[df['Subject_ID'] == int(subject_id), 'APOE'].values[0]
+        cdr = df.loc[df['Subject_ID'] == int(subject_id), 'CDR'].values[0]
+        bmi = df.loc[df['Subject_ID'] == int(subject_id), 'BMI'].values[0]
         # add to population_data
-        population_data[subject]["apoebin"] = apoe
-        population_data[subject]["CDR"] = cdr
     except Exception as e:
         print(e)
-        print("Subject " + subject_id + " not found in Ararat_CBF_cases_better_format.xlsx")
+        print("Subject " + subject_id + " not found in dce_available_3524_ac.xlsx")
+        apoe = "N/A"
+        cdr = "N/A"
+    population_data[subject]["APOE"] = apoe
+    population_data[subject]["CDR"] = cdr
+    population_data[subject]["BMI"] = bmi
 
 # make excel file
 # make dataframe
 df = pd.DataFrame(population_data)
-order = ["apoebin", "CDR", "aif_metric", "wm_median", "gm_median", "Ktrans_Hippo_median", "Ktrans_PhG_median", "Ktrans_Putamen_median", "Ktrans_Pallidum_median",
+order = ["Date", "APOE", "CDR", "BMI", "Sex", "Age", "Machine", "Institution", "Coil", "TR", "TE", "Flip_angle", "n_reps",
+         "AIFitness", "max_disp", "T1_blood", "T1_wm_median", "T1_gm_median",
+         "wm_median", "gm_median", "Ktrans_Hippo_median", "Ktrans_PhG_median", "Ktrans_Putamen_median", "Ktrans_Pallidum_median",
          "Ktrans_Thalamus_median", "Ktrans_Caudate_median", "Ktrans_Amygdala_median", "Ktrans_Entorhinal_cortex_median",
          "Ktrans_Fusiform_gyrus_cortex_median", "Ktrans_Fusiform_gyrus_WM_median", "Ktrans_Insula_WM_median",
-         "Ktrans_Superior_temporal_cortex_median"]
+         "Ktrans_Superior_temporal_cortex_median", "hippo_vol", "phg_vol", "putamen_vol", "pallidum_vol", "thalamus_vol",
+         "caudate_vol", "amygdala_vol", "entorhinal_cortex_vol", "fusiform_gyrus_cortex_vol", "fusiform_gyrus_wm_vol",
+         "insula_wm_vol", "superior_temporal_cortex_vol"]
 
 df = df.T
 df = df[order]
+# name first column
+df.index.name = "Subject_ID"
 # write to excel
-df.to_excel(os.path.join(dir, "dataset_ktrans" + output_dir + ".xlsx"))
+# df.to_excel(os.path.join(dir, "dataset_ktrans" + output_dir + ".xlsx"))
+writer = pd.ExcelWriter(os.path.join(dir, "dataset_ktrans.xlsx"), date_format='YYYY/MM/DD', datetime_format='YYYY/MM/DD') 
+df.to_excel(writer, sheet_name='Sheet1')
+cell_format = writer.book.add_format()
+cell_format.set_text_wrap()
+cell_format.set_align('center')
+cell_format.set_align('vcenter')
+
+for column in df.columns:
+    max_length = df[column].map(str).map(len).max()
+    max_length = max(max_length, len(column))
+    if column == "Date":
+        writer.sheets['Sheet1'].set_column(df.columns.get_loc(column)+1, df.columns.get_loc(column)+1, 10, cell_format)
+    else:
+        writer.sheets['Sheet1'].set_column(df.columns.get_loc(column)+1, df.columns.get_loc(column)+1, max_length+2, cell_format)
+index_cell_format = writer.book.add_format()
+index_cell_format.set_text_wrap()
+index_cell_format.set_align('center')
+index_cell_format.set_align('vcenter')
+# unbold index
+index_cell_format.set_bold(False)
+writer.sheets['Sheet1'].set_column(0, 0, 20, index_cell_format)
+# autofilter
+writer.sheets['Sheet1'].autofilter(0, 0, len(df), len(df.columns))
+# change date column data format to MM/DD/YYYY
+writer.close()
 
 # now backfill each subject's placement in the population
+imgs = []
 for subject_id in subjects:
+# for subject_id, timepoint in zip(subjects, timepoints):
     # list _timepoint directories in subject directory
-    for timepoint in os.listdir(os.path.join(dir, subject_id)):
-        if timepoint.endswith("_timepoint"):
-            placement_wm_histogram_path = os.path.join(dir, subject_id, timepoint, output_dir, "figures/placement_wm_histogram.png")
-            placement_gm_histogram_path = os.path.join(dir, subject_id, timepoint, output_dir, "figures/placement_gm_histogram.png")
-
+    for timepoint in sorted(os.listdir(os.path.join(dir, 'dceprep', subject_id))):
+        if timepoint.startswith("ses-"):
+            # placement_wm_histogram_path = os.path.join(dir, subject_id, timepoint, output_dir, "figures/placement_wm_histogram.png")
+            # placement_gm_histogram_path = os.path.join(dir, subject_id, timepoint, output_dir, "figures/placement_gm_histogram.png")
+            placement_wm_histogram_path = os.path.join(dir, 'dceprep', subject_id, timepoint, "figures/placement_wm_histogram.png")
+            placement_gm_histogram_path = os.path.join(dir, 'dceprep', subject_id, timepoint, "figures/placement_gm_histogram.png")
             # get subject's wm_mean
             try:
                 case_wm_median = population_data[subject_id + "_" + timepoint]["wm_median"]
@@ -1538,8 +1841,7 @@ for subject_id in subjects:
             plt.close()
 
             # append to html file
-            filename = os.path.join(dir, subject_id, timepoint, output_dir, "case_report.html")
-            print(filename)
+            filename = os.path.join(dir, 'dceprep', subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-casereport.html")
             with open(filename, "r") as f:
                 report_content = f.read()
 
@@ -1549,3 +1851,31 @@ for subject_id in subjects:
             # write html to file
             with open(filename, 'w') as f:
                 f.write(report_content)
+
+            # now take ses-* reports/{prefix}_desc-report.png and append it to scrollable report
+            # get desc-report.png path
+            report_path = os.path.join(dir, 'dceprep', subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-report.png")
+            # append to imgs
+            imgs.append(report_path)
+
+# make scrollable report
+
+from PIL import Image
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
+# Function to add images to PDF
+def add_image_to_pdf(pdf, image_path):
+    pdf.drawImage(image_path, 50, 50, width=letter[0]-85, height=letter[1]-50)  # Adjust coordinates and dimensions as needed
+    pdf.showPage()
+
+# Create a PDF canvas
+pdf_file = f"{dir}/reports/EZQCreport.pdf"
+pdf = canvas.Canvas(pdf_file, pagesize=letter)
+
+# Add images to the PDF
+for report in imgs:
+    add_image_to_pdf(pdf, report)
+
+# Save the PDF to dir/reports
+pdf.save()

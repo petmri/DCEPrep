@@ -14,12 +14,18 @@ import nibabel as nib
 POLYFIT = True
 KTRANS_MIN_THRESHOLD = 0.00001
 
-def analyze(file_dir):
+def analyze(tp_dir):
     # load files from script pipeline
-    files = ['/T1_wm.nii.gz', '/T1_gm.nii.gz', '/T1_csf.nii.gz', '/Ktrans_wm.nii.gz',
-            '/Ktrans_gm.nii.gz', '/Ktrans_csf.nii.gz', '/T1_wm_mask.nii.gz', '/T1_gm_mask.nii.gz']
-    for i, file in enumerate(files):
-        files[i] = file_dir + file
+    files = ['anat/' + prefix + '_space-DCEref_label-WM_T1map.nii.gz',
+             'anat/' + prefix + '_space-DCEref_label-GM_T1map.nii.gz',
+             'anat/' + prefix + '_space-DCEref_label-CSF_T1map.nii.gz',
+             'dce/' + prefix + '_seg-WM_Ktrans.nii.gz',
+             'dce/' + prefix + '_seg-GM_Ktrans.nii.gz',
+             'dce/' + prefix + '_seg-CSF_Ktrans.nii.gz',
+             'anat/' + prefix + '_space-DCEref_label-WM_mask.nii.gz',
+             'anat/' + prefix + '_space-DCEref_label-GM_mask.nii.gz']
+    # for i, file in enumerate(files):
+    #     files[i] = file_dir + file
 
     T1_wm = nib.load(files[0])
     T1_gm = nib.load(files[1])
@@ -269,7 +275,7 @@ def analyze(file_dir):
     ax3.legend()
 
     # Save graphs
-    path2 = file_dir + '/figures/T1_Ktrans_analysis.png'
+    path2 = 'figures/' + prefix + '_desc-analysis.png'
     plt.savefig(path2, bbox_inches='tight')
     
     # Zeros
@@ -312,10 +318,12 @@ def analyze(file_dir):
     ax5.grid()
     ax5.legend()
 
-    plt.savefig(file_dir + '/figures/T1_Ktrans_zeros.png', bbox_inches='tight')
+    plt.savefig('figures/' + prefix + '_desc-zeros.png', bbox_inches='tight')
     # print(any(np.array(Ktrans_wm_zeros) >= 70) or any(np.array(Ktrans_gm_zeros) >= 70))
-    print((Ktrans_wm_zero_avg >= 55) or (Ktrans_gm_zero_avg >= 55))
+    # print((Ktrans_wm_zero_avg >= 55) or (Ktrans_gm_zero_avg >= 55))
 
 
-dir = Path(sys.argv[1])     # takes timepoint directory as argument
-analyze(str(dir))
+tp_dir = Path(sys.argv[1])     # takes timepoint directory as argument
+# output_dir = Path(sys.argv[2]) # takes output directory as argument
+prefix = sys.argv[2]           # takes prefix as argument
+analyze(str(tp_dir))

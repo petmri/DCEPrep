@@ -115,6 +115,10 @@
                     <li><a href="#Insula_wm">Insula</a></li>
                     <li><a href="#Sup_temp_c">Sup-Temp-ctx</a></li>
                 </ul>
+            </li>
+            <li class="nav-item">
+                <a href="#Flagged">Flagged Cases</a>
+            </li>
         </ul>
     </nav>
     <!-- <p></p> -->
@@ -125,7 +129,7 @@
         <li>
             Successful Cases:
             {% for link, case in Combo %}
-                <a href="{{ base_url }}/{{ link }}/case_report.html">{{ case }}</a>{% if not loop.last %}, {% endif %}
+                <a href="../dceprep/{{ link }}">{{ case }}</a>{% if not loop.last %}, {% endif %}
             {% endfor %}
         </li>
         <li>
@@ -396,5 +400,11 @@
         <li>outliers (> 5): {{ whole_superior_temporal_cortex_outliers }}</li>
         <img src="{{ whole_superior_temporal_cortex_histogram }}" alt="missing whole superior temporal cortex histogram"/>
     </ul>
+    <h2 id="Flagged">Flagged Cases (motion > {{ Motion_threshold }}mm, AIFitness < {{ AIFitness_threshold }})</h4>
+    <li>
+        {% for link, case in Flagged_combo %}
+            <a href="../dceprep/{{ link }}">{{ case }}</a>{% if not loop.last %}, {% endif %}
+        {% endfor %}
+    </li>
 </body>
 </html>

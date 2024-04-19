@@ -11,12 +11,16 @@ import re
 from nilearn import plotting
 from matplotlib import colors as mcolors
 
-tp_dir = sys.argv[1]
-dir = sys.argv[2]
-if dir[-1] == '/':
-    dir = dir[:-1]
+source_dir = sys.argv[1]
+# source_dir = sys.argv[2]
+prefix = sys.argv[2]
+# if source_dir[-1] == '/':
+#     source_dir = source_dir[:-1]
 
-files_to_reorient = [tp_dir + '/2.nii', dir + '/dce_patlak_fit_Ktrans.nii', dir + '/T1_wm_mask.nii.gz', dir + '/T1_map_t1_fa_fit_VFA.nii', dir + '/T1_bet_mask.nii.gz', dir + '/T1_gm_mask.nii.gz']
+files_to_reorient = [f'anat/{prefix}_flip-01_space-DCEref_VFA.nii.gz', f'dce/{prefix}_Ktrans.nii',
+                     f'anat/{prefix}_space-DCEref_T1w.nii.gz',
+                     f'anat/{prefix}_space-DCEref_label-WM_mask.nii.gz', f'anat/{prefix}_space-DCEref_T1map.nii',
+                     f'anat/{prefix}_space-DCEref_desc-brain_mask.nii.gz', f'anat/{prefix}_space-DCEref_label-GM_mask.nii.gz']
 # if c3d exists, reorient files to RAS
 dimensions = 0
 voxel_size = 0
@@ -29,8 +33,8 @@ if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
         command = ['c3d', file, '-orient', 'RAS', '-o', file_no_extension + '_RAS.nii.gz']
         try:
             subprocess.run(command, check=True)
-            if file == os.path.join(dir, 'dce_patlak_fit_Ktrans.nii'):
-                ktrans = nib.load(os.path.join(str(dir), 'dce_patlak_fit_Ktrans_RAS.nii.gz'))
+            if file == (f'dce/{prefix}_Ktrans.nii'):
+                ktrans = nib.load(f'dce/{prefix}_Ktrans_RAS.nii.gz')
                 ktrans_data = ktrans.get_fdata()
                 ktrans_flipped = np.flip(ktrans_data, axis=1)
                 ktrans_flipped = nib.Nifti1Image(ktrans_flipped, ktrans.affine, ktrans.header)
@@ -46,7 +50,7 @@ if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
                 max_coord = int(ktrans_coords-5*ktrans_z_slices)
                 plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(ktrans_coords, midpt, -5), axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
                 plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(midpt, max_coord, -5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
-                plt.savefig(str(dir) + '/figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
+                plt.savefig('figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
                 plt.close()
         except Exception as e:
             print("Error running c3d command: " + ' '.join(command))
@@ -59,8 +63,8 @@ else:
         command = ['mri_convert', '--in_orientation', 'LPI', file, file_no_extension + '_RAS.nii.gz']
         try:
             subprocess.run(command, check=True)
-            if file == dir + '/dce_patlak_fit_Ktrans.nii':
-                ktrans = nib.load(str(dir) + '/dce_patlak_fit_Ktrans_RAS.nii.gz')
+            if file == (f'dce/{prefix}_Ktrans.nii'):
+                ktrans = nib.load(f'dce/{prefix}_Ktrans_RAS.nii.gz')
                 ktrans_data = ktrans.get_fdata()
                 ktrans_flipped = np.flip(ktrans_data, axis=1)
                 ktrans_flipped = nib.Nifti1Image(ktrans_flipped, ktrans.affine, ktrans.header)
@@ -71,7 +75,7 @@ else:
                 fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(15, 5), gridspec_kw={'hspace': -.1, 'wspace': -.1}, dpi=300)
                 plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-56, -21, 5), axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
                 plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-21, 13, 5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
-                plt.savefig(str(dir) + '/figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
+                plt.savefig('figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
                 plt.close()
         except Exception as e:
             print("Error running freesurfer mri_convert (reorient)")
@@ -95,16 +99,16 @@ except Exception as e:
     commit_hash = subprocess.check_output(command, cwd=os.path.dirname(os.path.realpath(__file__))).decode('ascii').strip()
 
 # get subject id
-subject_id = dir.split('/')[-2]
-timepoint = dir.split('/')[-1]
+subject_id = source_dir.split('/')[-2]
+timepoint = source_dir.split('/')[-1]
 if subject_id.endswith('_timepoint'):
-    subject_id = dir.split('/')[-3]
+    subject_id = source_dir.split('/')[-3]
     # get timepoint
-    timepoint = dir.split('/')[-2]
+    timepoint = source_dir.split('/')[-2]
 
 # get institute from DCE.json
 try:
-    with open(str(tp_dir) + '/DCE.json') as f:
+    with open(f"{source_dir}dce/{prefix}_DCE.json") as f:
         dce = json.load(f)
     institute = dce['InstitutionName']
     manufacturer = dce['Manufacturer']
@@ -121,43 +125,49 @@ except Exception as e:
 
 try:
     # brain mask
-    plotting.plot_roi(str(dir) + '/T1_bet_mask.nii.gz', bg_img=str(tp_dir)+'/T1.nii', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=-1, cmap='gray', output_file=str(dir)+'/figures/t1w_mask.svg', colorbar=False, draw_cross=False, title='mask')
+    plotting.plot_roi(f'anat/{prefix}_desc-brain_mask.nii.gz', bg_img=f'{source_dir}/anat/{prefix}_T1w.nii.gz', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=-1, cmap='gray', output_file='figures/t1w_mask.svg', colorbar=False, draw_cross=False, title='mask')
 
     # T1w segmentation
-    plotting.plot_anat(str(tp_dir) + '/T1.nii', cmap='gray', output_file=str(dir)+'/figures/t1w.svg', cut_coords=(-20, 0, -15), dim=-1, colorbar=False, draw_cross=False)
-    plotting.plot_roi(str(dir) + '/segmented_t1_seg_2.nii.gz', bg_img=str(tp_dir)+'/T1.nii', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=0, cmap='gray', output_file=str(dir)+'/figures/t1w_wm.svg', colorbar=False, draw_cross=False, title='wm')
-    plotting.plot_roi(str(dir) + '/segmented_t1_seg_1.nii.gz', bg_img=str(tp_dir)+'/T1.nii', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=0, cmap='gray', output_file=str(dir)+'/figures/t1w_gm.svg', colorbar=False, draw_cross=False, title='gm')
+    plotting.plot_anat(f'{source_dir}/anat/{prefix}_T1w.nii.gz', cmap='gray', output_file='figures/t1w.svg', cut_coords=(-20, 0, -15), dim=-1, colorbar=False, draw_cross=False)
+    plotting.plot_roi(f'anat/{prefix}_label-WM_mask.nii.gz', bg_img=f'{source_dir}/anat/{prefix}_T1w.nii.gz', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=0, cmap='gray', output_file='figures/t1w_wm.svg', colorbar=False, draw_cross=False, title='wm')
+    plotting.plot_roi(f'anat/{prefix}_label-GM_mask.nii.gz', bg_img=f'{source_dir}/anat/{prefix}_T1w.nii.gz', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=0, cmap='gray', output_file='figures/t1w_gm.svg', colorbar=False, draw_cross=False, title='gm')
 except Exception as e:
     print("Error plotting T1w segmentation")
     print(e)
 
 try:
     # T1w to VFA
-    plotting.plot_anat(str(dir) + '/T1_wm_mask_RAS.nii.gz', cmap='gray', output_file=str(dir)+'/figures/t1w_to_vfa.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w to VFA')
+    # plotting.plot_anat(f'anat/{prefix}_label-WM_mask_RAS.nii.gz', cmap='gray', output_file='figures/t1w_to_dceref.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w to DCEref')
 
     # T1w to dyn
+    t1w_dceref = nib.load(f'anat/{prefix}_space-DCEref_T1w_RAS.nii.gz')
+    t1w_dceref_data = t1w_dceref.get_fdata()
+    t1w_dceref_flipped = np.flip(t1w_dceref_data, axis=1)
+    t1w_dceref_flipped = nib.Nifti1Image(t1w_dceref_flipped, t1w_dceref.affine, t1w_dceref.header)
+    plotting.plot_anat(t1w_dceref_flipped, cmap='gray', output_file=f'figures/{prefix}_space-DCEref_T1w.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w to dyn')
+
     # flip T1w masks
-    t1w_mask = nib.load(str(dir) + '/T1_bet_mask_RAS.nii.gz')
+    t1w_mask = nib.load(f'anat/{prefix}_space-DCEref_desc-brain_mask_RAS.nii.gz')
     t1w_mask_data = t1w_mask.get_fdata()
     t1w_mask_flipped = np.flip(t1w_mask_data, axis=1)
     t1w_mask_flipped = nib.Nifti1Image(t1w_mask_flipped, t1w_mask.affine, t1w_mask.header)
-    # nib.save(t1w_mask_flipped, str(dir) + '/T1_bet_mask_RAS.nii')
+    # nib.save(t1w_mask_flipped, str(tp_dir) + '/T1_bet_mask_RAS.nii')
 
-    t1w_wm_mask = nib.load(str(dir) + '/T1_wm_mask_RAS.nii.gz')
+    t1w_wm_mask = nib.load(f'anat/{prefix}_space-DCEref_label-WM_mask_RAS.nii.gz')
     t1w_wm_mask_data = t1w_wm_mask.get_fdata()
     t1w_wm_mask_flipped = np.flip(t1w_wm_mask_data, axis=1)
     t1w_wm_mask_flipped = nib.Nifti1Image(t1w_wm_mask_flipped, t1w_wm_mask.affine, t1w_wm_mask.header)
-    # nib.save(t1w_wm_mask_flipped, str(dir) + '/T1_wm_mask_RAS.nii')
+    # nib.save(t1w_wm_mask_flipped, str(tp_dir) + '/T1_wm_mask_RAS.nii')
 
-    t1w_gm_mask = nib.load(str(dir) + '/T1_gm_mask_RAS.nii.gz')
+    t1w_gm_mask = nib.load(f'anat/{prefix}_space-DCEref_label-GM_mask_RAS.nii.gz')
     t1w_gm_mask_data = t1w_gm_mask.get_fdata()
     t1w_gm_mask_flipped = np.flip(t1w_gm_mask_data, axis=1)
     t1w_gm_mask_flipped = nib.Nifti1Image(t1w_gm_mask_flipped, t1w_gm_mask.affine, t1w_gm_mask.header)
-    # nib.save(t1w_gm_mask_flipped, str(dir) + '/T1_gm_mask_RAS.nii')
+    # nib.save(t1w_gm_mask_flipped, str(tp_dir) + '/T1_gm_mask_RAS.nii')
 
-    plotting.plot_anat(t1w_mask_flipped, cmap='gray', output_file=str(dir)+'/figures/t1bet_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w brain mask to dyn')
-    plotting.plot_anat(t1w_wm_mask_flipped, cmap='gray', output_file=str(dir)+'/figures/t1wm_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w wm to dyn')
-    plotting.plot_anat(t1w_gm_mask_flipped, cmap='gray', output_file=str(dir)+'/figures/t1gm_to_dyn.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w gm to dyn')
+    plotting.plot_roi(t1w_mask_flipped, cmap='gray', bg_img=t1w_dceref_flipped, output_file='figures/t1bet_to_dyn.svg', display_mode='z', vmin=0, vmax=1, dim=0, annotate=True, colorbar=False, draw_cross=False, title='T1w brain mask to DCEref')
+    plotting.plot_roi(t1w_wm_mask_flipped, cmap='gray', bg_img=t1w_dceref_flipped, output_file='figures/t1wm_to_dyn.svg', display_mode='z', vmin=0, vmax=1, dim=0, annotate=True, colorbar=False, draw_cross=False, title='T1w wm to DCEref')
+    plotting.plot_roi(t1w_gm_mask_flipped, cmap='gray', bg_img=t1w_dceref_flipped, output_file='figures/t1gm_to_dyn.svg', display_mode='z', vmin=0, vmax=1, dim=0, annotate=True, colorbar=False, draw_cross=False, title='T1w gm to DCEref')
 except Exception as e:
     print("Error plotting T1w to dyn")
     print(e)
@@ -167,7 +177,7 @@ try:
     # read txt file
     FAs = []
     is_target_line = False
-    with open(str(dir) + '/T1_map_t1_fa_fit_VFA.txt', 'r') as f:
+    with open(f'anat/{prefix}_space-DCEref_T1map.txt', 'r') as f:
         for line in f:
             if "User selected TE/TR/FA/TI: " in line:
                 is_target_line = True
@@ -187,7 +197,7 @@ try:
     # now get TR from txt file
     TR = None
     is_target_line = False
-    with open(str(dir) + '/T1_map_t1_fa_fit_VFA.txt', 'r') as f:
+    with open(f'anat/{prefix}_space-DCEref_T1map.txt', 'r') as f:
         for line in f:
             if "User selected tr: " in line:
                 is_target_line = True
@@ -200,7 +210,7 @@ try:
 
     # check if GPU was used
     GPU = False
-    with open(str(dir) + '/T1_map_t1_fa_fit_VFA.txt', 'r') as f:
+    with open(f'anat/{prefix}_space-DCEref_T1map.txt', 'r') as f:
         for line in f:
             if "GPU detected" in line:
                 GPU = True
@@ -219,12 +229,12 @@ except Exception as e:
 try:
     # T1 map
     # flip T1 map
-    img = nib.load(str(dir) + '/T1_map_t1_fa_fit_VFA_RAS.nii.gz')
+    img = nib.load(f'anat/{prefix}_space-DCEref_T1map_RAS.nii.gz')
     img_data = img.get_fdata()
     img_data = np.flip(img_data, axis=0)
     img_data = np.flip(img_data, axis=1)
     t1_map_flipped = nib.Nifti1Image(img_data, img.affine, img.header)
-    plotting.plot_anat(t1_map_flipped, cmap='gray', vmin=0, vmax=5000, output_file=str(dir)+'/figures/t1_map.svg', annotate=False, colorbar=False, draw_cross=False, title='T1 map')
+    plotting.plot_anat(t1_map_flipped, cmap='gray', vmin=0, vmax=5000, output_file='figures/t1_map.svg', annotate=False, colorbar=False, draw_cross=False, title='T1 map')
 except Exception as e:
     print("Error plotting T1 map")
     print(e)
@@ -232,9 +242,10 @@ except Exception as e:
 # try:
 # AIF
 # plot graph of AIF region
-aif = nib.load(str(dir) + '/aif.nii')
+aif = nib.load(f'dce/{prefix}_desc-AIFpos_T1map.nii.gz')
 aif_data = aif.get_fdata()
-img = nib.load(str(dir) + '/DCE_mc.nii.gz')
+# img = nib.load(str(tp_dir) + '/DCE_mc.nii.gz')
+img = nib.load(f'dce/{prefix}_desc-hmc_DCE.nii.gz')
 img_data = img.get_fdata()
 # binarize AIF
 aif_data[aif_data > 0] = 1
@@ -294,14 +305,15 @@ aif_metric = quality_ultimate(aif_curve_ratio)
 # plot AIF
 plt.plot(aif_curve_ratio)
 plt.text(0.25, 0.95, 'Voxel Baseline Avg SI: ' + str(aif_curve[0]), transform=plt.gca().transAxes, fontsize=11, verticalalignment='top')
+plt.text(0.25, 0.9, 'AIFitness: ' + str(aif_metric), transform=plt.gca().transAxes, fontsize=11, verticalalignment='top')
 plt.title('AIF Curve')
 plt.xlabel('Timepoint')
 plt.ylabel('Signal intensity / Baseline')
-plt.savefig(str(dir)+'/figures/AIF_graph.svg', bbox_inches='tight')
+plt.savefig(f'figures/{prefix}_desc-AIF_curve.svg', bbox_inches='tight')
 plt.close()
 
 # save AIF values to file
-np.savetxt(str(dir) + '/AIF_values.txt', aif_curve_ratio)
+np.savetxt('dce/AIF_values.txt', aif_curve_ratio)
 
 # plot AIF overlay
 plt.figure(figsize=(15,5), dpi=250)
@@ -317,7 +329,7 @@ aif_slice = np.where(aif_data > 0)[2][0]
 cmap = mcolors.LinearSegmentedColormap.from_list('custom cmap', [(0, 0, 0, 0), 'blue', 'green', 'red'])
 plt.imshow(img_data[:,:,aif_slice, 5], cmap='gray')
 plt.imshow(aif_data[:,:,aif_slice], cmap=cmap, alpha=1)
-plt.savefig(str(dir)+'/figures/AIF_overlay.svg', bbox_inches='tight')
+plt.savefig(f'figures/{prefix}_desc-AIF_overlay.svg', bbox_inches='tight')
 plt.close()
 # except Exception as e:
 #     print("Error plotting AIF")
@@ -334,7 +346,7 @@ def extract_value(pattern, text):
     return None
 
 try:
-    with open(dir + '/A_dceR1info.log', 'r') as file:
+    with open('dce/A_dceR1info.log', 'r') as file:
         log_text = file.read()
     RUNA_log = True
 except Exception as e:
@@ -360,7 +372,7 @@ blood_t1_pattern = "Average Filtered AIF T1: "
 
 if RUNA_log:
     # get last line of log file
-    with open(dir + '/A_dceR1info.log', 'r') as file:
+    with open('dce/A_dceR1info.log', 'r') as file:
         match = False
         for line in file:
             if line[:-1] == blood_t1_pattern:
@@ -376,7 +388,7 @@ try:
     # now get Time Resolution from log file
     time_resolution = None
     is_target_line = False
-    with open(str(dir) + '/B_dcefitted_R1info.log', 'r') as f:
+    with open('dce/B_dcefitted_R1info.log', 'r') as f:
         for line in f:
             if "User selected time resolution (sec)" in line:
                 is_target_line = True
@@ -398,7 +410,7 @@ if RUNB_log:
         r2_values = re.findall(r2_pattern, log_text)
         return r2_values
 
-    with open(dir + '/B_dcefitted_R1info.log', 'r') as file:
+    with open('dce/B_dcefitted_R1info.log', 'r') as file:
         log_text = file.read()
 
     r2_values = extract_r2_values(log_text)
@@ -408,7 +420,7 @@ if RUNB_log:
         r2_raw_values = r2_values[-1]
 
     # get last line of B log file (time elapsed)
-    with open(dir + '/B_dcefitted_R1info.log', 'r') as file:
+    with open('dce/B_dcefitted_R1info.log', 'r') as file:
         for line in file:
             pass
         B_last_line = line
@@ -420,7 +432,7 @@ else:
 try:
     # get GPU info
     GPU = False
-    with open(str(dir) + '/dce_patlak_fit.log', 'r') as f:
+    with open('dce/dce_patlak_fit.log', 'r') as f:
         for line in f:
             if "Gpufit detected" in line:
                 GPU = True
@@ -444,7 +456,7 @@ if RUND_log:
             return match.group(1)
         return None
 
-    with open(dir + '/dce_patlak_fit.log', 'r') as file:
+    with open('dce/dce_patlak_fit.log', 'r') as file:
         log_text = file.read()
 
     dce_elapsed_time = extract_elapsed_time(log_text)
@@ -455,39 +467,44 @@ else:
 
 # get Ktrans mean wm and gm
 KTRANS_MIN_THRESHOLD = 0.00001
-ktrans_wm = nib.load(str(dir) + '/Ktrans_wm.nii.gz')
+ktrans_wm = nib.load(f'dce/{prefix}_seg-WM_Ktrans.nii.gz')
 ktrans_wm_data = ktrans_wm.get_fdata()
 # mean_wm = np.mean(ktrans_wm_data[ktrans_wm_data > 0])*1000
 ktrans_median_wm = np.median(ktrans_wm_data[ktrans_wm_data > KTRANS_MIN_THRESHOLD])*1000
 ktrans_std_wm = np.std(ktrans_wm_data[ktrans_wm_data > KTRANS_MIN_THRESHOLD])*1000
 
-ktrans_gm = nib.load(str(dir) + '/Ktrans_gm.nii.gz')
+ktrans_gm = nib.load(f'dce/{prefix}_seg-GM_Ktrans.nii.gz')
 ktrans_gm_data = ktrans_gm.get_fdata()
 # mean_gm = np.mean(ktrans_gm_data[ktrans_gm_data > 0])*1000
 ktrans_median_gm = np.median(ktrans_gm_data[ktrans_gm_data > KTRANS_MIN_THRESHOLD])*1000
 ktrans_std_gm = np.std(ktrans_gm_data[ktrans_gm_data > KTRANS_MIN_THRESHOLD])*1000
 
 # get T1 map median wm and gm
-T1_wm = nib.load(str(dir) + '/T1_wm.nii.gz')
+T1_wm = nib.load(f'anat/{prefix}_space-DCEref_label-WM_T1map.nii.gz')
 T1_wm_data = T1_wm.get_fdata()
 T1_wm_median = np.median(T1_wm_data[T1_wm_data > 0])
 T1_wm_std = np.std(T1_wm_data[T1_wm_data > 0])
 
-T1_gm = nib.load(str(dir) + '/T1_gm.nii.gz')
+T1_gm = nib.load(f'anat/{prefix}_space-DCEref_label-GM_T1map.nii.gz')
 T1_gm_data = T1_gm.get_fdata()
 T1_gm_median = np.median(T1_gm_data[T1_gm_data > 0])
 T1_gm_std = np.std(T1_gm_data[T1_gm_data > 0])
 
 # MNI space registration
-fsl_dir = os.environ['FSLDIR']
+# fsl_dir = os.environ['FSLDIR']
 # print(fsl_dir)
-try:
-    plotting.plot_anat(os.path.dirname(os.path.realpath(__file__)) + '/MNI152_T1_1mm_brain.nii.gz', title='MNI152_T1_1mm_brain', output_file=dir + '/figures/MNI152_T1_1mm_brain.svg', colorbar=False, draw_cross=False)
-    plotting.plot_anat(dir + '/t1w_MNIWarped.nii.gz', title='t1w_MNI', cut_coords=(2, -1, 20), output_file=dir + '/figures/t1w_MNI.svg', colorbar=False, draw_cross=False)
-    plotting.plot_anat(dir + '/Ktrans_MNI.nii.gz', title='ktrans_MNI', cut_coords=(2, -1, 20), vmin=0, vmax=0.001, output_file=dir + '/figures/Ktrans_MNI.svg', colorbar=False, draw_cross=False)
-except Exception as e:
-    print("Error plotting MNI space registration")
-    print(e)
+# try:
+#     plotting.plot_anat(os.path.dirname(os.path.realpath(__file__)) + '/MNI152_T1_1mm_brain.nii.gz', title='MNI152_T1_1mm_brain', output_file=tp_dir + '/figures/MNI152_T1_1mm_brain.svg', colorbar=False, draw_cross=False)
+#     plotting.plot_anat(tp_dir + '/t1w_MNIWarped.nii.gz', title='t1w_MNI', cut_coords=(2, -1, 20), output_file=tp_dir + '/figures/t1w_MNI.svg', colorbar=False, draw_cross=False)
+#     plotting.plot_anat(source_dir + '/Ktrans_MNI.nii.gz', title='ktrans_MNI', cut_coords=(2, -1, 20), vmin=0, vmax=0.001, output_file=source_dir + '/figures/Ktrans_MNI.svg', colorbar=False, draw_cross=False)
+# except Exception as e:
+#     print("Error plotting MNI space registration")
+#     print(e)
+
+# if tp_dir != source_dir:
+#     tp_figdir = "../"
+# else:
+#     tp_figdir = ""
 
 data = {
     'title': subject_id + ' ' + timepoint + ' Report',
@@ -498,16 +515,16 @@ data = {
     'Commit': 'Commit: ' + commit_hash,
     'Institute': 'Institute: ' + institute,
     'Machine': 'Machine: ' + manufacturer + ' ' + MR_machine_model + ' ' + str(field_strength) + 'T',
-    'ktrans': 'figures/ktrans.svg',
+    'ktrans': '../figures/ktrans.svg',
     'image_alt1': 'Missing image',
     'Dimensions': 'Dimensions: ' + str(dimensions),
     'Voxel_Size': 'Voxel Size: ' + str(voxel_size),
-    'Overlay': 'figures/overlay.svg',
-    'T1w': 'figures/t1w.svg',
-    'T1w_mask': 'figures/t1w_mask.svg',
-    'T1w_gm': 'figures/t1w_gm.svg',
-    'T1w_wm': 'figures/t1w_wm.svg',
-    'T1w_to_VFA': 'figures/t1w_to_vfa.svg',
+    'Overlay': '../figures/overlay.svg',
+    'T1w': '../figures/t1w.svg',
+    'T1w_mask': '../figures/t1w_mask.svg',
+    'T1w_gm': '../figures/t1w_gm.svg',
+    'T1w_wm': '../figures/t1w_wm.svg',
+    'T1w_to_DCEref': '../figures/t1w_to_dceref.svg',
     'T1_TR': 'TR: ' + str(TR) + 'ms',
     'T1_FAs': 'FAs: ' + FA_str,
     'T1_GPU': str(GPU_T1),
@@ -515,17 +532,18 @@ data = {
     'T1_wm_std': 'T1 wm std: ' + str(round(T1_wm_std, 4)),
     'T1_gm_median': 'T1 gm median: ' + str(round(T1_gm_median, 4)),
     'T1_gm_std': 'T1 gm std: ' + str(round(T1_gm_std, 4)),
-    'T1_map': 'figures/t1_map.svg',
-    'displacements' : 'figures/displacements.svg',
-    'AIF_mask': 'figures/DCE_mc_mask.svg',
+    'T1_map': '../figures/t1_map.svg',
+    'displacements' : '../figures/displacements.svg',
+    'AIF_mask': f'../figures/{prefix}_desc-AIF_mask.svg',
     'AIF_metric' : "AIFitness: " + str(aif_metric),
-    'AIF_curve': 'figures/DCE_mc_curve.svg',
-    'AIF_overlay': 'figures/AIF_overlay.svg',
-    'AIF_graph': 'figures/AIF_graph.svg',
-    't1w_bet_dyn' : 'figures/t1bet_to_dyn.svg',
-    't1w_wm_dyn' : 'figures/t1wm_to_dyn.svg',
-    't1w_gm_dyn' : 'figures/t1gm_to_dyn.svg',
-    'Z_DCE' : 'figures/DCE_mc_bfc_norm.svg',
+    'AIF_curve': f'../figures/{prefix}_desc-AIF_resampledcurve.svg',
+    'AIF_overlay': f'../figures/{prefix}_desc-AIF_overlay.svg',
+    'AIF_graph': f'../figures/{prefix}_desc-AIF_curve.svg',
+    't1w_dyn' : f'../figures/{prefix}_space-DCEref_T1w.svg',
+    't1w_bet_dyn' : '../figures/t1bet_to_dyn.svg',
+    't1w_wm_dyn' : '../figures/t1wm_to_dyn.svg',
+    't1w_gm_dyn' : '../figures/t1gm_to_dyn.svg',
+    'Z_DCE' : f'../figures/{prefix}_desc-bfcz_DCE.svg',
     'DCE_TR' : 'Repetition Time: ' + str(DCE_tr) + 's',
     'DCE_FA' : 'Flip Angle: ' + str(DCE_fa) + '°',
     'Hematocrit' : 'Hematocrit: ' + str(hematocrit),
@@ -537,33 +555,34 @@ data = {
     'R_squared_fit' : 'R squared of AIF fit (fitted): ' + str(r2_aif_fit),
     'R_squared_raw' : 'R squared of AIF fit (raw): ' + str(r2_raw_values),
     'B_last_line' : str(B_last_line),
-    'DCE_AIF_fit' : 'figures/dceAIF_fitting.png',
-    'DCE_AIF_timecurve' : 'figures/dce_timecurves.png',
+    'DCE_AIF_fit' : '../figures/dceAIF_fitting.png',
+    'DCE_AIF_timecurve' : '../figures/dce_timecurves.png',
     'DCE_model' : 'Model: Patlak',
     'GPU_DCE' : str(GPU_DCE),
     'DCE_elapsed_time' : 'Elapsed time: ' + str(dce_elapsed_time) + 's',
-    'ktrans_zeros' : 'figures/T1_Ktrans_zeros.png',
-    'ktrans_analysis' : 'figures/T1_Ktrans_analysis.png',
+    'ktrans_zeros' : f'../figures/{prefix}_desc-zeros.png',
+    'ktrans_analysis' : f'../figures/{prefix}_desc-analysis.png',
     'ktrans_wm_mean' : 'Mean wm Ktrans: ' + str(round(mean_wm, 4)),
     'ktrans_wm_median' : 'Median wm Ktrans: ' + str(round(ktrans_median_wm, 4)),
     'ktrans_wm_std' : 'Std wm Ktrans: ' + str(round(ktrans_std_wm, 4)),
     'ktrans_gm_mean' : 'Mean gm Ktrans: ' + str(round(mean_gm, 4)),
     'ktrans_gm_median' : 'Median gm Ktrans: ' + str(round(ktrans_median_gm, 4)),
     'ktrans_gm_std' : 'Std gm Ktrans: ' + str(round(ktrans_std_gm, 4)),
-    'MNI_img' : 'figures/MNI152_T1_1mm_brain.svg',
-    'MNI_T1w' : 'figures/t1w_MNI.svg',
-    'MNI_Ktrans' : 'figures/ktrans_MNI.svg',
+    'MNI_img' : '../figures/MNI152_T1_1mm_brain.svg',
+    'MNI_T1w' : '../figures/t1w_MNI.svg',
+    'MNI_Ktrans' : '../figures/ktrans_MNI.svg',
 }
 
 # insert VFAs into template
+flips = ['flip-01', 'flip-02', 'flip-03', 'flip-04', 'flip-05', 'flip-06', 'flip-07']
 for i in range(len(FAs)):
     data['FA_' + str(i+1)] = 'FA ' + str(FAs[i])
-    data['Z_' + str(i+1)] = 'figures/' + str(FAs[i]) + '_BFC_Z.svg'
+    data['Z_' + str(i+1)] = f'../figures/{prefix}_{flips[i]}_space-DCEref_desc-bfcz_VFA.svg'
 
 output = template.render(data)
 
 # write html to file
-with open(dir + '/case_report.html', 'w') as f:
+with open(f'reports/{prefix}_desc-casereport.html', 'w') as f:
     f.write(output)
 
-print('Report generated in ' + dir + '/case_report.html')
+print(f'Report generated in reports/{prefix}_desc-casereport.html')

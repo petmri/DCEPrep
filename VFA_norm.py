@@ -22,7 +22,8 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     dim = {0, 1, 2}
     mri = nib.load(mri_file1)
     white_matter = nib.load(wm_masked)
-    num = int(re.search(r'\d+', mri_file1.split('/')[-1]).group())
+    num = int(re.search(r'flip-(\d+)', mri_file1.split('/')[-1]).group(1))
+    num = f"{num:02d}"
     mri_data = mri.get_fdata()
     wm_data = white_matter.get_fdata()
     mri_shape = mri_data.shape
@@ -87,6 +88,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
             # check if slice is empty
             if area == 0:
                 # just get from next slice
+                print(i)
                 if i == slice_num - 1:
                     a = np.where(wm_data[:,:,i-1] > 0)
                     area = np.count_nonzero(wm_data[:,:,i-1][a])
@@ -120,11 +122,11 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
             plt.ylabel("Frequency")
 
             # make hist directory if it doesn't exist
-            hist_dir = file_dir + '/figures/hist'
+            hist_dir = file_dir + '/../figures/hist'
             Path(hist_dir).mkdir(parents=True, exist_ok=True)
 
             # Save the figure
-            path1 = file_dir + '/figures/hist/' + str(num) + '_' + str(i+1) + '_hist.png'
+            path1 = file_dir + '/../figures/hist/' + str(num) + '_' + str(i+1) + '_hist.png'
             plt.savefig(path1)
             plt.close()
 
@@ -217,9 +219,9 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     ax.legend()
 
     # if figures directory doesn't exist, create it
-    Path(file_dir + '/figures').mkdir(parents=True, exist_ok=True)
+    Path('figures').mkdir(parents=True, exist_ok=True)
 
-    path2 = file_dir + '/figures/' + str(num) +'_BFC_Z.svg'
+    path2 = 'figures/' + str(prefix) + '_flip-' + str(num) + '_space-DCEref_desc-bfcz_VFA.svg'
     plt.savefig(path2, bbox_inches='tight')
     plt.close()
 
@@ -240,15 +242,15 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     mri_final = np.transpose(mri_final, (x_index, y_index, z_index))
     mri_final = mri_final.astype(np.float32)
     final_img = nib.Nifti1Image(mri_final, mri.affine)
-    path3 = file_dir + '/' + str(num) + '_BFC_Z.nii'
+    path3 = file_dir + '/' + str(prefix) + '_flip-' + str(num) + '_space-DCEref_desc-bfcz_VFA.nii.gz'
     nib.save(final_img, path3)
 
 if __name__ == "__main__":
     dir = Path(sys.argv[1])     # takes timepoint directory as argument
+    prefix = sys.argv[2]
     files_in_dir = dir.iterdir()
-    file_list = [file for file in files_in_dir if re.search(r'\d+_bfc.nii.*', str(file))]
-    
+    file_list = [file for file in files_in_dir if re.search(r'.*flip-\d+_space-DCEref_desc-brain_VFA.nii.*', str(file))]
     num_processes = len(file_list)
 
     with multiprocessing.Pool(processes=num_processes) as pool:
-        pool.starmap(normalize, [(str(file), str(file).split('.', 1)[0] + '_wm.nii.gz', str(dir)) for file in file_list])
+        pool.starmap(normalize, [(str(file), str(file).split('_desc-brain', 1)[0] + '_seg-WM_VFA.nii.gz', str(dir)) for file in file_list])
