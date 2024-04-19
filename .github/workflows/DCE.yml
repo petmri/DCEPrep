@@ -52,10 +52,10 @@ jobs:
     #  uses: matlab-actions/setup-matlab@v1
         
     - name: Preprocess the data
-      run:  ./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA -b -Z -m -c
+      run:  ./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA/rawdata -b -Z -m -c
       
     - name: Run DCE
-      run:  ./DCE_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA -b
+      run:  ./DCE_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA
     
     - name: Output logs
       run:  |
