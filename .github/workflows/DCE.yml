@@ -55,7 +55,7 @@ jobs:
       run:  ./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA/rawdata -b -Z -m -c
       
     - name: Run DCE
-      run:  ./DCE_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA
+      run:  ./DCE_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA/rawdata -f
     
     - name: Output logs
       run:  |
