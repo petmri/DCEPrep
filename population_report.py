@@ -134,8 +134,8 @@ for subject_id in subjects:
                 #     print(file + " has a weak AIF curve with " + str(intensities[1]) + " and " + str(intensities[2]))
                 # if intensities[2] > intensities[1] or intensities[3] > intensities[2]+.5:
                 #     print(file + " has a delayed injection with " + str(intensities[1]) + " and " + str(intensities[2]) + " and " + str(intensities[3]))
-                if any(intensities[10:30] < 2):
-                    print(subject_id, timepoint, "has an intensity < 2")
+                # if any(intensities[10:30] < 2):
+                #     print(subject_id, timepoint, "has an intensity < 2")
                 # line up curve peaks
                 max_index = np.argmax(intensities)
                 intensities = np.roll(intensities, -max_index+2)
@@ -177,16 +177,16 @@ for subject_id in subjects:
                             AIFitness = float(AIFitness)
                             AIFitness = round(AIFitness, 4)
                             # population_AIFitness.append(round(float(AIFitness), 4))
-                            if float(AIFitness) > 130:
-                                print(subject_id + "_" + timepoint + " has an AIFitness of " + str(AIFitness) + "!")
-                        if wm_median > 5:
-                            if subject_id + "_" + timepoint not in wm_outliers:
-                                print(subject_id + "_" + timepoint + " has a wm_median of " + str(wm_median) + "!")
-                                wm_outliers.append(subject_id + "_" + timepoint)
-                        if gm_median > 5:
-                            if subject_id + "_" + timepoint not in gm_outliers:
-                                print(subject_id + "_" + timepoint + " has a gm_median of " + str(gm_median) + "!")
-                                gm_outliers.append(subject_id + "_" + timepoint)
+                        #     if float(AIFitness) > 130:
+                        #         print(subject_id + "_" + timepoint + " has an AIFitness of " + str(AIFitness) + "!")
+                        # if wm_median > 5:
+                        #     if subject_id + "_" + timepoint not in wm_outliers:
+                        #         print(subject_id + "_" + timepoint + " has a wm_median of " + str(wm_median) + "!")
+                        #         wm_outliers.append(subject_id + "_" + timepoint)
+                        # if gm_median > 5:
+                        #     if subject_id + "_" + timepoint not in gm_outliers:
+                        #         print(subject_id + "_" + timepoint + " has a gm_median of " + str(gm_median) + "!")
+                        #         gm_outliers.append(subject_id + "_" + timepoint)
             except Exception as e:
                 print("Error reading " + filename)
                 print(e)
@@ -198,6 +198,22 @@ for subject_id in subjects:
                 AIFitness = -1
                 # continue
 
+            A_log = os.path.join(dceprep_dir, subject_id, timepoint, "dce/A_dceR1info.log")
+            try:
+                with open(A_log, 'r') as f:
+                    for line in f:
+                        if "User selected TR (ms):" in line:
+                            TR = next(f).strip()
+                            TR = float(TR)
+                        if "User selected FA (degrees):" in line:
+                            flip_angle = next(f).strip()
+                            flip_angle = float(flip_angle)
+            except Exception as e:
+                print("Error reading " + A_log)
+                print(e)
+                TR = -1
+                flip_angle = -1
+            
             # read lines after "AIF mmol:"
             aif_mmol = []
             # B_log = os.path.join(dir, subject_id, timepoint, output_dir, "B_dcefitted_R1info.log")
@@ -205,6 +221,10 @@ for subject_id in subjects:
             try:
                 with open(B_log, 'r') as f:
                     for line in f:
+                        if "User selected time resolution (sec)" in line:
+                            # take next line as time resolution
+                            time_resolution = next(f).strip()
+                            time_resolution = float(time_resolution)
                         if "AIF mmol:" in line:
                             aif_mmol = f.readlines()
                             # find index of line after last numbers ("MAT results saved to: \n")
@@ -227,7 +247,6 @@ for subject_id in subjects:
                             aif_mmol = np.array(aif_mmol)
                             # take mean
                             aif_mmol = np.mean(aif_mmol)
-                            break
             except Exception as e:
                 print("Error reading " + B_log)
                 print(e)
@@ -268,12 +287,12 @@ for subject_id in subjects:
                         coil = data.get("CoilString", "json field error")
                     scan_options = data.get("ScanOptions", "json field error")
                     TE = data.get("EchoTime", "json field error")
-                    flip_angle = data.get("FlipAngle", "json field error")
+                    # flip_angle = data.get("FlipAngle", "json field error")
                     if "RepetitionTimeExcitation" in data:
-                        TR = data.get("RepetitionTimeExcitation", "json field error")
+                        # TR = data.get("RepetitionTimeExcitation", "json field error")
                         time_resolution = data.get("RepetitionTime", "json field error")
                     else:
-                        TR = data.get("RepetitionTime", "json field error")
+                        # TR = data.get("RepetitionTime", "json field error")
                         time_resolution = "not in header"
             except Exception as e:
                 print("Error reading " + json_file)
@@ -976,8 +995,8 @@ for entry in population_data.keys():
 plt.hist(T1_blood_histogram, bins=30)
 plt.title("T1 Blood")
 plt.xlabel("T1 Blood")
-# T1_blood_histogram_path = os.path.join("../figures/", output_dir + "T1_blood_histogram.png")
-T1_blood_histogram_path = os.path.join("../figures/", "T1_blood_histogram.png")
+# T1_blood_histogram_path = os.path.join("figures/", output_dir + "T1_blood_histogram.png")
+T1_blood_histogram_path = os.path.join("figures/", "T1_blood_histogram.png")
 plt.savefig(T1_blood_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -985,8 +1004,8 @@ plt.close()
 plt.hist(AIFitness_values, bins=30)
 plt.title("AIFitness Median")
 plt.xlabel("AIFitness")
-# aifitness_histogram_path = os.path.join("../figures/", output_dir + "aifitness_histogram.png")
-aifitness_histogram_path = os.path.join("../figures/", "aifitness_histogram.png")
+# aifitness_histogram_path = os.path.join("figures/", output_dir + "aifitness_histogram.png")
+aifitness_histogram_path = os.path.join("figures/", "aifitness_histogram.png")
 plt.savefig(aifitness_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -999,8 +1018,8 @@ for entry in population_data.keys():
 plt.hist(aif_mmol_histogram, bins=30)
 plt.title("AIF mmol (mean of last 1/3)")
 plt.xlabel("AIF mmol")
-# aif_mmol_histogram_path = os.path.join("../figures/", output_dir + "aif_mmol_histogram.png")
-aif_mmol_histogram_path = os.path.join("../figures/", "aif_mmol_histogram.png")
+# aif_mmol_histogram_path = os.path.join("figures/", output_dir + "aif_mmol_histogram.png")
+aif_mmol_histogram_path = os.path.join("figures/", "aif_mmol_histogram.png")
 plt.savefig(aif_mmol_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1013,8 +1032,8 @@ for entry in population_data.keys():
 plt.hist(wm_histogram, bins=50, range=(0, 5))
 plt.title("White Matter Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-# ktrans_wm_histogram_path = os.path.join("../figures/", output_dir + "wm_histogram.png")
-ktrans_wm_histogram_path = os.path.join("../figures/", "wm_histogram.png")
+# ktrans_wm_histogram_path = os.path.join("figures/", output_dir + "wm_histogram.png")
+ktrans_wm_histogram_path = os.path.join("figures/", "wm_histogram.png")
 plt.savefig(ktrans_wm_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1027,8 +1046,8 @@ for entry in population_data.keys():
 plt.hist(gm_histogram, bins=50, range=(0, 5))
 plt.title("Gray Matter Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-# ktrans_gm_histogram_path = os.path.join("../figures/", output_dir + "gm_histogram.png")
-ktrans_gm_histogram_path = os.path.join("../figures/", "gm_histogram.png")
+# ktrans_gm_histogram_path = os.path.join("figures/", output_dir + "gm_histogram.png")
+ktrans_gm_histogram_path = os.path.join("figures/", "gm_histogram.png")
 # save range of histogram for later use
 gm_histogram_range = plt.xlim()
 plt.savefig(ktrans_gm_histogram_path, bbox_inches='tight')
@@ -1044,8 +1063,8 @@ plt.fill_between(np.arange(0, len(avg_curve)), avg_curve - np.std(aif_curves, ax
 plt.xlabel('Time (s)')
 plt.ylabel('Normalized Intensity')
 plt.title('AIF Curves')
-# aif_avg_curve_path = os.path.join("../figures/", output_dir + "aif_avg_curve.png")
-aif_avg_curve_path = os.path.join("../figures/", "aif_avg_curve.png")
+# aif_avg_curve_path = os.path.join("figures/", output_dir + "aif_avg_curve.png")
+aif_avg_curve_path = os.path.join("figures/", "aif_avg_curve.png")
 plt.savefig(aif_avg_curve_path, bbox_inches='tight', dpi=300)  # Increase dpi for higher resolution
 plt.close()
 
@@ -1171,208 +1190,208 @@ for entry in population_data.keys():
 # plt.hist(rPhG_L_histogram, bins=50, range=(0, 5))
 # plt.title("Left Rostral Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# rPhG_L_histogram_path = os.path.join("../figures/", output_dir + "rPhG_L_histogram.png")
+# rPhG_L_histogram_path = os.path.join("figures/", output_dir + "rPhG_L_histogram.png")
 # plt.savefig(rPhG_L_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(rPhG_R_histogram, bins=50, range=(0, 5))
 # plt.title("Right Rostral Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# rPhG_R_histogram_path = os.path.join("../figures/", output_dir + "rPhG_R_histogram.png")
+# rPhG_R_histogram_path = os.path.join("figures/", output_dir + "rPhG_R_histogram.png")
 # plt.savefig(rPhG_R_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(cPhG_L_histogram, bins=50, range=(0, 5))
 # plt.title("Left Caudal Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# cPhG_L_histogram_path = os.path.join("../figures/", output_dir + "cPhG_L_histogram.png")
+# cPhG_L_histogram_path = os.path.join("figures/", output_dir + "cPhG_L_histogram.png")
 # plt.savefig(cPhG_L_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(cPhG_R_histogram, bins=50, range=(0, 5))
 # plt.title("Right Caudal Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# cPhG_R_histogram_path = os.path.join("../figures/", output_dir + "cPhG_R_histogram.png")
+# cPhG_R_histogram_path = os.path.join("figures/", output_dir + "cPhG_R_histogram.png")
 # plt.savefig(cPhG_R_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(lateral_PPHC_L_histogram, bins=50, range=(0, 5))
 # plt.title("Left Lateral Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# lateral_PPHC_L_histogram_path = os.path.join("../figures/", output_dir + "lateral_PPHC_L_histogram.png")
+# lateral_PPHC_L_histogram_path = os.path.join("figures/", output_dir + "lateral_PPHC_L_histogram.png")
 # plt.savefig(lateral_PPHC_L_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(lateral_PPHC_R_histogram, bins=50, range=(0, 5))
 # plt.title("Right Lateral Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# lateral_PPHC_R_histogram_path = os.path.join("../figures/", output_dir + "lateral_PPHC_R_histogram.png")
+# lateral_PPHC_R_histogram_path = os.path.join("figures/", output_dir + "lateral_PPHC_R_histogram.png")
 # plt.savefig(lateral_PPHC_R_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(ECPhG_L_histogram, bins=50, range=(0, 5))
 # plt.title("Left Entorhinal Cortex and Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# ECPhG_L_histogram_path = os.path.join("../figures/", output_dir + "ECPhG_L_histogram.png")
+# ECPhG_L_histogram_path = os.path.join("figures/", output_dir + "ECPhG_L_histogram.png")
 # plt.savefig(ECPhG_L_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(ECPhG_R_histogram, bins=50, range=(0, 5))
 # plt.title("Right Entorhinal Cortex and Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# ECPhG_R_histogram_path = os.path.join("../figures/", output_dir + "ECPhG_R_histogram.png")
+# ECPhG_R_histogram_path = os.path.join("figures/", output_dir + "ECPhG_R_histogram.png")
 # plt.savefig(ECPhG_R_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(TIPhG_L_histogram, bins=50, range=(0, 5))
 # plt.title("Left Temporal Inferior Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# TIPhG_L_histogram_path = os.path.join("../figures/", output_dir + "TIPhG_L_histogram.png")
+# TIPhG_L_histogram_path = os.path.join("figures/", output_dir + "TIPhG_L_histogram.png")
 # plt.savefig(TIPhG_L_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(TIPhG_R_histogram, bins=50, range=(0, 5))
 # plt.title("Right Temporal Inferior Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# TIPhG_R_histogram_path = os.path.join("../figures/", output_dir + "TIPhG_R_histogram.png")
+# TIPhG_R_histogram_path = os.path.join("figures/", output_dir + "TIPhG_R_histogram.png")
 # plt.savefig(TIPhG_R_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(THPhG_L_histogram, bins=50, range=(0, 5))
 # plt.title("Left Temporal Inferior Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# THPhG_L_histogram_path = os.path.join("../figures/", output_dir + "THPhG_L_histogram.png")
+# THPhG_L_histogram_path = os.path.join("figures/", output_dir + "THPhG_L_histogram.png")
 # plt.savefig(THPhG_L_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(THPhG_R_histogram, bins=50, range=(0, 5))
 # plt.title("Right Temporal Inferior Parahippocampal Gyrus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# THPhG_R_histogram_path = os.path.join("../figures/", output_dir + "THPhG_R_histogram.png")
+# THPhG_R_histogram_path = os.path.join("figures/", output_dir + "THPhG_R_histogram.png")
 # plt.savefig(THPhG_R_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(rHipp_L_histogram, bins=50, range=(0, 5))
 # plt.title("Left Rostral Hippocampus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# rHipp_L_histogram_path = os.path.join("../figures/", output_dir + "rHipp_L_histogram.png")
+# rHipp_L_histogram_path = os.path.join("figures/", output_dir + "rHipp_L_histogram.png")
 # plt.savefig(rHipp_L_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(rHipp_R_histogram, bins=50, range=(0, 5))
 # plt.title("Right Rostral Hippocampus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# rHipp_R_histogram_path = os.path.join("../figures/", output_dir + "rHipp_R_histogram.png")
+# rHipp_R_histogram_path = os.path.join("figures/", output_dir + "rHipp_R_histogram.png")
 # plt.savefig(rHipp_R_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(cHipp_L_histogram, bins=50, range=(0, 5))
 # plt.title("Left Caudal Hippocampus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# cHipp_L_histogram_path = os.path.join("../figures/", output_dir + "cHipp_L_histogram.png")
+# cHipp_L_histogram_path = os.path.join("figures/", output_dir + "cHipp_L_histogram.png")
 # plt.savefig(cHipp_L_histogram_path, bbox_inches='tight')
 # plt.close()
 
 # plt.hist(cHipp_R_histogram, bins=50, range=(0, 5))
 # plt.title("Right Caudal Hippocampus Median Ktrans")
 # plt.xlabel("Ktrans (10^-3/min)")
-# cHipp_R_histogram_path = os.path.join("../figures/", output_dir + "cHipp_R_histogram.png")
+# cHipp_R_histogram_path = os.path.join("figures/", output_dir + "cHipp_R_histogram.png")
 # plt.savefig(cHipp_R_histogram_path, bbox_inches='tight')
 # plt.close()
 
 plt.hist(whole_hippo_histogram, bins=50, range=(0, 5))
 plt.title("Whole Hippocampus Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_hippo_histogram_path = os.path.join("../figures/", output_dir + "whole_hippo_histogram.png")
-whole_hippo_histogram_path = os.path.join("../figures/", "whole_hippo_histogram.png")
+# whole_hippo_histogram_path = os.path.join("figures/", output_dir + "whole_hippo_histogram.png")
+whole_hippo_histogram_path = os.path.join("figures/", "whole_hippo_histogram.png")
 plt.savefig(whole_hippo_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_phg_histogram, bins=50, range=(0, 5))
 plt.title("Whole Parahippocampal Gyrus Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_phg_histogram_path = os.path.join("../figures/", output_dir + "whole_phg_histogram.png")
-whole_phg_histogram_path = os.path.join("../figures/", "whole_phg_histogram.png")
+# whole_phg_histogram_path = os.path.join("figures/", output_dir + "whole_phg_histogram.png")
+whole_phg_histogram_path = os.path.join("figures/", "whole_phg_histogram.png")
 plt.savefig(whole_phg_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_putamen_histogram, bins=50, range=(0, 5))
 plt.title("Whole Putamen Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_putamen_histogram_path = os.path.join("../figures/", output_dir + "whole_putamen_histogram.png")
-whole_putamen_histogram_path = os.path.join("../figures/", "whole_putamen_histogram.png")
+# whole_putamen_histogram_path = os.path.join("figures/", output_dir + "whole_putamen_histogram.png")
+whole_putamen_histogram_path = os.path.join("figures/", "whole_putamen_histogram.png")
 plt.savefig(whole_putamen_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_pallidum_histogram, bins=50, range=(0, 5))
 plt.title("Whole Pallidum Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_pallidum_histogram_path = os.path.join("../figures/", output_dir + "whole_pallidum_histogram.png")
-whole_pallidum_histogram_path = os.path.join("../figures/", "whole_pallidum_histogram.png")
+# whole_pallidum_histogram_path = os.path.join("figures/", output_dir + "whole_pallidum_histogram.png")
+whole_pallidum_histogram_path = os.path.join("figures/", "whole_pallidum_histogram.png")
 plt.savefig(whole_pallidum_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_thalamus_histogram, bins=50, range=(0, 5))
 plt.title("Whole Thalamus Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_thalamus_histogram_path = os.path.join("../figures/", output_dir + "whole_thalamus_histogram.png")
-whole_thalamus_histogram_path = os.path.join("../figures/", "whole_thalamus_histogram.png")
+# whole_thalamus_histogram_path = os.path.join("figures/", output_dir + "whole_thalamus_histogram.png")
+whole_thalamus_histogram_path = os.path.join("figures/", "whole_thalamus_histogram.png")
 plt.savefig(whole_thalamus_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_caudate_histogram, bins=50, range=(0, 5))
 plt.title("Whole Caudate Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_caudate_histogram_path = os.path.join("../figures/", output_dir + "whole_caudate_histogram.png")
-whole_caudate_histogram_path = os.path.join("../figures/", "whole_caudate_histogram.png")
+# whole_caudate_histogram_path = os.path.join("figures/", output_dir + "whole_caudate_histogram.png")
+whole_caudate_histogram_path = os.path.join("figures/", "whole_caudate_histogram.png")
 plt.savefig(whole_caudate_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_amygdala_histogram, bins=50, range=(0, 5))
 plt.title("Whole Amygdala Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_amygdala_histogram_path = os.path.join("../figures/", output_dir + "whole_amygdala_histogram.png")
-whole_amygdala_histogram_path = os.path.join("../figures/", "whole_amygdala_histogram.png")
+# whole_amygdala_histogram_path = os.path.join("figures/", output_dir + "whole_amygdala_histogram.png")
+whole_amygdala_histogram_path = os.path.join("figures/", "whole_amygdala_histogram.png")
 plt.savefig(whole_amygdala_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_entorhinal_cortex_histogram, bins=50, range=(0, 5))
 plt.title("Whole Entorhinal Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_entorhinal_cortex_histogram_path = os.path.join("../figures/", output_dir + "whole_entorhinal_cortex_histogram.png")
-whole_entorhinal_cortex_histogram_path = os.path.join("../figures/", "whole_entorhinal_cortex_histogram.png")
+# whole_entorhinal_cortex_histogram_path = os.path.join("figures/", output_dir + "whole_entorhinal_cortex_histogram.png")
+whole_entorhinal_cortex_histogram_path = os.path.join("figures/", "whole_entorhinal_cortex_histogram.png")
 plt.savefig(whole_entorhinal_cortex_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_fusiform_gyrus_cortex_histogram, bins=50, range=(0, 5))
 plt.title("Whole Fusiform Gyrus Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_fusiform_gyrus_cortex_histogram_path = os.path.join("../figures/", output_dir + "whole_fusiform_gyrus_cortex_histogram.png")
-whole_fusiform_gyrus_cortex_histogram_path = os.path.join("../figures/", "whole_fusiform_gyrus_cortex_histogram.png")
+# whole_fusiform_gyrus_cortex_histogram_path = os.path.join("figures/", output_dir + "whole_fusiform_gyrus_cortex_histogram.png")
+whole_fusiform_gyrus_cortex_histogram_path = os.path.join("figures/", "whole_fusiform_gyrus_cortex_histogram.png")
 plt.savefig(whole_fusiform_gyrus_cortex_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_fusiform_gyrus_WM_histogram, bins=50, range=(0, 5))
 plt.title("Whole Fusiform Gyrus WM Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_fusiform_gyrus_WM_histogram_path = os.path.join("../figures/", output_dir + "whole_fusiform_gyrus_WM_histogram.png")
-whole_fusiform_gyrus_WM_histogram_path = os.path.join("../figures/", "whole_fusiform_gyrus_WM_histogram.png")
+# whole_fusiform_gyrus_WM_histogram_path = os.path.join("figures/", output_dir + "whole_fusiform_gyrus_WM_histogram.png")
+whole_fusiform_gyrus_WM_histogram_path = os.path.join("figures/", "whole_fusiform_gyrus_WM_histogram.png")
 plt.savefig(whole_fusiform_gyrus_WM_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_insula_WM_histogram, bins=50, range=(0, 5))
 plt.title("Whole Insula WM Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_insula_WM_histogram_path = os.path.join("../figures/", output_dir + "whole_insula_WM_histogram.png")
-whole_insula_WM_histogram_path = os.path.join("../figures/", "whole_insula_WM_histogram.png")
+# whole_insula_WM_histogram_path = os.path.join("figures/", output_dir + "whole_insula_WM_histogram.png")
+whole_insula_WM_histogram_path = os.path.join("figures/", "whole_insula_WM_histogram.png")
 plt.savefig(whole_insula_WM_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_superior_temporal_cortex_histogram, bins=50, range=(0, 5))
 plt.title("Whole Superior Temporal Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_superior_temporal_cortex_histogram_path = os.path.join("../figures/", output_dir + "whole_superior_temporal_cortex_histogram.png")
-whole_superior_temporal_cortex_histogram_path = os.path.join("../figures/", "whole_superior_temporal_cortex_histogram.png")
+# whole_superior_temporal_cortex_histogram_path = os.path.join("figures/", output_dir + "whole_superior_temporal_cortex_histogram.png")
+whole_superior_temporal_cortex_histogram_path = os.path.join("figures/", "whole_superior_temporal_cortex_histogram.png")
 plt.savefig(whole_superior_temporal_cortex_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1472,7 +1491,7 @@ for case in successful_timepoints:
     if flag_str != "":
         flagged_cases.append(f'{case} ({flag_str})')
         flagged_links.append(save_name)
-print(flagged_cases, flagged_links)
+
 # read ROCKETSHIP preference file
 with open(ROCKETSHIP_dir + "/script_preferences.txt", "r") as f:
     lines = f.readlines()
@@ -1875,7 +1894,11 @@ pdf = canvas.Canvas(pdf_file, pagesize=letter)
 
 # Add images to the PDF
 for report in imgs:
-    add_image_to_pdf(pdf, report)
+    try:
+        add_image_to_pdf(pdf, report)
+    except Exception as e:
+        print(f"Error adding {report} to PDF.")
+        print(e)
 
 # Save the PDF to dir/reports
 pdf.save()

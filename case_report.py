@@ -108,7 +108,7 @@ if subject_id.endswith('_timepoint'):
 
 # get institute from DCE.json
 try:
-    with open(f"{source_dir}dce/{prefix}_DCE.json") as f:
+    with open(os.path.join(source_dir, 'dce', f'{prefix}_DCE.json')) as f:
         dce = json.load(f)
     institute = dce['InstitutionName']
     manufacturer = dce['Manufacturer']

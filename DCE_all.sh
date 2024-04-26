@@ -120,7 +120,7 @@ for der_dir in dceprep/sub-*/ses-*/; do
 			if [ $PURGE_INTERMEDIATES -eq 1 ] # && [ $COMPARISON_MODE -eq 1 ]
 				then
 				cd anat
-				rm -f !(${PREFIX}*bfczunified_VFA.nii|${PREFIX}_space-DCEref_T1map*|${PREFIX}*label-*_T1map*|*.mat|*wmparc.nii.gz)
+				rm -f !(${PREFIX}*bfczunified_VFA.nii|${PREFIX}_space-DCEref_T1map*|${PREFIX}*label-*_T1map*|*.mat|*wmparc.nii.gz|*space-DCEref_desc-brain_mask.nii.gz)
 				cd ../dce
 				rm -f !(${PREFIX}*Ktrans*|${PREFIX}*bfcz_DCE*|${PREFIX}*AIFincluded*|${PREFIX}*AIF_T1map*|figures|*.log|*.txt|*.par)
 			fi
@@ -139,7 +139,7 @@ for der_dir in dceprep/sub-*/ses-*/; do
 	# DCE
 	# ------------------------------
 	echo Begin DCE processing...
-	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; run_dce_auto('$SUBJECT_TP_PATH/'); exit;"
+	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; run_dce_auto('$SUBJECT_TP_PATH/', '$DATA_DIR/rawdata/$SUBJECT/$SESSION/'); exit;"
 	mv dce/dce_patlak_fit_Ktrans.nii dce/${PREFIX}_Ktrans.nii
 	mv dce/dce_patlak_fit_ktrans_ci_low.nii dce/${PREFIX}_Ktrans_ci_low.nii
 	mv dce/dce_patlak_fit_ktrans_ci_high.nii dce/${PREFIX}_Ktrans_ci_high.nii
