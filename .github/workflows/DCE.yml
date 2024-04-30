@@ -72,9 +72,9 @@ jobs:
       with:
         name: HTML_report
         path: |
-          /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.html
-          /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.pdf
-          /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/sub-1101743/ses-01/figures/
+          /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.html
+          /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.pdf
+          /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/figures/
         retention-days: 7
         if-no-files-found: error
 
