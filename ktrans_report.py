@@ -2,10 +2,7 @@ import json
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib.gridspec as gridspec
-from matplotlib.axes import _secondary_axes
-from matplotlib.animation import adjusted_figsize
 from matplotlib.pyplot import subplots_adjust
-from mpl_toolkits.axes_grid1 import ImageGrid
 import numpy as np
 import nibabel as nib
 from pathlib import Path

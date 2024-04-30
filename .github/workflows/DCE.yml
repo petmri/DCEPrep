@@ -59,8 +59,9 @@ jobs:
     
     - name: Output logs
       run:  |
-        cat /media/network_mriphysics/USC-PPG/RUNNER_DATA/preprocessing_log.txt
-        cat /media/network_mriphysics/USC-PPG/RUNNER_DATA/dce_log.txt
+        date=$(date +"%Y-%m-%d")
+        cat /media/network_mriphysics/USC-PPG/RUNNER_DATA/preprocessing_log_${date}.txt
+        cat /media/network_mriphysics/USC-PPG/RUNNER_DATA/dce_log_${date}.txt
 
     - name: Convert HTML to PDF
       run:  wkhtmltopdf --enable-local-file-access /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/case_report.html /media/network_mriphysics/USC-PPG/RUNNER_DATA/1101743_runner/1st_timepoint/case_report.pdf

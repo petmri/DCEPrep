@@ -1,11 +1,17 @@
+CairoSVG
+imageio
 Jinja2
 lmfit
 matplotlib
 nibabel
 nilearn
 numpy
+pandas
+Pillow
 Pillow
 pydicom
 PySimpleGUI
+PySimpleGUI
+reportlab
 scikit_learn
 scipy
