@@ -107,7 +107,7 @@ if [ -z "$DATA_DIR" ]
 fi
 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit || find / -name '*run_dce_auto.m' -printf '%h\n' -quit) # &> /dev/null
+	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_cli.m' -printf '%h\n' -quit || find / -name '*run_dce_cli.m' -printf '%h\n' -quit) # &> /dev/null
 	SCRIPT_PATH=$(dirname "$(realpath $0)")
 	GPUFIT_PATH=$(find $HOME -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit || find / -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit) # &> /dev/null
 	GPUFIT_M_PATH=$(find $HOME -name 'ModelID.m' -printf '%h\n' -quit || find / -name 'ModelID.m' -printf '%h\n' -quit)

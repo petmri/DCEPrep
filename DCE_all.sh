@@ -75,7 +75,7 @@ if [ -z "$DATA_DIR" ]
 		exit 1
 fi
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_auto.m' -printf '%h\n' -quit || find / -name '*run_dce_auto.m' -printf '%h\n' -quit) &> /dev/null
+	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_cli.m' -printf '%h\n' -quit || find / -name '*run_dce_cli.m' -printf '%h\n' -quit) &> /dev/null
 	SCRIPT_PATH=$(dirname "$(realpath $0)")
 	GPUFIT_PATH=$(find $HOME -name 'GpufitConstrainedMex.mexa64' -printf '%h\n' -quit || find / -name 'GpufitConstrainedMex.mexa64' -printf '%h\n' -quit)
 	GPUFIT_M_PATH=$(find $HOME -name 'ModelID.m' -printf '%h\n' -quit || find / -name 'ModelID.m' -printf '%h\n' -quit)
@@ -139,7 +139,7 @@ for der_dir in dceprep/sub-*/ses-*/; do
 	# DCE
 	# ------------------------------
 	echo Begin DCE processing...
-	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; run_dce_auto('$SUBJECT_TP_PATH/', '$DATA_DIR/rawdata/$SUBJECT/$SESSION/'); exit;"
+	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; run_dce_cli('$DATA_DIR/rawdata/$SUBJECT/$SESSION/', '$SUBJECT_TP_PATH/'); exit;"
 	mv dce/dce_patlak_fit_Ktrans.nii dce/${PREFIX}_Ktrans.nii
 	mv dce/dce_patlak_fit_ktrans_ci_low.nii dce/${PREFIX}_Ktrans_ci_low.nii
 	mv dce/dce_patlak_fit_ktrans_ci_high.nii dce/${PREFIX}_Ktrans_ci_high.nii
@@ -204,7 +204,8 @@ for der_dir in dceprep/sub-*/ses-*/; do
 		subj=$(echo $dir | rev | cut -d'/' -f2 | rev)
 
 		# run Freesurfer
-		# recon-all -s $DATA_DIR -i anat/${PREFIX}_T1w.nii.gz -sd $dir/freesurfer/$SUBJECT/$SESSION -all -parallel -openmp 8
+		recon-all -s $DATA_DIR -i anat/${PREFIX}_T1w.nii.gz -sd $dir/freesurfer/$SUBJECT/$SESSION -all -parallel -openmp 8
+
 		# get wm parcellation
 		mri_label2vol --seg $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc.mgz \
 			--temp $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/rawavg.mgz \
