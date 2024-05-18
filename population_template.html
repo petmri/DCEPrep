@@ -400,6 +400,22 @@
         <li>outliers (> 5): {{ whole_superior_temporal_cortex_outliers }}</li>
         <img src="{{ whole_superior_temporal_cortex_histogram }}" alt="missing whole superior temporal cortex histogram"/>
     </ul>
+    <h3 id="Post_cing_c">Posterior Cingulate Cortex</h3>
+    <ul>
+        <li>Whole posterior cingulate cortex mean median: {{ whole_posterior_cingulate_cortex_mean }}</li>
+        <li>Whole posterior cingulate cortex median median: {{ whole_posterior_cingulate_cortex_median }}</li>
+        <li>Whole posterior cingulate cortex stdev median: {{ whole_posterior_cingulate_cortex_std }}</li>
+        <li>outliers (> 5): {{ whole_posterior_cingulate_cortex_outliers }}</li>
+        <img src="{{ whole_posterior_cingulate_cortex_histogram }}" alt="missing whole posterior cingulate cortex histogram"/>
+    </ul>
+    <h3 id="Med_temp_c">Medial Temporal Cortex</h3>
+    <ul>
+        <li>Whole medial temporal cortex mean median: {{ whole_medial_temporal_cortex_mean }}</li>
+        <li>Whole medial temporal cortex median median: {{ whole_medial_temporal_cortex_median }}</li>
+        <li>Whole medial temporal cortex stdev median: {{ whole_medial_temporal_cortex_std }}</li>
+        <li>outliers (> 5): {{ whole_medial_temporal_cortex_outliers }}</li>
+        <img src="{{ whole_medial_temporal_cortex_histogram }}" alt="missing whole medial temporal cortex histogram"/>
+    </ul>
     <h2 id="Flagged">Flagged Cases (motion > {{ Motion_threshold }}mm, AIFitness < {{ AIFitness_threshold }})</h4>
     <li>
         {% for link, case in Flagged_combo %}

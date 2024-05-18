@@ -64,6 +64,8 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
 
     gaussian_params = []
     if GAUSSFIT:
+        startat = 0
+        endat = slice_num - 1
         # get histogram of each wm slice
         for i in range(slice_num):
             # print("SLICE: " + str(i + 1))
@@ -88,22 +90,26 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
             # check if slice is empty
             if area == 0:
                 # just get from next slice
-                print(i)
-                if i == slice_num - 1:
-                    a = np.where(wm_data[:,:,i-1] > 0)
-                    area = np.count_nonzero(wm_data[:,:,i-1][a])
-                    amp_guess = area / pstdev(wm_data[:,:,i-1][a]) * 0.3989 * bin_width
-                    params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i-1], sigma1=pstdev(wm_data[:,:,i-1][a]), A2=amp_guess, mu2=median(wm_data[:,:,i-1][a]), sigma2=pstdev(wm_data[:,:,i-1][a]))
-                else:
-                    a = np.where(wm_data[:,:,i+1] > 0)
-                    area = np.count_nonzero(wm_data[:,:,i+1][a])
-                    amp_guess = area / pstdev(wm_data[:,:,i+1][a]) * 0.3989 * bin_width
-                    params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i+1], sigma1=pstdev(wm_data[:,:,i+1][a]), A2=amp_guess, mu2=median(wm_data[:,:,i+1][a]), sigma2=pstdev(wm_data[:,:,i+1][a]))
+                # if i == slice_num - 1:
+                #     a = np.where(wm_data[:,:,i-1] > 0)
+                #     area = np.count_nonzero(wm_data[:,:,i-1][a])
+                #     amp_guess = area / pstdev(wm_data[:,:,i-1][a]) * 0.3989 * bin_width
+                #     params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i-1], sigma1=pstdev(wm_data[:,:,i-1][a]), A2=amp_guess, mu2=median(wm_data[:,:,i-1][a]), sigma2=pstdev(wm_data[:,:,i-1][a]))
+                # else:
+                #     a = np.where(wm_data[:,:,i+1] > 0)
+                #     area = np.count_nonzero(wm_data[:,:,i+1][a])
+                #     amp_guess = area / pstdev(wm_data[:,:,i+1][a]) * 0.3989 * bin_width
+                #     params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i+1], sigma1=pstdev(wm_data[:,:,i+1][a]), A2=amp_guess, mu2=median(wm_data[:,:,i+1][a]), sigma2=pstdev(wm_data[:,:,i+1][a]))
+                # omit slice if empty
+                if i == 0:
+                    startat = 1
+                elif i == slice_num - 1:
+                    endat = slice_num - 2
+                continue
             else:
                 amp_guess = area / pstdev(wm_data[:,:,i][a]) * 0.3989 * bin_width
                 params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i], sigma1=pstdev(wm_data[:,:,i][a]), A2=amp_guess, mu2=median(wm_data[:,:,i][a]), sigma2=pstdev(wm_data[:,:,i][a]))
-                        
-            params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i], sigma1=pstdev(wm_data[:,:,i][a]), A2=amp_guess, mu2=median(wm_data[:,:,i][a]), sigma2=pstdev(wm_data[:,:,i][a]))
+
             result = model.fit(hist, params, x=bins[:-1])
             # print(result.fit_report())
             # print(result.best_values)
@@ -133,8 +139,8 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
 
         # apply normalizations
         print("Using Gaussian fitting to normalize FA " + str(num))
-        mu = []
-        for i in range(slice_num):
+        mu = [0 for i in range(slice_num)]
+        for i in range(startat, endat):
             # max(gaussian_params[i][0], gaussian_params[i][3])
             # if gaussian_params[i][0] > gaussian_params[i][3] and gaussian_params[i][1] > 0 and gaussian_params[i][1] < 1000:# and abs(gaussian_params[i][1] - wm_mean[i]) < abs(gaussian_params[i][4] - wm_mean[i]):
             #     mu.append(gaussian_params[i][1])
@@ -142,9 +148,9 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
             #     mu.append(gaussian_params[i][4])
             
             if gaussian_params[i]['A1'] > gaussian_params[i]['A2'] and gaussian_params[i]['mu1'] > 0 and gaussian_params[i]['mu1'] > gaussian_params[i]['mu2'] and gaussian_params[i]['mu1'] < 1500:
-                mu.append(gaussian_params[i]['mu1'])
+                mu[i] = gaussian_params[i]['mu1']
             else:
-                mu.append(gaussian_params[i]['mu2'])
+                mu[i] = gaussian_params[i]['mu2']
 
             print("mu " + str(mu[i]))
             print("SLICE: " + str(i + 1))
@@ -155,6 +161,8 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
         mean_mu = mean(mu)
         # print("mean_mu: " + str(mean_mu))
         for i in range(slice_num):
+            if mu[i] == 0:
+                continue
             scale_factor = mean_mu / mu[i]
             mri_final[:, :, i] *= scale_factor
             wm_final[:, :, i] *= scale_factor
@@ -241,6 +249,8 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
 
     mri_final = np.transpose(mri_final, (x_index, y_index, z_index))
     mri_final = mri_final.astype(np.float32)
+    # cut off z-slices where mu is 0
+    # mri_final = mri_final[:, :, startat:endat]
     final_img = nib.Nifti1Image(mri_final, mri.affine)
     path3 = file_dir + '/' + str(prefix) + '_flip-' + str(num) + '_space-DCEref_desc-bfcz_VFA.nii.gz'
     nib.save(final_img, path3)

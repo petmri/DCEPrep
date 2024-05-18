@@ -18,9 +18,10 @@ prefix = sys.argv[2]
 #     source_dir = source_dir[:-1]
 
 files_to_reorient = [f'anat/{prefix}_flip-01_space-DCEref_VFA.nii.gz', f'dce/{prefix}_Ktrans.nii',
-                     f'anat/{prefix}_space-DCEref_T1w.nii.gz',
-                     f'anat/{prefix}_space-DCEref_label-WM_mask.nii.gz', f'anat/{prefix}_space-DCEref_T1map.nii',
-                     f'anat/{prefix}_space-DCEref_desc-brain_mask.nii.gz', f'anat/{prefix}_space-DCEref_label-GM_mask.nii.gz']
+                     f'anat/{prefix}_space-DCEref_T1w.nii.gz', f'anat/{prefix}_space-DCEref_label-WM_mask.nii.gz',
+                     f'anat/{prefix}_space-DCEref_T1map.nii', f'anat/{prefix}_space-DCEref_desc-brain_mask.nii.gz',
+                     f'anat/{prefix}_space-DCEref_label-GM_mask.nii.gz', f'anat/{prefix}_space-DCEref_desc-wmparc.nii.gz',
+                     f'dce/{prefix}_desc-hmc_DCEref.nii.gz']
 # if c3d exists, reorient files to RAS
 dimensions = 0
 voxel_size = 0
@@ -128,9 +129,9 @@ try:
     plotting.plot_roi(f'anat/{prefix}_desc-brain_mask.nii.gz', bg_img=f'{source_dir}/anat/{prefix}_T1w.nii.gz', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=-1, cmap='gray', output_file='figures/t1w_mask.svg', colorbar=False, draw_cross=False, title='mask')
 
     # T1w segmentation
-    plotting.plot_anat(f'{source_dir}/anat/{prefix}_T1w.nii.gz', cmap='gray', output_file='figures/t1w.svg', cut_coords=(-20, 0, -15), dim=-1, colorbar=False, draw_cross=False)
-    plotting.plot_roi(f'anat/{prefix}_label-WM_mask.nii.gz', bg_img=f'{source_dir}/anat/{prefix}_T1w.nii.gz', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=0, cmap='gray', output_file='figures/t1w_wm.svg', colorbar=False, draw_cross=False, title='wm')
-    plotting.plot_roi(f'anat/{prefix}_label-GM_mask.nii.gz', bg_img=f'{source_dir}/anat/{prefix}_T1w.nii.gz', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=0, cmap='gray', output_file='figures/t1w_gm.svg', colorbar=False, draw_cross=False, title='gm')
+    plotting.plot_roi(f'{source_dir}/anat/{prefix}_T1w.nii.gz', bg_img=f'{source_dir}/anat/{prefix}_T1w.nii.gz', cmap='gray', output_file='figures/t1w.svg', cut_coords=(-20, 0, -15), dim=-1, colorbar=False, draw_cross=False)
+    plotting.plot_roi(f'anat/{prefix}_label-WM_mask.nii.gz', bg_img=f'{source_dir}/anat/{prefix}_T1w.nii.gz', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=-1, cmap='gray', output_file='figures/t1w_wm.svg', colorbar=False, draw_cross=False, title='wm')
+    plotting.plot_roi(f'anat/{prefix}_label-GM_mask.nii.gz', bg_img=f'{source_dir}/anat/{prefix}_T1w.nii.gz', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=-1, cmap='gray', output_file='figures/t1w_gm.svg', colorbar=False, draw_cross=False, title='gm')
 except Exception as e:
     print("Error plotting T1w segmentation")
     print(e)
@@ -336,6 +337,28 @@ plt.close()
 #     # print error
 #     print(e)
 
+# wmparc overlay on DCE
+wmparc = nib.load(f'anat/{prefix}_space-DCEref_desc-wmparc_RAS.nii.gz')
+wmparc_data = wmparc.get_fdata()
+wmparc_flipped = np.flip(wmparc_data, axis=1)
+wmparc_flipped = nib.Nifti1Image(wmparc_flipped, wmparc.affine, wmparc.header)
+
+dce = nib.load(f'dce/{prefix}_desc-hmc_DCEref_RAS.nii.gz')
+dce_data = dce.get_fdata()
+dce_flipped = np.flip(dce_data, axis=1)
+dce_flipped = nib.Nifti1Image(dce_flipped, dce.affine, dce.header)
+
+# overlay wmparc on DCE
+plt.figure(figsize=(15,5), dpi=250)
+plt.subplot(1,2,1)
+plt.axis('off')
+# rotate images
+# wmparc_data = np.rot90(wmparc_data, axes=(0,1))
+
+# overlay wmparc mask on DCE per region
+plotting.plot_roi(dce_flipped, bg_img=dce_flipped, output_file=f'figures/{prefix}_desc-hmc_DCEref.svg', display_mode='z', cut_coords=range(-140, -110, 10), vmin=0, vmax=1000, dim=-1.55, annotate=False, colorbar=False, draw_cross=False, title='DCE', alpha=0)
+plotting.plot_roi(wmparc_flipped, bg_img=dce_flipped, output_file='figures/wmparc_overlay.svg', display_mode='z', cut_coords=range(-140, -110, 10), cmap='tab20', dim=-1.55, annotate=False, colorbar=False, draw_cross=False, title='wmparc overlay', alpha=0.7)
+
 # T1 dynamic space
 
 # get DCE parameters
@@ -524,7 +547,7 @@ data = {
     'T1w_mask': '../figures/t1w_mask.svg',
     'T1w_gm': '../figures/t1w_gm.svg',
     'T1w_wm': '../figures/t1w_wm.svg',
-    'T1w_to_DCEref': '../figures/t1w_to_dceref.svg',
+    'T1w_to_DCEref': f'../figures/{prefix}_space-DCEref_T1w.svg',
     'T1_TR': 'TR: ' + str(TR) + 'ms',
     'T1_FAs': 'FAs: ' + FA_str,
     'T1_GPU': str(GPU_T1),
@@ -539,6 +562,8 @@ data = {
     'AIF_curve': f'../figures/{prefix}_desc-AIF_resampledcurve.svg',
     'AIF_overlay': f'../figures/{prefix}_desc-AIF_overlay.svg',
     'AIF_graph': f'../figures/{prefix}_desc-AIF_curve.svg',
+    'DCEref': f'../figures/{prefix}_desc-hmc_DCEref.svg',
+    'wmparc_overlay': f'../figures/wmparc_overlay.svg',
     't1w_dyn' : f'../figures/{prefix}_space-DCEref_T1w.svg',
     't1w_bet_dyn' : '../figures/t1bet_to_dyn.svg',
     't1w_wm_dyn' : '../figures/t1wm_to_dyn.svg',

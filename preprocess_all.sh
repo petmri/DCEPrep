@@ -10,7 +10,9 @@ EN_BIAS2=0
 EN_MOTION_CORR=0
 T1_ONLY=0
 USE_AUTO_AIF=0
+AIF_SUFFIX="desc-AIF_mask"
 SKIP_IF_SUCCESS=0
+SCRIPT_LOOP_DIRS=sub-*/ses-*
 
 # internal vars (don't change)
 fail=0
@@ -24,8 +26,11 @@ prog=0
 successes=0
 
 # options
-while getopts ":d:bBAZfhcC::mstl::" options; do
+while getopts ":d:bBa:AZfhcC:mstl:S:" options; do
 	case "${options}" in
+		a)
+			AIF_SUFFIX=${OPTARG}
+			;;
 		A)
 			USE_AUTO_AIF=1
 			;;
@@ -65,6 +70,7 @@ while getopts ":d:bBAZfhcC::mstl::" options; do
 		h)
 			echo "This script runs through all subject folders of a specified main data directory, preprocessing every folder ending in '_timepoint'."
 			echo "The output is the DCE input, which are the corrected dynamic images, brain mask, T1 maps."
+			echo "-a: specify AIF suffix (default is 'desc-AIF_mask'). .nii.gz will be appended to the suffix."
 			echo "-A: enable AutoAIF"
 			echo "-b: enable first round of bias field corrections"
 			echo "-B: enable second round of bias field corrections, post-Z-norm if enabled"
@@ -74,6 +80,7 @@ while getopts ":d:bBAZfhcC::mstl::" options; do
 			echo "-h: display this message"
 			echo "-m: enable motion correction"
 			echo "-s: skip preprocessing if DCE input file already exists"
+			echo "-S [dir_path]: specify the subject(s)/session(s) to run (default is 'sub-*/ses-*/')"
 			echo "-t: only run up to T1 mapping"
 			echo "-Z: enable Z-slice normalization"
 			exit 0
@@ -86,6 +93,9 @@ while getopts ":d:bBAZfhcC::mstl::" options; do
 			;;
 		s)
 			SKIP_IF_SUCCESS=1
+			;;
+		S)
+			SCRIPT_LOOP_DIRS=${OPTARG}
 			;;
 		t)
 			T1_ONLY=1
@@ -119,13 +129,15 @@ fi
 echo "SCRIPT_PATH: $SCRIPT_PATH"
 cd $DATA_DIR || exit 1
 # count timepoints
-for source_dir in */ses-*/; do
+for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	((count++))
 done
 # Run bias correction on VFA data
 # ------------------------------
-for source_dir in sub-*/ses-*/; do
-	source_dir=$DATA_DIR/${source_dir::-1}
+for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
+	if [ ${source_dir::-1} == "/" ]; then
+		source_dir=$DATA_DIR/${source_dir::-1}
+	fi
 	date >> $LOG_FILE
 	echo "Preprocessing ${source_dir}..."
 	((current++))
@@ -150,7 +162,8 @@ for source_dir in sub-*/ses-*/; do
 
 	if [ $SKIP_IF_SUCCESS -eq 1 ]
 		then
-		if [ -f "dce/${PREFIX}_desc-bfcz_DCE.nii.gz" ] || [ -f "$DERIV_DIR/reports/$SUBJECT/$SESSION/case_report.html" ]
+		if [ -f "dce/${PREFIX}_desc-bfcz_DCE.nii.gz" ] && [ -f "anat/${PREFIX}_space-DCEref_desc-brain_mask.nii.gz" ] && \
+			[ -f "dce/${PREFIX}_desc-AIF_T1map.nii.gz" ] && [ -f "anat/${PREFIX}_space-DCEref_T1map.nii" ] # || [ -f "$DERIV_DIR/reports/$SUBJECT/$SESSION/case_report.html" ]
 			then
 			echo "Skipping ${source_dir} because it has already been processed." >> $LOG_FILE
 			let successes++
@@ -160,12 +173,12 @@ for source_dir in sub-*/ses-*/; do
 	fi
 
 	# get list of VFAs
-	VFA_LIST=($(ls -1 $source_dir/anat/*.nii* | grep -v "$source_dir/anat/*T1w.nii*" | grep -v "$source_dir/dce/*aif.nii*"))
+	VFA_LIST=($(ls $source_dir/anat/*.nii* | grep -v "$source_dir/anat/*T1w.nii*" | grep -v "$source_dir/dce/*aif.nii*"))
 	# sort VFAs
 	VFA_LIST=($(printf '%s\n' "${VFA_LIST[@]}" | grep -o -E 'flip-[0-9]+' | sort -n))
 	echo "Found ${#VFA_LIST[@]} VFAs: ${VFA_LIST[@]}"
 	VFA_NUMS=($(printf '%s\n' "${VFA_LIST[@]}" | grep -o -E 'flip-[0-9]+' | grep -o -E '[0-9]+'))
-	# error if no VFAs found
+
 	if [ ${#VFA_LIST[@]} -eq 0 ]
 		then
 		echo "$source_dir No VFAs found! Skipping timepoint..." >> $LOG_FILE
@@ -183,15 +196,19 @@ for source_dir in sub-*/ses-*/; do
 		cd $DATA_DIR
 		continue
 	fi
-	
+
 	if [ $clean -eq 1 ]
 		then
-		echo Cleaning folder...
+		echo Cleaning folder... $PWD
         # rm -f !(2.nii|5.nii|10.nii|12.nii|15.nii|DCE.nii|aif.nii|T1w.nii|*.json)
 		# remove all files except for the VFA list, DCE, AIF, T1, and json files
 		# rm -dfr !([0-9]*.nii|DCE.nii.gz|aif.nii|T1w.nii|*.json)
+		rm -rf anat figures reports
+		cd dce
+		rm -f !(${PREFIX}_${AIF_SUFFIX}.nii.gz)
 		# rm -f $source_dir/!([0-9]*.nii|DCE.nii.gz|aif.nii|T1w.nii|*.json)
 		# rm -f $source_dir/*BFC*
+		cd $SUBJECT_TP_PATH
     fi
 	
 	# HD-BET brain extraction & segmentations from MP-RAGE
@@ -290,6 +307,55 @@ for source_dir in sub-*/ses-*/; do
 	# make array of VFA dynamic images
 	VFA_DYN_LIST=($(ls -1 anat/${PREFIX}_flip-*.nii*))
 	VFA_DYN_LIST=($(printf '%s\n' "${VFA_DYN_LIST[@]}" | grep -o -E 'flip-[0-9]+*'| sort -n | uniq))
+
+	# logic for dealing with empty slices due to registration
+	# check slices of each VFA, discard empty slices from ALL images
+	for VFA in "${VFA_DYN_LIST[@]}"; do
+		fslslice anat/${PREFIX}_${VFA}_${REF_SPACE}_VFA.nii.gz anat/${PREFIX}_${VFA}_${REF_SPACE}_VFA
+	done
+	# check if any slices are empty
+	EMPTY_SLICES=0
+	problem_slice=0
+	for slice in $(ls -1 anat/${PREFIX}_${VFA}_${REF_SPACE}_VFA*.nii*); do
+		if [ $(fslstats $slice -V | awk '{print $1}') -lt 100 ]
+			then
+			rm $slice
+			# remove corresponding slice from all VFAs
+			slice=$(echo $slice | grep -o -E '_[0-9]+.nii' | grep -o -E '[0-9]+')
+			rm anat/${PREFIX}_flip-*_${REF_SPACE}_VFA_slice_$slice.nii*
+			problem_slice=$slice
+			EMPTY_SLICES=1
+			echo "Removing empty slice $slice from all images" >> $LOG_FILE
+		fi
+	done
+	if [ $EMPTY_SLICES -eq 1 ]
+		then
+		anat_files=$(ls anat/*${REF_SPACE}*.nii* | grep -v "slice")
+		echo $anat_files
+		for registered_img in $anat_files; do
+			echo "Re-merging $registered_img"
+			reg_img_no_ext=${registered_img%.nii*}
+			reg_img_no_ext=${reg_img_no_ext%_slice_*}
+			fslslice $registered_img $reg_img_no_ext
+			rm ${reg_img_no_ext}_slice_$problem_slice.nii*
+			fslmerge -z $registered_img ${reg_img_no_ext}_slice_*.nii* # &> /dev/null
+		done
+		dce_files=$(ls dce/*.nii* | grep -v "slice" | grep -v ".par")
+		for img in $dce_files; do
+			img_no_ext=${img%.nii*}
+			img_no_ext=${img_no_ext%_slice_*}
+			fslslice $img $img_no_ext
+			rm ${img_no_ext}_slice_$problem_slice.nii*
+			fslmerge -z $img ${img_no_ext}_slice_*.nii* # &> /dev/null
+		done
+		# re-merge VFAs
+		for VFA in "${VFA_DYN_LIST[@]}"; do
+			fslmerge -z anat/${PREFIX}_${VFA}_${REF_SPACE}_VFA.nii.gz anat/${PREFIX}_${VFA}_${REF_SPACE}_VFA_slice_*.nii* # &> /dev/null
+		done
+		rm anat/*slice_*.nii* dce/*slice_*.nii*
+	else
+		rm anat/*slice_*.nii*
+	fi
 
 	if [ ! -f anat/${PREFIX}_label-WM_mask.nii.gz ]
 		then
@@ -488,7 +554,7 @@ for source_dir in sub-*/ses-*/; do
 	echo -ne "FAST DCE REP 1 [========================>                         ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
 	mkdir -p figures # &> /dev/null
-	if [ $USE_AUTO_AIF -eq 1 ]
+	if [ $USE_AUTO_AIF -eq 1 ] && [ ! -f "dce/${PREFIX}_${AIF_SUFFIX}.nii.gz" ]
 		then
 		# find AutoAIF path
 		AUTO_AIF_PATH=$(find $HOME -name '*main_vif.py' -printf '%h\n' -quit || find / -name '*main_vif.py' -printf '%h\n' -quit) # &> /dev/null
@@ -506,6 +572,9 @@ for source_dir in sub-*/ses-*/; do
 		# fslmaths aif_floats.nii -thr 0.95 aif_mask.nii
 		fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_desc-AIFtopvoxels_mask.nii dce/${PREFIX}_desc-AIF_T1map.nii
 		# gunzip -f aif.nii.gz
+	else
+		# use manual AIF
+		fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_${AIF_SUFFIX}.nii.gz dce/${PREFIX}_desc-AIF_T1map.nii.gz
 	fi
 	# ensure AIF is included in mask
 	# fslcpgeom 2.nii T1_bet_mask_dyn.nii.gz

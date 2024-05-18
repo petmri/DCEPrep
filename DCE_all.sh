@@ -12,10 +12,11 @@ SKIP_IF_SUCCESS=0
 USE_FREESURFER=0
 PURGE_INTERMEDIATES=0
 GIGA_PURGE=0
+SCRIPT_LOOP_DIR=dceprep/sub-*/ses-*
 shopt -s extglob
 
 # options
-while getopts ":d:C::fhl::s" options; do
+while getopts ":d:C:fhl:sS:" options; do
 	case "${options}" in
 		b)
 			EN_BIAS1=1
@@ -54,6 +55,7 @@ while getopts ":d:C::fhl::s" options; do
 			echo "-h: display this message"
 			echo "-l: specify a list of subjects to process (filename only, place in code folder)"
 			echo "-s: skip subjects that have already been processed"
+			echo "-S [dir_path]: specify the subject(s)/session(s) to run (default is 'sub-*/ses-*/')"
 			exit 0
 			;;
 		l)
@@ -61,6 +63,9 @@ while getopts ":d:C::fhl::s" options; do
 			;;
 		s)
 			SKIP_IF_SUCCESS=1
+			;;
+		S)
+			SCRIPT_LOOP_DIR=dceprep/$OPTARG
 			;;
 		*)
 			echo "Invalid option ${OPTARG}. Please use -h for a list of valid options."
@@ -92,7 +97,7 @@ cd $DERIV_DIR || exit 1
 # 	SUBJECT=sub-$(echo $line | awk '{print $1}')
 # 	echo $SUBJECT
 # 	SESSION=$(echo $line | awk '{print $3}')
-for der_dir in dceprep/sub-*/ses-*/; do
+for der_dir in $SCRIPT_LOOP_DIR; do
 	# dir=$DATA_DIR/${dir::-1}
 	# der_dir=dceprep/$SUBJECT/$SESSION
 	dir=$der_dir
@@ -204,7 +209,11 @@ for der_dir in dceprep/sub-*/ses-*/; do
 		subj=$(echo $dir | rev | cut -d'/' -f2 | rev)
 
 		# run Freesurfer
-		recon-all -s $DATA_DIR -i anat/${PREFIX}_T1w.nii.gz -sd $dir/freesurfer/$SUBJECT/$SESSION -all -parallel -openmp 8
+		# if [ ! -f $dir/freesurfer/$SUBJECT/$SESSION/mri/wmparc.mgz ]
+		# 	then
+		# 	mkdir -p $dir/freesurfer/$SUBJECT/$SESSION
+		# 	recon-all -s $DATA_DIR -i anat/${PREFIX}_T1w.nii.gz -sd $dir/freesurfer/$SUBJECT/$SESSION -all -parallel -openmp 8
+		# fi
 
 		# get wm parcellation
 		mri_label2vol --seg $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc.mgz \
@@ -238,8 +247,8 @@ for der_dir in dceprep/sub-*/ses-*/; do
 		# flirt -in dce_patlak_fit_Ktrans.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out ktrans_2_MNI.nii.gz -init DCE2MNI.mat -applyxfm
 	fi
 	mkdir reports &> /dev/null
-	python3 $SCRIPT_PATH/ktrans_report.py $DATA_DIR/$SUBJECT/$SESSION $PREFIX
 	python3 $SCRIPT_PATH/case_report.py $DATA_DIR/$SUBJECT/$SESSION $PREFIX
+	python3 $SCRIPT_PATH/ktrans_report.py $DATA_DIR/$SUBJECT/$SESSION $PREFIX
 	if [ $PURGE_INTERMEDIATES -eq 1 ]
 		then
 		# rm -f !(Ktrans_*|T1_gm*|T1_wm*|T1_csf*|*_patlak_fit*.nii|case_report.html|*_MNI.nii.gz|*fit_VFA.nii|figures|dce*.png|*.log)

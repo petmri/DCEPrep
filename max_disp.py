@@ -22,7 +22,7 @@ vector_max_disp = np.zeros(64)
 # for i in range(64):
 #     vector_max_disp[i] = np.linalg.norm(mc_params[i], axis=0)
 # vector_max_disp = np.abs(vector_max_disp).max()
-for i in range(64):
+for i in range(len(mc_params[:,0])):
     vector_max_disp = sqrt((mc_params[i,3]+mc_params[i,0])**2 + (mc_params[i,4]+mc_params[i,1])**2 + (mc_params[i,5]+mc_params[i,2])**2)
 vector_max_disp = np.abs(vector_max_disp).max()
 vector_max_disp_i = np.abs(mc_params).argmax(axis=0)[param_num]+1
