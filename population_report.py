@@ -169,11 +169,11 @@ for subject_id in subjects:
                             T1_blood = float(line.split(":")[-1].strip()[:-6])
                         if "Median wm Ktrans" in line:
                             # wm_mean = float(lines[i].split(':')[1][:-6])
-                            wm_median = float(lines[i].split()[-1][:-6])
+                            wm_median = float(line.split()[-1][:-5])
                             # wm_std = float(lines[i + 1].split(':')[-1][:-6])
                         if "Median gm Ktrans" in line:
                             # gm_mean = float(lines[i].split(':')[1][:-6])
-                            gm_median = float(lines[i].split()[-1][:-6])
+                            gm_median = float(line.split()[-1][:-5])
                             # gm_std = float(lines[i + 1].split(':')[-1][:-6])
                         # read aif metric from html file
                         if "AIFitness" in line:
