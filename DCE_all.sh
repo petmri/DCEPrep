@@ -1,7 +1,6 @@
 #!/bin/bash
-# Oct 13, 2022
-# FSL, AFNI, Matlab, ROCKETSHIP + parametric_scripts, ANTS, and Python are required
-# Within parametric_scripts should be a custom scripts folder with T1mapping_fit.m
+# FSL, Matlab, ROCKETSHIP + parametric_scripts, ANTS, and Python are required
+# Within ROCKETSHIP/parametric_scripts should be a custom scripts folder with T1mapping_fit.m
 # control variables
 COMPARISON_MODE=0
 EN_BIAS1=0
@@ -112,7 +111,24 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	if [ $COMPARISON_MODE -eq 1 ]
 		then
 		echo "Comparison mode enabled. Processing in $OUTPUT_DIR..." >> $LOG_FILE
-		cd "$OUTPUT_DIR" || echo "ERROR: $OUTPUT_DIR does not exist. Preprocess first or check the name and try again." >> $LOG_FILE
+		if [ ! -d $DERIV_DIR/dceprep-"$OUTPUT_DIR"/$SUBJECT/$SESSION ]
+			then
+			mkdir -p $DERIV_DIR/dceprep-"$OUTPUT_DIR"/$SUBJECT/$SESSION
+			mkdir -p $DERIV_DIR/dceprep-"$OUTPUT_DIR"/$SUBJECT/$SESSION/dce
+			mkdir -p $DERIV_DIR/dceprep-"$OUTPUT_DIR"/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/*bfcz* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
+			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/*desc-AIF*_T1map* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
+			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/*hmc* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
+			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/*.txt $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
+			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/anat/*_T1map* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/anat/*mask* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/anat/*.mat $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/anat/*wmparc* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/anat/*DCEref_VFA* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/anat/*DCEref_T1w* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/figures $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/figures
+		fi
+		cd $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION || echo "ERROR: $OUTPUT_DIR does not exist. Preprocess first or check the name and try again." >> $LOG_FILE
 	fi
 	SUBJECT_TP_PATH=$(pwd)
 
@@ -135,7 +151,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	fi
 	if [ ! -f "dce/${PREFIX}_desc-bfcz_DCE.nii.gz" ] && [ ! -f "dce/${PREFIX}_desc-bfcz_DCE.nii" ]
 		then
-		echo Missing input file dce/${PREFIX}_desc-bfcz_DCE.nii. Make sure the data has been preprocessed. Skipping $dir... >> $LOG_FILE
+		echo Missing input file dce/${PREFIX}_desc-bfcz_DCE. Make sure the data has been preprocessed. Skipping $dir... >> $LOG_FILE
 		cd $DERIV_DIR
 		fail=1
 		continue
@@ -144,7 +160,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	# DCE
 	# ------------------------------
 	echo Begin DCE processing...
-	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; run_dce_cli('$DATA_DIR/rawdata/$SUBJECT/$SESSION/', '$SUBJECT_TP_PATH/'); exit;"
+	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; run_dce_cli('$DATA_DIR/$SUBJECT/$SESSION/', '$SUBJECT_TP_PATH/'); exit;"
 	mv dce/dce_patlak_fit_Ktrans.nii dce/${PREFIX}_Ktrans.nii
 	mv dce/dce_patlak_fit_ktrans_ci_low.nii dce/${PREFIX}_Ktrans_ci_low.nii
 	mv dce/dce_patlak_fit_ktrans_ci_high.nii dce/${PREFIX}_Ktrans_ci_high.nii
@@ -247,8 +263,8 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 		# flirt -in dce_patlak_fit_Ktrans.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out ktrans_2_MNI.nii.gz -init DCE2MNI.mat -applyxfm
 	fi
 	mkdir reports &> /dev/null
-	python3 $SCRIPT_PATH/case_report.py $DATA_DIR/$SUBJECT/$SESSION $PREFIX
-	python3 $SCRIPT_PATH/ktrans_report.py $DATA_DIR/$SUBJECT/$SESSION $PREFIX
+	python3 $SCRIPT_PATH/case_report.py $DATA_DIR/$SUBJECT/$SESSION $PREFIX $OUTPUT_DIR
+	python3 $SCRIPT_PATH/ktrans_report.py $DATA_DIR/$SUBJECT/$SESSION $PREFIX $OUTPUT_DIR
 	if [ $PURGE_INTERMEDIATES -eq 1 ]
 		then
 		# rm -f !(Ktrans_*|T1_gm*|T1_wm*|T1_csf*|*_patlak_fit*.nii|case_report.html|*_MNI.nii.gz|*fit_VFA.nii|figures|dce*.png|*.log)
@@ -267,7 +283,7 @@ done # < $INPUT_LIST
 
 # python3 $SCRIPT_PATH/population_report.py $DATA_DIR $OUTPUT_DIR $ROCKETSHIP_PATH
 mkdir -p $DERIV_DIR/reports
-python3 $SCRIPT_PATH/population_report.py $DERIV_DIR $ROCKETSHIP_PATH
+python3 $SCRIPT_PATH/population_report.py $DERIV_DIR $OUTPUT_DIR $ROCKETSHIP_PATH
 ((failures=count-successes))
 echo "Completed DCE processing for $count subjects." >> $LOG_FILE
 echo $successes subjects succeeded >> $LOG_FILE

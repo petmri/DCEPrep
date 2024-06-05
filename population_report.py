@@ -10,17 +10,22 @@ import subprocess
 from sys import argv
 
 dir = argv[1]
-dceprep_dir = argv[1] + "/dceprep"
-# try:
-#     output_dir = argv[2]
-# except:
-#     output_dir = ""
+try:
+    output_dir = argv[2]
+except:
+    output_dir = ""
 
-# try:
-#     ROCKETSHIP_dir = argv[3]
-# except IndexError:
-ROCKETSHIP_dir = argv[2]
-#     output_dir = ""
+dceprep_dir = argv[1] + "/dceprep"
+
+try:
+    ROCKETSHIP_dir = argv[3]
+except IndexError:
+    ROCKETSHIP_dir = argv[2]
+    output_dir = ""
+
+if output_dir != "":
+    output_dir = "-" + output_dir
+    dceprep_dir = dceprep_dir + output_dir
 
 # Load MRI population data dict with keys as subject IDs and values as gm and wm data
 population_data = {}
@@ -28,7 +33,7 @@ population_data_exclude = {}
 population_data_failed = {}
 # list directories in dir
 if not os.path.isdir(dceprep_dir):
-    print("Directory does not exist, trying current working directory")
+    print(f"{dceprep_dir} does not exist, trying current working directory")
     dir_list = os.listdir(os.getcwd())
 else:
     dir_list = os.listdir(dceprep_dir)
@@ -142,11 +147,18 @@ for subject_id in subjects:
                 #     print(subject_id, timepoint, "has an intensity < 2")
                 # line up curve peaks
                 max_index = np.argmax(intensities)
-                intensities = np.roll(intensities, -max_index+2)
+                # intensities = np.roll(intensities, -max_index+2)
+                intensities = np.roll(intensities, -max_index)
                 if intensities.shape[0] < 40:
                     mean_last_7 = np.mean(intensities[-7:])
                     intensities = np.pad(intensities, (0, 40-intensities.shape[0]), 'constant', constant_values=(mean_last_7))
-                aif_curves.append(intensities[0:40])
+                # aif_curves.append(intensities[0:40])
+                if intensities.shape[0] == 64:
+                    # make last five values 0 then roll back
+                    intensities[-5:] = 1
+                    intensities = np.roll(intensities, 5)
+                    if not np.isnan(intensities).any():
+                        aif_curves.append(intensities)
             except Exception as e:
                 print("Error reading DCE or AIF for", subject_id, timepoint)
                 print(e)
@@ -212,45 +224,79 @@ for subject_id in subjects:
                         if "User selected FA (degrees):" in line:
                             flip_angle = next(f).strip()
                             flip_angle = float(flip_angle)
+                        if "time points = " in line:
+                            n_reps = line.split(" ")[-1]
+                            n_reps = int(n_reps)
             except Exception as e:
                 print("Error reading " + A_log)
                 print(e)
                 TR = -1
                 flip_angle = -1
-            
+
             # read lines after "AIF mmol:"
             aif_mmol = []
             # B_log = os.path.join(dir, subject_id, timepoint, output_dir, "B_dcefitted_R1info.log")
             B_log = os.path.join(dceprep_dir, subject_id, timepoint, "dce/B_dcefitted_R1info.log")
+            B_imported_log = os.path.join(dceprep_dir, subject_id, timepoint, "dce/B_dceimported_R1info.log")
             try:
-                with open(B_log, 'r') as f:
-                    for line in f:
-                        if "User selected time resolution (sec)" in line:
-                            # take next line as time resolution
-                            time_resolution = next(f).strip()
-                            time_resolution = float(time_resolution)
-                        if "AIF mmol:" in line:
-                            aif_mmol = f.readlines()
-                            # find index of line after last numbers ("MAT results saved to: \n")
-                            try:
-                                lastline = aif_mmol.index("MAT results saved to: \n")
-                            except ValueError:
-                                lastline = aif_mmol.index("Finished B\n")
-                            aif_mmol = aif_mmol[:lastline-1]
-                            # remove \n and \t
-                            aif_mmol = [i[2:-2] for i in aif_mmol]
-                            # split each item into list
-                            aif_mmol = [i.split() for i in aif_mmol]
-                            # unite all lists into one
-                            aif_mmol = [item for sublist in aif_mmol for item in sublist]
-                            # convert to float
-                            aif_mmol = [float(i) for i in aif_mmol]
-                            # take last 33% of aif
-                            aif_mmol = aif_mmol[int(len(aif_mmol) * 0.66):]
-                            # convert to numpy array
-                            aif_mmol = np.array(aif_mmol)
-                            # take mean
-                            aif_mmol = np.mean(aif_mmol)
+                if os.path.isfile(B_log):
+                    with open(B_log, 'r') as f:
+                        for line in f:
+                            if "User selected time resolution (sec)" in line:
+                                # take next line as time resolution
+                                time_resolution = next(f).strip()
+                                time_resolution = float(time_resolution)
+                            if "AIF mmol:" in line:
+                                aif_mmol = f.readlines()
+                                # find index of line after last numbers ("MAT results saved to: \n")
+                                try:
+                                    lastline = aif_mmol.index("MAT results saved to: \n")
+                                except ValueError:
+                                    lastline = aif_mmol.index("Finished B\n")
+                                aif_mmol = aif_mmol[:lastline-1]
+                                # remove \n and \t
+                                aif_mmol = [i[2:-2] for i in aif_mmol]
+                                # split each item into list
+                                aif_mmol = [i.split() for i in aif_mmol]
+                                # unite all lists into one
+                                aif_mmol = [item for sublist in aif_mmol for item in sublist]
+                                # convert to float
+                                aif_mmol = [float(i) for i in aif_mmol]
+                                # take last 33% of aif
+                                aif_mmol = aif_mmol[int(len(aif_mmol) * 0.66):]
+                                # convert to numpy array
+                                aif_mmol = np.array(aif_mmol)
+                                # take mean
+                                aif_mmol = np.mean(aif_mmol)
+                elif os.path.isfile(B_imported_log):
+                    with open(B_imported_log, 'r') as f:
+                        for line in f:
+                            if "User selected time resolution (sec)" in line:
+                                # take next line as time resolution
+                                time_resolution = next(f).strip()
+                                time_resolution = float(time_resolution)
+                            if "AIF mmol:" in line:
+                                aif_mmol = f.readlines()
+                                # find index of line after last numbers ("MAT results saved to: \n")
+                                try:
+                                    lastline = aif_mmol.index("MAT results saved to: \n")
+                                except ValueError:
+                                    lastline = aif_mmol.index("Finished B\n")
+                                aif_mmol = aif_mmol[:lastline-1]
+                                # remove \n and \t
+                                aif_mmol = [i[2:-2] for i in aif_mmol]
+                                # split each item into list
+                                aif_mmol = [i.split() for i in aif_mmol]
+                                # unite all lists into one
+                                aif_mmol = [item for sublist in aif_mmol for item in sublist]
+                                # convert to float
+                                aif_mmol = [float(i) for i in aif_mmol]
+                                # take last 33% of aif
+                                aif_mmol = aif_mmol[int(len(aif_mmol) * 0.66):]
+                                # convert to numpy array
+                                aif_mmol = np.array(aif_mmol)
+                                # take mean
+                                aif_mmol = np.mean(aif_mmol)
             except Exception as e:
                 print("Error reading " + B_log)
                 print(e)
@@ -292,12 +338,12 @@ for subject_id in subjects:
                     scan_options = data.get("ScanOptions", "json field error")
                     TE = data.get("EchoTime", "json field error")
                     # flip_angle = data.get("FlipAngle", "json field error")
-                    if "RepetitionTimeExcitation" in data:
-                        # TR = data.get("RepetitionTimeExcitation", "json field error")
-                        time_resolution = data.get("RepetitionTime", "json field error")
-                    else:
-                        # TR = data.get("RepetitionTime", "json field error")
-                        time_resolution = "not in header"
+                    # if "RepetitionTimeExcitation" in data:
+                    #     # TR = data.get("RepetitionTimeExcitation", "json field error")
+                    #     time_resolution = data.get("RepetitionTime", "json field error")
+                    # else:
+                    #     # TR = data.get("RepetitionTime", "json field error")
+                    #     time_resolution = "not in header"
             except Exception as e:
                 print("Error reading " + json_file)
                 print(e)
@@ -314,7 +360,6 @@ for subject_id in subjects:
                 flip_angle = "json read error"
                 TR = "json read error"
                 time_resolution = "json read error"
-            n_reps = dce.shape[-1]
 
             # get MNI region stats
             # read ktrans map
@@ -389,7 +434,7 @@ for subject_id in subjects:
             # R_MEDIAL_TEMPORAL_CORTEX = 2015
             L_POSTERIOR_CINGULATE_CORTEX = 1023
             R_POSTERIOR_CINGULATE_CORTEX = 2023
-            
+
             # atlas file is where this script is located
             # atlas = os.path.join(os.path.dirname(os.path.realpath(__file__)), "BN_Atlas_246_1mm.nii.gz")
             # atlas = nib.load(atlas)
@@ -401,7 +446,7 @@ for subject_id in subjects:
             try:
                 # wmparc = os.path.join(dir, subject_id, timepoint, output_dir, "wmparc_dyn.nii.gz")
                 prefix = f"{subject_id}_{timepoint}"
-                wmparc_path = os.path.join(dir, 'dceprep', subject_id, timepoint, f"anat/{prefix}_space-DCEref_desc-wmparc.nii.gz")
+                wmparc_path = os.path.join(dceprep_dir, subject_id, timepoint, f"anat/{prefix}_space-DCEref_desc-wmparc.nii.gz")
                 # if not os.path.isfile(wmparc_path):
                     # convert from mgz to nii and register to DCE
                 wmparc = nib.load(wmparc_path)
@@ -1199,20 +1244,26 @@ gm_histogram_range = plt.xlim()
 plt.savefig(ktrans_gm_histogram_path, bbox_inches='tight')
 plt.close()
 
-avg_curve = np.asarray(aif_curves)
-avg_curve = np.mean(avg_curve, axis=0)
-# for aif in aif_curves:
-#     plt.plot(aif, linewidth=0.5, color='grey', alpha=0.5)
-plt.plot(avg_curve, linewidth=1, color='black')
-# plot stdev per timepoint
-plt.fill_between(np.arange(0, len(avg_curve)), avg_curve - np.std(aif_curves, axis=0), avg_curve + np.std(aif_curves, axis=0), alpha=0.3)
-plt.xlabel('Time (s)')
-plt.ylabel('Normalized Intensity')
-plt.title('AIF Curves')
-# aif_avg_curve_path = os.path.join("figures/", output_dir + "aif_avg_curve.png")
-aif_avg_curve_path = os.path.join("figures/", "aif_avg_curve.png")
-plt.savefig(aif_avg_curve_path, bbox_inches='tight', dpi=300)  # Increase dpi for higher resolution
-plt.close()
+try:
+    avg_curve = np.asarray(aif_curves)
+    avg_curve = np.mean(avg_curve, axis=0)
+    # save average curve to export into MATLAB
+    np.savetxt("average_aif_curve.csv", avg_curve, delimiter=",")
+    for aif in aif_curves:
+        plt.plot(aif, linewidth=0.5, color='grey', alpha=0.5)
+    plt.plot(avg_curve, linewidth=1, color='black')
+    # plot stdev per timepoint
+    plt.fill_between(np.arange(0, len(avg_curve)), avg_curve - np.std(aif_curves, axis=0), avg_curve + np.std(aif_curves, axis=0), alpha=0.3)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Normalized Intensity')
+    plt.title('AIF Curves')
+    # aif_avg_curve_path = os.path.join("figures/", output_dir + "aif_avg_curve.png")
+    aif_avg_curve_path = os.path.join("figures/", "aif_avg_curve.png")
+    plt.savefig(aif_avg_curve_path, bbox_inches='tight', dpi=300)  # Increase dpi for higher resolution
+    plt.close()
+except Exception as e:
+    print("Error plotting AIF curve.", e)
+    aif_avg_curve_path = None
 
 # time for hippocampus histograms
 # rPhG_L_histogram = []
@@ -1615,8 +1666,8 @@ failed_links = [os.path.join(dceprep_dir, case) for case in failed_cases]
 # get flagged cases 
 flagged_cases = []
 flagged_links = []
-MOTION_THRESHOLD = 3.5
-AIFITNESS_THRESHOLD = 80
+MOTION_THRESHOLD = 3.8
+AIFITNESS_THRESHOLD = 75
 for case in successful_timepoints:
     entry = case.replace('/', '_')
     flag_str = ""
@@ -1905,10 +1956,10 @@ if not os.path.exists(dir + '/reports'):
     os.makedirs(dir + '/reports')
 
 # write html to file
-with open(dir + '/reports/population_report.html', 'w') as f:
+with open(dir + '/reports/population_report' + output_dir + '.html', 'w') as f:
     f.write(output)
 
-print('Report generated in ' + dir + '/reports/population_report.html')
+print('Report generated in ' + dir + '/reports/population_report' + output_dir + '.html')
 
 # add apoe and cdr fields to population_data
 df = pd.read_excel('/media/network_mriphysics/USC-PPG/bids_test/dce_available_3524_ac.xlsx', sheet_name="main")
@@ -2019,12 +2070,12 @@ for subject, timepoint, exclusion_reason in zip(subjects_excluded, timepoints_ex
 
 
 # make excel file
-writer = pd.ExcelWriter(os.path.join(dir, "dataset_ktrans.xlsx"), date_format='YYYY/MM/DD', datetime_format='YYYY/MM/DD') 
+writer = pd.ExcelWriter(os.path.join(dir, "dataset_ktrans" + output_dir + ".xlsx"), date_format='YYYY/MM/DD', datetime_format='YYYY/MM/DD') 
 # make dataframe
 df_success = pd.DataFrame(population_data)
-df_exclude = pd.DataFrame(population_data_exclude)
+# df_exclude = pd.DataFrame(population_data_exclude)
 
-order = ["Date", "APOE", "CDR", "BMI", "Sex", "Age", "Machine", "Institution", "Coil", "TR", "TE", "Flip_angle", "n_reps",
+order = ["Date", "APOE", "CDR", "BMI", "Sex", "Age", "Machine", "Institution", "Coil", "TR", "Time_resolution", "TE", "Flip_angle", "n_reps",
          "AIFitness", "max_disp", "T1_blood", "T1_wm_median", "T1_gm_median",
          "wm_median", "gm_median", "Ktrans_Hippo_median", "Ktrans_PhG_median", "Ktrans_Putamen_median", "Ktrans_Pallidum_median",
          "Ktrans_Thalamus_median", "Ktrans_Caudate_median", "Ktrans_Amygdala_median", "Ktrans_Entorhinal_cortex_median",
@@ -2040,27 +2091,50 @@ df_success = df_success[order]
 
 order_exclude = order.copy()
 order_exclude.insert(0, "Reason")
-df_exclude = df_exclude.T
-df_exclude = df_exclude[order_exclude]
+# df_exclude = df_exclude.T
+# df_exclude = df_exclude[order_exclude]
 
 # name first column
 df_success.index.name = "Subject_ID"
-df_exclude.index.name = "Subject_ID"
+# df_exclude.index.name = "Subject_ID"
 
 # write to excel
 # df_success.to_excel(os.path.join(dir, "dataset_ktrans" + output_dir + ".xlsx"))
 df_success.to_excel(writer, sheet_name='Success')
-df_exclude.to_excel(writer, sheet_name='Pre-Exclude')
+# df_exclude.to_excel(writer, sheet_name='Pre-Exclude')
+cell_format = writer.book.add_format()
+cell_format.set_text_wrap()
+cell_format.set_align('center')
+cell_format.set_align('vcenter')
+index_cell_format = writer.book.add_format()
+index_cell_format.set_text_wrap()
+index_cell_format.set_align('center')
+index_cell_format.set_align('vcenter')
+# unbold index
+index_cell_format.set_bold(False)
+if len(population_data_exclude) > 0:
+    df_exclude = pd.DataFrame(population_data_exclude)
+    df_exclude = df_exclude.T
+    df_exclude = df_exclude[order_exclude]
+    df_exclude.index.name = "Subject_ID"
+    df_exclude.to_excel(writer, sheet_name='Pre-Exclude')
+    for column in df_exclude.columns:
+        max_length = df_exclude[column].map(str).map(len).max()
+        max_length = max(max_length, len(column))
+        if column == "Date":
+            writer.sheets['Pre-Exclude'].set_column(df_exclude.columns.get_loc(column)+1, df_exclude.columns.get_loc(column)+1, 10, cell_format)
+        else:
+            writer.sheets['Pre-Exclude'].set_column(df_exclude.columns.get_loc(column)+1, df_exclude.columns.get_loc(column)+1, max_length+2, cell_format)
+
+    writer.sheets['Pre-Exclude'].set_column(0, 0, 20, index_cell_format)
+    writer.sheets['Pre-Exclude'].autofilter(0, 0, len(df_exclude), len(df_exclude.columns))
+
 if len(population_data_failed) > 0:
     df_fail = pd.DataFrame(population_data_failed)
     df_fail = df_fail.T
     df_fail = df_fail[order_exclude]
     df_fail.index.name = "Subject_ID"
     df_fail.to_excel(writer, sheet_name='Fail')
-cell_format = writer.book.add_format()
-cell_format.set_text_wrap()
-cell_format.set_align('center')
-cell_format.set_align('vcenter')
 
 for column in df_success.columns:
     max_length = df_success[column].map(str).map(len).max()
@@ -2070,25 +2144,9 @@ for column in df_success.columns:
     else:
         writer.sheets['Success'].set_column(df_success.columns.get_loc(column)+1, df_success.columns.get_loc(column)+1, max_length+2, cell_format)
 
-for column in df_exclude.columns:
-    max_length = df_exclude[column].map(str).map(len).max()
-    max_length = max(max_length, len(column))
-    if column == "Date":
-        writer.sheets['Pre-Exclude'].set_column(df_exclude.columns.get_loc(column)+1, df_exclude.columns.get_loc(column)+1, 10, cell_format)
-    else:
-        writer.sheets['Pre-Exclude'].set_column(df_exclude.columns.get_loc(column)+1, df_exclude.columns.get_loc(column)+1, max_length+2, cell_format)
-
-index_cell_format = writer.book.add_format()
-index_cell_format.set_text_wrap()
-index_cell_format.set_align('center')
-index_cell_format.set_align('vcenter')
-# unbold index
-index_cell_format.set_bold(False)
 writer.sheets['Success'].set_column(0, 0, 20, index_cell_format)
-writer.sheets['Pre-Exclude'].set_column(0, 0, 20, index_cell_format)
 # autofilter
 writer.sheets['Success'].autofilter(0, 0, len(df_success), len(df_success.columns))
-writer.sheets['Pre-Exclude'].autofilter(0, 0, len(df_exclude), len(df_exclude.columns))
 # change date column data format to MM/DD/YYYY
 writer.close()
 
@@ -2098,12 +2156,12 @@ imgs_exclude = []
 for subject_id in subjects:
 # for subject_id, timepoint in zip(subjects, timepoints):
     # list _timepoint directories in subject directory
-    for timepoint in sorted(os.listdir(os.path.join(dir, 'dceprep', subject_id))):
+    for timepoint in sorted(os.listdir(os.path.join(dceprep_dir, subject_id))):
         if timepoint.startswith("ses-"):
             # placement_wm_histogram_path = os.path.join(dir, subject_id, timepoint, output_dir, "figures/placement_wm_histogram.png")
             # placement_gm_histogram_path = os.path.join(dir, subject_id, timepoint, output_dir, "figures/placement_gm_histogram.png")
-            placement_wm_histogram_path = os.path.join(dir, 'dceprep', subject_id, timepoint, "figures/placement_wm_histogram.png")
-            placement_gm_histogram_path = os.path.join(dir, 'dceprep', subject_id, timepoint, "figures/placement_gm_histogram.png")
+            placement_wm_histogram_path = os.path.join(dceprep_dir, subject_id, timepoint, "figures/placement_wm_histogram.png")
+            placement_gm_histogram_path = os.path.join(dceprep_dir, subject_id, timepoint, "figures/placement_gm_histogram.png")
             # get subject's wm_mean
             try:
                 case_wm_median = population_data[subject_id + "_" + timepoint]["wm_median"]
@@ -2136,7 +2194,7 @@ for entry in population_data.keys():
     timepoint = entry.split("_")[1]
     # append to html file
     try:
-        filename = os.path.join(dir, 'dceprep', subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-casereport.html")
+        filename = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-casereport.html")
         with open(filename, "r") as f:
             report_content = f.read()
 
@@ -2149,7 +2207,7 @@ for entry in population_data.keys():
 
         # now take ses-* reports/{prefix}_desc-report.png and append it to scrollable report
         # get desc-report.png path
-        report_path = os.path.join(dir, 'dceprep', subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-report.png")
+        report_path = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-report.png")
         # append to imgs
         imgs.append(report_path)
     except Exception as e:
@@ -2161,7 +2219,7 @@ for entry in population_data_exclude.keys():
     timepoint = entry.split("_")[1]
     # append to html file
     try:
-        filename = os.path.join(dir, 'dceprep', subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-casereport.html")
+        filename = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-casereport.html")
         with open(filename, "r") as f:
             report_content = f.read()
 
@@ -2174,7 +2232,7 @@ for entry in population_data_exclude.keys():
 
         # now take ses-* reports/{prefix}_desc-report.png and append it to scrollable report
         # get desc-report.png path
-        report_path = os.path.join(dir, 'dceprep', subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-report.png")
+        report_path = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-report.png")
         # append to imgs
         imgs_exclude.append(report_path)
     except Exception as e:
@@ -2193,7 +2251,7 @@ def add_image_to_pdf(pdf, image_path):
     pdf.showPage()
 
 # Create a PDF canvas
-pdf_file = f"{dir}/reports/EZQCreport.pdf"
+pdf_file = f"{dir}/reports/EZQCreport" + output_dir + ".pdf"
 pdf = canvas.Canvas(pdf_file, pagesize=letter)
 
 # Add images to the PDF
@@ -2207,7 +2265,7 @@ for report in imgs:
 # Save the PDF to dir/reports
 pdf.save()
 
-pdf_file = f"{dir}/reports/EZQCreport_exclude.pdf"
+pdf_file = f"{dir}/reports/EZQCreport_exclude" + output_dir + ".pdf"
 pdf = canvas.Canvas(pdf_file, pagesize=letter)
 
 # Add images to the PDF

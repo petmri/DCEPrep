@@ -411,16 +411,30 @@ try:
     # now get Time Resolution from log file
     time_resolution = None
     is_target_line = False
-    with open('dce/B_dcefitted_R1info.log', 'r') as f:
-        for line in f:
-            if "User selected time resolution (sec)" in line:
-                is_target_line = True
-            elif is_target_line:
-                match = re.search(r'(\d+)(.*)\d*', line)
-                if match:
-                    time_resolution = match.group()
-                else:
-                    is_target_line = False
+    B_log = 'dce/B_dcefitted_R1info.log'
+    B_imported_log = 'dce/B_dceimported_R1info.log'
+    if os.path.isfile(B_log):
+        with open(B_log, 'r') as f:
+            for line in f:
+                if "User selected time resolution (sec)" in line:
+                    is_target_line = True
+                elif is_target_line:
+                    match = re.search(r'(\d+)(.*)\d*', line)
+                    if match:
+                        time_resolution = match.group()
+                    else:
+                        is_target_line = False
+    elif os.path.isfile(B_imported_log):
+        with open(B_imported_log, 'r') as f:
+            for line in f:
+                if "User selected time resolution (sec)" in line:
+                    is_target_line = True
+                elif is_target_line:
+                    match = re.search(r'(\d+)(.*)\d*', line)
+                    if match:
+                        time_resolution = match.group()
+                    else:
+                        is_target_line = False
     RUNB_log = True
 except Exception as e:
     print("Error getting DCE RUNB parameters from B_dcefitted_R1info.log")
@@ -433,8 +447,12 @@ if RUNB_log:
         r2_values = re.findall(r2_pattern, log_text)
         return r2_values
 
-    with open('dce/B_dcefitted_R1info.log', 'r') as file:
-        log_text = file.read()
+    if os.path.isfile(B_log):
+        with open('dce/B_dcefitted_R1info.log', 'r') as file:
+            log_text = file.read()
+    elif os.path.isfile(B_imported_log):
+        with open('dce/B_dceimported_R1info.log', 'r') as file:
+            log_text = file.read()
 
     r2_values = extract_r2_values(log_text)
 
@@ -443,10 +461,16 @@ if RUNB_log:
         r2_raw_values = r2_values[-1]
 
     # get last line of B log file (time elapsed)
-    with open('dce/B_dcefitted_R1info.log', 'r') as file:
-        for line in file:
-            pass
-        B_last_line = line
+    if os.path.isfile(B_log):
+        with open('dce/B_dcefitted_R1info.log', 'r') as file:
+            for line in file:
+                pass
+            B_last_line = line
+    elif os.path.isfile(B_imported_log):
+        with open('dce/B_dceimported_R1info.log', 'r') as file:
+            for line in file:
+                pass
+            B_last_line = line
 else:
     r2_aif_fit = 'Failed to load RUNB log'
     r2_raw_values = 'Failed to load RUNB log'

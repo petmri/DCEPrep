@@ -145,18 +145,20 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	SUBJECT=$(echo $source_dir | grep -o 'sub-[0-9]*')
 	SESSION=$(echo $source_dir | grep -o 'ses-[0-9]*')
 	PREFIX=${SUBJECT}_${SESSION}
-	mkdir -p $DERIV_DIR/dceprep/$SUBJECT/$SESSION
-	cd $DERIV_DIR/dceprep/$SUBJECT/$SESSION || exit 1
+
 	# gzip -f $source_dir/DCE.nii # &> /dev/null
 	if [ $COMPARISON_MODE -eq 1 ]
 		then
-		if [ ! -d "$OUTPUT_DIR" ]
+		if [ ! -d "$DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION" ]
 			then
 			echo "Comparison mode enabled. Creating output directory $OUTPUT_DIR..." >> $LOG_FILE
-			mkdir -p "$OUTPUT_DIR"
+			mkdir -p $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION
 		fi
-		# cd "$OUTPUT_DIR" || exit 1
-		cp $source_dir/*.json .
+		cd $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION || exit 1
+		# cp $source_dir/*.json .
+	else
+		mkdir -p $DERIV_DIR/dceprep/$SUBJECT/$SESSION
+		cd $DERIV_DIR/dceprep/$SUBJECT/$SESSION || exit 1
 	fi
 	SUBJECT_TP_PATH=$(pwd)
 
@@ -200,21 +202,17 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	if [ $clean -eq 1 ]
 		then
 		echo Cleaning folder... $PWD
-        # rm -f !(2.nii|5.nii|10.nii|12.nii|15.nii|DCE.nii|aif.nii|T1w.nii|*.json)
-		# remove all files except for the VFA list, DCE, AIF, T1, and json files
-		# rm -dfr !([0-9]*.nii|DCE.nii.gz|aif.nii|T1w.nii|*.json)
+		# remove all files except for the AIF
 		rm -rf anat figures reports
 		cd dce
 		rm -f !(${PREFIX}_${AIF_SUFFIX}.nii.gz)
-		# rm -f $source_dir/!([0-9]*.nii|DCE.nii.gz|aif.nii|T1w.nii|*.json)
-		# rm -f $source_dir/*BFC*
 		cd $SUBJECT_TP_PATH
     fi
-	
+
 	# HD-BET brain extraction & segmentations from MP-RAGE
 	SECONDS=0
 	echo -ne "HD-BET MP-RAGE [                                                  ] $prog% ($current/$count) Calculating runtime...   \r"
-	
+
 	mkdir anat &> /dev/null
 	mkdir dce &> /dev/null
 	if [ ! -f "anat/${PREFIX}_desc-brain_mask.nii.gz" ]
@@ -372,7 +370,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		#ETA=$(echo "scale=0;  $mETA - $mETA * .0667" | bc -l)
 		prog=$(echo "scale=2;  $prog + 6.67 / $count" | bc -l)
 	fi
-	
+
 	fslmaths anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz -thr 0.9 -bin anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz # &> /dev/null
 	# copy VFA files to _masked.nii
 	for VFA in "${VFA_DYN_LIST[@]}"; do
@@ -384,7 +382,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		cp anat/${PREFIX}_${VFA}_${REF_SPACE}_VFA.nii.gz anat/${PREFIX}_${VFA}_${REF_SPACE}_desc-brain_VFA.nii.gz
 	done
 	# gzip -f *_masked.nii
-	
+
 	if [ $EN_BIAS1 -eq 1 ]
 		then
 			VFA_FAST () {
