@@ -378,7 +378,7 @@ except Exception as e:
     print("Error getting DCE parameters from A_dceR1info.log")
     print(e)
 
-tr_pattern = r"User selected TR \(ms\):\s+(\d+\.\d+)"
+tr_pattern = r"User selected TR \(ms\):\s+(\d+(\.\d+)?)"
 fa_pattern = r"User selected FA \(degrees\):\s+(\d+)"
 hematocrit_pattern = r"User selected hematocit \(0 to 1.0\):\s+(\d+\.\d+)"
 snr_threshold_pattern = r"User selected SNR threshold for AIF:\s+(\d+)"
@@ -471,6 +471,8 @@ if RUNB_log:
             for line in file:
                 pass
             B_last_line = line
+        r2_aif_fit = 'Imported AIF'
+        r2_raw_values = 'Imported AIF'
 else:
     r2_aif_fit = 'Failed to load RUNB log'
     r2_raw_values = 'Failed to load RUNB log'
@@ -593,7 +595,7 @@ data = {
     't1w_wm_dyn' : '../figures/t1wm_to_dyn.svg',
     't1w_gm_dyn' : '../figures/t1gm_to_dyn.svg',
     'Z_DCE' : f'../figures/{prefix}_desc-bfcz_DCE.svg',
-    'DCE_TR' : 'Repetition Time: ' + str(DCE_tr) + 's',
+    'DCE_TR' : 'Repetition Time: ' + str(DCE_tr) + 'ms',
     'DCE_FA' : 'Flip Angle: ' + str(DCE_fa) + '°',
     'Hematocrit' : 'Hematocrit: ' + str(hematocrit),
     'SNR_Threshold' : 'SNR Threshold: ' + str(snr_threshold),
