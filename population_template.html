@@ -140,6 +140,7 @@
         </li>
         
         <li>Successes: {{ Successes }}</li>
+        <li>Excludes: {{ Excludes }}</li>
         <!-- <li>{{ Timepoint }}</li> -->
         <li>Date: {{ Date }}</li>
         <li>Commit: {{ Commit }}</li>
@@ -193,6 +194,7 @@
         <img src="{{ AIFitness_histogram }}" alt="missing AIFitness histogram"/>
         <img src="{{ aif_mmol_histogram }}" alt="missing aif mmol histogram"/>
     </div>
+    <img src="{{ aif_curves }}" alt="missing aif curves" width="50%"/>
     <li>T1 blood mean median: {{ T1_blood_mean }}</li>
     <li>T1 blood median median: {{ T1_blood_median }}</li>
     <li>T1 blood stdev median: {{ T1_blood_std }}</li>

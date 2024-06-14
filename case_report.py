@@ -347,6 +347,8 @@ dce = nib.load(f'dce/{prefix}_desc-hmc_DCEref_RAS.nii.gz')
 dce_data = dce.get_fdata()
 dce_flipped = np.flip(dce_data, axis=1)
 dce_flipped = nib.Nifti1Image(dce_flipped, dce.affine, dce.header)
+# get 95% percentile of DCE
+dce_95th = np.percentile(dce_flipped.get_fdata(), 95)
 
 # overlay wmparc on DCE
 plt.figure(figsize=(15,5), dpi=250)
@@ -356,9 +358,13 @@ plt.axis('off')
 # wmparc_data = np.rot90(wmparc_data, axes=(0,1))
 
 # overlay wmparc mask on DCE per region
-plotting.plot_roi(dce_flipped, bg_img=dce_flipped, output_file=f'figures/{prefix}_desc-hmc_DCEref.svg', display_mode='z', cut_coords=range(-140, -110, 10), vmin=0, vmax=1000, dim=-1.55, annotate=False, colorbar=False, draw_cross=False, title='DCE', alpha=0)
-plotting.plot_roi(wmparc_flipped, bg_img=dce_flipped, output_file='figures/wmparc_overlay.svg', display_mode='z', cut_coords=range(-140, -110, 10), cmap='tab20', dim=-1.55, annotate=False, colorbar=False, draw_cross=False, title='wmparc overlay', alpha=0.7)
-
+try:
+    plotting.plot_roi(dce_flipped, bg_img=dce_flipped, output_file=f'figures/{prefix}_desc-hmc_DCEref.svg', display_mode='z', cut_coords=range(-140, -110, 10), vmin=0, vmax=dce_95th, dim=-1.55, annotate=False, colorbar=False, draw_cross=False, title='DCE', alpha=0)
+    plotting.plot_roi(wmparc_flipped, bg_img=dce_flipped, output_file='figures/wmparc_overlay.svg', display_mode='z', cut_coords=range(-140, -110, 10), cmap='tab20', dim=-1.55, annotate=False, colorbar=False, draw_cross=False, title='wmparc overlay', alpha=0.7)
+except Exception as e:
+    # plot with default coords
+    plotting.plot_roi(dce_flipped, bg_img=dce_flipped, output_file=f'figures/{prefix}_desc-hmc_DCEref.svg', display_mode='z', vmin=0, vmax=dce_95th, dim=-1, annotate=False, colorbar=False, draw_cross=False, title='DCE', alpha=0)
+    plotting.plot_roi(wmparc_flipped, bg_img=dce_flipped, output_file='figures/wmparc_overlay.svg', display_mode='z', cmap='tab20', dim=-1, annotate=False, colorbar=False, draw_cross=False, title='wmparc overlay', alpha=0.7)
 # T1 dynamic space
 
 # get DCE parameters
@@ -380,7 +386,7 @@ except Exception as e:
 
 tr_pattern = r"User selected TR \(ms\):\s+(\d+(\.\d+)?)"
 fa_pattern = r"User selected FA \(degrees\):\s+(\d+)"
-hematocrit_pattern = r"User selected hematocit \(0 to 1.0\):\s+(\d+\.\d+)"
+hematocrit_pattern = r"User selected hematocrit \(0 to 1.0\):\s+(\d+\.\d+)"
 snr_threshold_pattern = r"User selected SNR threshold for AIF:\s+(\d+)"
 relaxivity_pattern = r"User selected contrast agent R1 relaxivity \(/mM/sec\):\s+(\d+\.\d+)"
 steady_state_pattern = r"User selected end of steady state time \(image number\):\s+(-?\d+)"

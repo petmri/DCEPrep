@@ -66,6 +66,8 @@ while getopts ":d:bBa:AZfhcC:mstl:S:" options; do
 				mkdir -p "$DERIV_DIR/logs"
 			fi
 			LOG_FILE=$DERIV_DIR/logs/preprocessing_log_$DATE.txt
+			# write command to log file
+			echo "Command: $0 $@" > $LOG_FILE
 			;;
 		h)
 			echo "This script runs through all subject folders of a specified main data directory, preprocessing every folder ending in '_timepoint'."
@@ -262,7 +264,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	fi
 	
 	REF_SPACE=space-DCEref
-	if [ ! -f anat/T1_dyn0GenericAffine.mat ] && [ $EN_MOTION_CORR -eq 1 ]
+	if [ ! -f anat/${PREFIX}_from-T1w_to-DCEref.mat ] && [ $EN_MOTION_CORR -eq 1 ]
 		then
 		# MPRAGE -> dynamic registration
 		antsRegistration --verbose 0 --dimensionality 3 --float 0 \
@@ -270,6 +272,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 			--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
 			--transform Rigid[ 0.1 ] --metric MI[ $DCE_REF_VOL,${source_dir}/anat/${PREFIX}_T1w.nii.gz,1,32,Regular,0.25 ] \
 			--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
+		mv anat/${PREFIX}_${REF_SPACE}_T1w0GenericAffine.mat anat/${PREFIX}_from-T1w_to-DCEref.mat
 	elif [ $EN_MOTION_CORR -eq 0 ]
 		then
 		antsRegistration --verbose 0 --dimensionality 3 --float 0 \
@@ -277,8 +280,8 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 			--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
 			--transform Rigid[ 0.1 ] --metric MI[ $DCE_REF_VOL,${source_dir}/anat/${PREFIX}_T1w.nii.gz,1,32,Regular,0.25 ] \
 			--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
+		mv anat/${PREFIX}_${REF_SPACE}_T1w0GenericAffine.mat anat/${PREFIX}_from-T1w_to-DCEref.mat
 	fi
-	mv anat/${PREFIX}_${REF_SPACE}_T1w0GenericAffine.mat anat/${PREFIX}_from-T1w_to-DCEref.mat
 	T1w_to_DCEref=anat/${PREFIX}_from-T1w_to-DCEref.mat
 	# VFA -> dynamic registration
 	VFA_reg() {

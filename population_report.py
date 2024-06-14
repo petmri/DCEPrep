@@ -52,26 +52,26 @@ subjects.sort()
 #     for timepoint in os.listdir(os.path.join(dir, subject_id)):
 #         if timepoint.endswith("_timepoint"):
 #             successful_timepoints.append(subject_id + '/' + timepoint)
+manual_aif_status = "AUTO"
+# read log file for command used to run dceprep
+# log is preprocessing_log_{date}.txt, use latest log
+logs = os.listdir(os.path.join(dir, "logs"))
+logs = [log for log in logs if log.startswith("preprocessing_log")]
+logs.sort()
+log = logs[-1]
+log = os.path.join(dir, "logs", log)
+with open(log, "r") as f:
+    for line in f:
+        if "Command: " in line:
+            command = line
+            break
+use_manual_aif = False
+if "-a" in command:
+    use_manual_aif = True
 
 KTRANS_MIN_THRESHOLD = 0.00001
 wm_outliers = []
 gm_outliers = []
-# rPhG_L_outliers = []
-# rPhG_R_outliers = []
-# cPhG_L_outliers = []
-# cPhG_R_outliers = []
-# lateral_PPHC_L_outliers = []
-# lateral_PPHC_R_outliers = []
-# ECPhG_L_outliers = []
-# ECPhG_R_outliers = []
-# TIPhG_L_outliers = []
-# TIPhG_R_outliers = []
-# THPhG_L_outliers = []
-# THPhG_R_outliers = []
-# rHipp_L_outliers = []
-# rHipp_R_outliers = []
-# cHipp_L_outliers = []
-# cHipp_R_outliers = []
 whole_hippo_outliers = []
 whole_phg_outliers = []
 whole_putamen_outliers = []
@@ -86,10 +86,25 @@ whole_insula_WM_outliers = []
 whole_superior_temporal_cortex_outliers = []
 whole_posterior_cingulate_cortex_outliers = []
 whole_medial_temporal_cortex_outliers = []
-# subject_list = ["4_11570", "4_65948", "4_67316", "4_68721", "4_84177"]
-# subject_list = ["1102237", "1102187", "1102043", "1101938", "1101943", "1101819", "1102019", "1102091", "1102092"]
+wm_outliers_exclude = []
+gm_outliers_exclude = []
+whole_hippo_outliers_exclude = []
+whole_phg_outliers_exclude = []
+whole_putamen_outliers_exclude = []
+whole_pallidum_outliers_exclude = []
+whole_thalamus_outliers_exclude = []
+whole_caudate_outliers_exclude = []
+whole_amygdala_outliers_exclude = []
+whole_entorhinal_cortex_outliers_exclude = []
+whole_fusiform_gyrus_cortex_outliers_exclude = []
+whole_fusiform_gyrus_WM_outliers_exclude = []
+whole_insula_WM_outliers_exclude = []
+whole_superior_temporal_cortex_outliers_exclude = []
+whole_posterior_cingulate_cortex_outliers_exclude = []
+whole_medial_temporal_cortex_outliers_exclude = []
 total_timepoints = []
 successful_timepoints = []
+popAIF_curves = []
 aif_curves = []
 for subject_id in subjects:
 # for subject_id, timepoint in zip(subjects, timepoints):
@@ -108,12 +123,9 @@ for subject_id in subjects:
         gm_median = 0
         gm_std = 0
         if timepoint.startswith("ses-"):
-            # total_timepoints.append(subject_id + '/' + timepoint + "/" + output_dir)
             total_timepoints.append(subject_id + '/' + timepoint)
             # read AIF curve by applying aif.nii to dce.nii
             try:
-                # dce = os.path.join(dir, subject_id, timepoint, output_dir, "DCE_mc_bfc_norm.nii.gz")
-                # aif = os.path.join(dir, subject_id, timepoint, output_dir, "aif.nii")
                 dce = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-bfcz_DCE.nii.gz")
                 aif = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-AIF_T1map.nii.gz")
                 # load files
@@ -148,21 +160,30 @@ for subject_id in subjects:
                 # line up curve peaks
                 max_index = np.argmax(intensities)
                 # intensities = np.roll(intensities, -max_index+2)
-                intensities = np.roll(intensities, -max_index)
                 if intensities.shape[0] < 40:
                     mean_last_7 = np.mean(intensities[-7:])
                     intensities = np.pad(intensities, (0, 40-intensities.shape[0]), 'constant', constant_values=(mean_last_7))
-                # aif_curves.append(intensities[0:40])
+                aif_curves.append(intensities[0:40])
+                intensities = np.roll(intensities, -max_index)
                 if intensities.shape[0] == 64:
                     # make last five values 0 then roll back
                     intensities[-5:] = 1
                     intensities = np.roll(intensities, 5)
                     if not np.isnan(intensities).any():
-                        aif_curves.append(intensities)
+                        popAIF_curves.append(intensities)
             except Exception as e:
                 print("Error reading DCE or AIF for", subject_id, timepoint)
                 print(e)
                 continue
+
+            # if use manual AIF and file exists, mark as manual
+            manual_aif_path = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-AIF_mask.nii.gz")
+            if use_manual_aif and os.path.isfile(manual_aif_path):
+                manual_aif_status = "MANUAL"
+            elif not use_manual_aif and os.path.isfile(manual_aif_path):
+                manual_aif_status = "OMITTED"
+            else:
+                manual_aif_status = "AUTO"
 
             # read wm and gm data from html file
             # filename = os.path.join(dir, subject_id, timepoint, output_dir, "case_report.html")
@@ -195,14 +216,14 @@ for subject_id in subjects:
                             # population_AIFitness.append(round(float(AIFitness), 4))
                         #     if float(AIFitness) > 130:
                         #         print(subject_id + "_" + timepoint + " has an AIFitness of " + str(AIFitness) + "!")
-                        # if wm_median > 5:
-                        #     if subject_id + "_" + timepoint not in wm_outliers:
-                        #         print(subject_id + "_" + timepoint + " has a wm_median of " + str(wm_median) + "!")
-                        #         wm_outliers.append(subject_id + "_" + timepoint)
-                        # if gm_median > 5:
-                        #     if subject_id + "_" + timepoint not in gm_outliers:
-                        #         print(subject_id + "_" + timepoint + " has a gm_median of " + str(gm_median) + "!")
-                        #         gm_outliers.append(subject_id + "_" + timepoint)
+                        if wm_median > 5:
+                            if subject_id + "_" + timepoint not in wm_outliers:
+                                # print(subject_id + "_" + timepoint + " has a wm_median of " + str(wm_median) + "!")
+                                wm_outliers.append(subject_id + "_" + timepoint)
+                        if gm_median > 5:
+                            if subject_id + "_" + timepoint not in gm_outliers:
+                                # print(subject_id + "_" + timepoint + " has a gm_median of " + str(gm_median) + "!")
+                                gm_outliers.append(subject_id + "_" + timepoint)
             except Exception as e:
                 print("Error reading " + filename)
                 print(e)
@@ -361,11 +382,7 @@ for subject_id in subjects:
                 TR = "json read error"
                 time_resolution = "json read error"
 
-            # get MNI region stats
             # read ktrans map
-            # ktrans_map = os.path.join(dir, subject_id, timepoint, output_dir, "Ktrans_MNI.nii.gz")
-            # ktrans_map = nib.load(ktrans_map)
-            # ktrans_map = ktrans_map.get_fdata()
             try:
                 # ktrans_map = os.path.join(dir, subject_id, timepoint, output_dir, "dce_patlak_fit_Ktrans.nii")
                 ktrans_map = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_Ktrans.nii")
@@ -375,36 +392,6 @@ for subject_id in subjects:
                 print("Error reading " + ktrans_map)
                 stats_failed = True
                 continue
-            # try:
-            #     ktrans_map_hippo = os.path.join(dir, subject_id, timepoint, output_dir, "Ktrans_aseg.nii.gz")
-            #     ktrans_map_hippo = nib.load(ktrans_map_hippo)
-            #     ktrans_map_hippo = ktrans_map_hippo.get_fdata()
-            #     ktrans_map = ktrans_map_hippo
-            #     # get mean of each z-slice and select slice with highest mean
-            #     ktrans_map = np.mean(ktrans_map, axis=(0, 1))
-            #     ktrans_map = np.argmax(ktrans_map)
-            #     # select z-slice with highest mean
-            #     ktrans_map_hippo = ktrans_map_hippo[:,:,ktrans_map]
-            # except:
-            #     print("Error reading " + ktrans_map_hippo)
-            #     continue
-            # ktrans_map = ktrans_map[:,110,:]
-            # rPhG_L = 109
-            # rPhG_R = 110
-            # cPhG_L = 111
-            # cPhG_R = 112
-            # lateral_PPHC_L = 113
-            # lateral_PPHC_R = 114
-            # ECPhG_L = 115
-            # ECPhG_R = 116
-            # TIPhG_L = 117
-            # TIPhG_R = 118
-            # THPhG_L = 119
-            # THPhG_R = 120
-            # rHipp_L = 215
-            # rHipp_R = 216
-            # cHipp_L = 217
-            # cHipp_R = 218
             # Numbers are locations of regions in freesurfer wmparc.mgz
             L_HIPPO = 17
             R_HIPPO = 53
@@ -430,8 +417,6 @@ for subject_id in subjects:
             R_INSULA_WM = 4035
             L_SUPERIOR_TEMPORAL_CORTEX = 1030
             R_SUPERIOR_TEMPORAL_CORTEX = 2030
-            # L_MEDIAL_TEMPORAL_CORTEX = 1015
-            # R_MEDIAL_TEMPORAL_CORTEX = 2015
             L_POSTERIOR_CINGULATE_CORTEX = 1023
             R_POSTERIOR_CINGULATE_CORTEX = 2023
 
@@ -584,7 +569,6 @@ for subject_id in subjects:
                     df_rh_aparc = df_rh_aparc.drop(df_rh_aparc.index[0])
 
                 # assign regional volumes to variables
-                # hippo_vol = df_aseg['StructName']
                 hippo_vol = df_aseg.loc[df_aseg['StructName'] == 'Left-Hippocampus', 'Volume_mm3'].values[0]
                 phg_vol = df_wmparc.loc[df_wmparc['StructName'] == 'wm-lh-parahippocampal', 'Volume_mm3'].values[0] + df_wmparc.loc[df_wmparc['StructName'] == 'wm-rh-parahippocampal', 'Volume_mm3'].values[0]
                 putamen_vol = df_aseg.loc[df_aseg['StructName'] == 'Left-Putamen', 'Volume_mm3'].values[0] + df_aseg.loc[df_aseg['StructName'] == 'Right-Putamen', 'Volume_mm3'].values[0]
@@ -615,44 +599,6 @@ for subject_id in subjects:
                 POSTERIOR_CINGULATE_CORTEX_INDICES = np.where((wmparc == L_POSTERIOR_CINGULATE_CORTEX) | (wmparc == R_POSTERIOR_CINGULATE_CORTEX) & (ktrans_map > KTRANS_MIN_THRESHOLD))
                 MEDIAL_TEMPORAL_CORTEX_INDICES = np.where((wmparc == L_HIPPO) | (wmparc == R_HIPPO) | (wmparc == L_PHG) | (wmparc == R_PHG) | (wmparc == L_ENTORHINAL_CORTEX) | (wmparc == R_ENTORHINAL_CORTEX) & (ktrans_map > KTRANS_MIN_THRESHOLD))
             
-            # get indices of hippocampi on z-slice 110
-            # MNI_hippo_seg = os.path.join(os.path.dirname(os.path.realpath(__file__)), "MNI_hippo_seg.nii.gz")
-            # MNI_hippo_seg = nib.load(MNI_hippo_seg)
-            # MNI_hippo_seg = MNI_hippo_seg.get_fdata()
-            # rPhG_L_indices = np.where((atlas == rPhG_L) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # rPhG_R_indices = np.where((atlas == rPhG_R) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # cPhG_L_indices = np.where((atlas == cPhG_L) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # cPhG_R_indices = np.where((atlas == cPhG_R) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # whole_hippo = np.where((atlas == rHipp_L) | (atlas == rHipp_R) | (atlas == cHipp_L) | (atlas == cHipp_R) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # lateral_PPHC_L_indices = np.where((atlas == lateral_PPHC_L) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # lateral_PPHC_R_indices = np.where((atlas == lateral_PPHC_R) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # ECPhG_L_indices = np.where((atlas == ECPhG_L) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # ECPhG_R_indices = np.where((atlas == ECPhG_R) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # TIPhG_L_indices = np.where((atlas == TIPhG_L) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # TIPhG_R_indices = np.where((atlas == TIPhG_R) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # THPhG_L_indices = np.where((atlas == THPhG_L) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # THPhG_R_indices = np.where((atlas == THPhG_R) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # rHipp_L_indices = np.where((atlas == rHipp_L) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # rHipp_R_indices = np.where((atlas == rHipp_R) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # cHipp_L_indices = np.where((atlas == cHipp_L) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # cHipp_R_indices = np.where((atlas == cHipp_R) & (ktrans_map > KTRANS_MIN_THRESHOLD))
-            # get ktrans values at hippocampi
-            # ktrans_rPhG_L = ktrans_map[rPhG_L_indices]*1000
-            # ktrans_rPhG_R = ktrans_map[rPhG_R_indices]*1000
-            # ktrans_cPhG_L = ktrans_map[cPhG_L_indices]*1000
-            # ktrans_cPhG_R = ktrans_map[cPhG_R_indices]*1000
-            # ktrans_lateral_PPHC_L = ktrans_map[lateral_PPHC_L_indices]*1000
-            # ktrans_lateral_PPHC_R = ktrans_map[lateral_PPHC_R_indices]*1000
-            # ktrans_ECPhG_L = ktrans_map[ECPhG_L_indices]*1000
-            # ktrans_ECPhG_R = ktrans_map[ECPhG_R_indices]*1000
-            # ktrans_TIPhG_L = ktrans_map[TIPhG_L_indices]*1000
-            # ktrans_TIPhG_R = ktrans_map[TIPhG_R_indices]*1000
-            # ktrans_THPhG_L = ktrans_map[THPhG_L_indices]*1000
-            # ktrans_THPhG_R = ktrans_map[THPhG_R_indices]*1000
-            # ktrans_rHipp_L = ktrans_map[rHipp_L_indices]*1000
-            # ktrans_rHipp_R = ktrans_map[rHipp_R_indices]*1000
-            # ktrans_cHipp_L = ktrans_map[cHipp_L_indices]*1000
-            # ktrans_cHipp_R = ktrans_map[cHipp_R_indices]*1000
                 Ktrans_Hippo = ktrans_map[HIPPO_INDICES]*1000
                 Ktrans_PhG = ktrans_map[PHG_INDICES]*1000
                 Ktrans_Putamen = ktrans_map[PUTAMEN_INDICES]*1000
@@ -668,24 +614,6 @@ for subject_id in subjects:
                 Ktrans_Posterior_cingulate_cortex = ktrans_map[POSTERIOR_CINGULATE_CORTEX_INDICES]*1000
                 Ktrans_Medial_temporal_cortex = ktrans_map[MEDIAL_TEMPORAL_CORTEX_INDICES]*1000
             
-            # ktrans_whole_hippo = ktrans_map[whole_hippo]*1000
-            # get median ktrans values
-            # ktrans_rPhG_L_median = np.median(ktrans_rPhG_L)
-            # ktrans_rPhG_R_median = np.median(ktrans_rPhG_R)
-            # ktrans_cPhG_L_median = np.median(ktrans_cPhG_L)
-            # ktrans_cPhG_R_median = np.median(ktrans_cPhG_R)
-            # ktrans_lateral_PPHC_L_median = np.median(ktrans_lateral_PPHC_L)
-            # ktrans_lateral_PPHC_R_median = np.median(ktrans_lateral_PPHC_R)
-            # ktrans_ECPhG_L_median = np.median(ktrans_ECPhG_L)
-            # ktrans_ECPhG_R_median = np.median(ktrans_ECPhG_R)
-            # ktrans_TIPhG_L_median = np.median(ktrans_TIPhG_L)
-            # ktrans_TIPhG_R_median = np.median(ktrans_TIPhG_R)
-            # ktrans_THPhG_L_median = np.median(ktrans_THPhG_L)
-            # ktrans_THPhG_R_median = np.median(ktrans_THPhG_R)
-            # ktrans_rHipp_L_median = np.median(ktrans_rHipp_L)
-            # ktrans_rHipp_R_median = np.median(ktrans_rHipp_R)
-            # ktrans_cHipp_L_median = np.median(ktrans_cHipp_L)
-            # ktrans_cHipp_R_median = np.median(ktrans_cHipp_R)
                 Ktrans_Hippo_median = np.median(Ktrans_Hippo)
                 Ktrans_PhG_median = np.median(Ktrans_PhG)
                 Ktrans_Putamen_median = np.median(Ktrans_Putamen)
@@ -701,55 +629,6 @@ for subject_id in subjects:
                 Ktrans_Posterior_cingulate_cortex_median = np.median(Ktrans_Posterior_cingulate_cortex)
                 Ktrans_Medial_temporal_cortex_median = np.median(Ktrans_Medial_temporal_cortex)
             
-            # check for outliers
-            # if ktrans_rPhG_L_median > 5:
-            #     if subject_id + "_" + timepoint not in rPhG_L_outliers:
-            #         rPhG_L_outliers.append(subject_id + "_" + timepoint)
-            # if ktrans_rPhG_R_median > 5:
-            #     if subject_id + "_" + timepoint not in rPhG_R_outliers:
-            #         rPhG_R_outliers.append(subject_id + "_" + timepoint)
-            # if ktrans_cPhG_L_median > 5:
-            #     if subject_id + "_" + timepoint not in cPhG_L_outliers:
-            #         cPhG_L_outliers.append(subject_id + "_" + timepoint)
-            # if ktrans_cPhG_R_median > 5:
-            #     if subject_id + "_" + timepoint not in cPhG_R_outliers:
-            #         cPhG_R_outliers.append(subject_id + "_" + timepoint)
-            # if ktrans_lateral_PPHC_L_median > 5:
-            #     if subject_id + "_" + timepoint not in lateral_PPHC_L_outliers:
-            #         lateral_PPHC_L_outliers.append(subject_id + "_" + timepoint)
-            # if ktrans_lateral_PPHC_R_median > 5:
-            #     if subject_id + "_" + timepoint not in lateral_PPHC_R_outliers:
-            #         lateral_PPHC_R_outliers.append(subject_id + "_" + timepoint)
-            # if ktrans_ECPhG_L_median > 5:
-            #     if subject_id + "_" + timepoint not in ECPhG_L_outliers:
-            #         ECPhG_L_outliers.append(subject_id + "_" + timepoint)
-            # if ktrans_ECPhG_R_median > 5:
-            #     if subject_id + "_" + timepoint not in ECPhG_R_outliers:
-            #         ECPhG_R_outliers.append(subject_id + "_" + timepoint)
-            # if ktrans_TIPhG_L_median > 5:
-            #     if subject_id + "_" + timepoint not in TIPhG_L_outliers:
-            #         TIPhG_L_outliers.append(subject_id + "_" + timepoint)
-            # if ktrans_TIPhG_R_median > 5:
-            #     if subject_id + "_" + timepoint not in TIPhG_R_outliers:
-            #         TIPhG_R_outliers.append(subject_id + "_" + timepoint)
-            # if ktrans_THPhG_L_median > 5:
-            #     if subject_id + "_" + timepoint not in THPhG_L_outliers:
-            #         THPhG_L_outliers.append(subject_id + "_" + timepoint)
-            # if ktrans_THPhG_R_median > 5:
-            #     if subject_id + "_" + timepoint not in THPhG_R_outliers:
-            #         THPhG_R_outliers.append(subject_id + "_" + timepoint)
-            # if ktrans_rHipp_L_median > 5:
-            #     if subject_id + "_" + timepoint not in rHipp_L_outliers:
-            #         rHipp_L_outliers.append(subject_id + "_" + timepoint)
-            # if ktrans_rHipp_R_median > 5:
-            #     if subject_id + "_" + timepoint not in rHipp_R_outliers:
-            #         rHipp_R_outliers.append(subject_id + "_" + timepoint)
-            # if ktrans_cHipp_L_median > 5:
-            #     if subject_id + "_" + timepoint not in cHipp_L_outliers:
-            #         cHipp_L_outliers.append(subject_id + "_" + timepoint)
-            # if ktrans_cHipp_R_median > 5:
-            #     if subject_id + "_" + timepoint not in cHipp_R_outliers:
-            #         cHipp_R_outliers.append(subject_id + "_" + timepoint)
                 if Ktrans_Hippo_median > 5:
                     if subject_id + "_" + timepoint not in whole_hippo_outliers:
                         whole_hippo_outliers.append(subject_id + "_" + timepoint)
@@ -793,67 +672,6 @@ for subject_id in subjects:
                     if subject_id + "_" + timepoint not in whole_medial_temporal_cortex_outliers:
                         whole_medial_temporal_cortex_outliers.append(subject_id + "_" + timepoint)
             
-            # get mean ktrans values
-            # ktrans_rPhG_L_mean = np.mean(ktrans_rPhG_L)
-            # ktrans_rPhG_R_mean = np.mean(ktrans_rPhG_R)
-            # ktrans_cPhG_L_mean = np.mean(ktrans_cPhG_L)
-            # ktrans_cPhG_R_mean = np.mean(ktrans_cPhG_R)
-            # ktrans_lateral_PPHC_L_mean = np.mean(ktrans_lateral_PPHC_L)
-            # ktrans_lateral_PPHC_R_mean = np.mean(ktrans_lateral_PPHC_R)
-            # ktrans_ECPhG_L_mean = np.mean(ktrans_ECPhG_L)
-            # ktrans_ECPhG_R_mean = np.mean(ktrans_ECPhG_R)
-            # ktrans_TIPhG_L_mean = np.mean(ktrans_TIPhG_L)
-            # ktrans_TIPhG_R_mean = np.mean(ktrans_TIPhG_R)
-            # ktrans_THPhG_L_mean = np.mean(ktrans_THPhG_L)
-            # ktrans_THPhG_R_mean = np.mean(ktrans_THPhG_R)
-            # ktrans_rHipp_L_mean = np.mean(ktrans_rHipp_L)
-            # ktrans_rHipp_R_mean = np.mean(ktrans_rHipp_R)
-            # ktrans_cHipp_L_mean = np.mean(ktrans_cHipp_L)
-            # ktrans_cHipp_R_mean = np.mean(ktrans_cHipp_R)
-            # Ktrans_Hippo_mean = np.mean(Ktrans_Hippo)
-            # Ktrans_PhG_mean = np.mean(Ktrans_PhG)
-            # Ktrans_Putamen_mean = np.mean(Ktrans_Putamen)
-            # Ktrans_Pallidum_mean = np.mean(Ktrans_Pallidum)
-            # Ktrans_Thalamus_mean = np.mean(Ktrans_Thalamus)
-            # Ktrans_Caudate_mean = np.mean(Ktrans_Caudate)
-            # Ktrans_Amygdala_mean = np.mean(Ktrans_Amygdala)
-            # Ktrans_Entorhinal_cortex_mean = np.mean(Ktrans_Entorhinal_cortex)
-            # Ktrans_Fusiform_gyrus_cortex_mean = np.mean(Ktrans_Fusiform_gyrus_cortex)
-            # Ktrans_Fusiform_gyrus_WM_mean = np.mean(Ktrans_Fusiform_gyrus_WM)
-            # Ktrans_Insula_WM_mean = np.mean(Ktrans_Insula_WM)
-            # Ktrans_Superior_temporal_cortex_mean = np.mean(Ktrans_Superior_temporal_cortex)
-
-            # get std ktrans values
-            # ktrans_rPhG_L_std = np.std(ktrans_rPhG_L)
-            # ktrans_rPhG_R_std = np.std(ktrans_rPhG_R)
-            # ktrans_cPhG_L_std = np.std(ktrans_cPhG_L)
-            # ktrans_cPhG_R_std = np.std(ktrans_cPhG_R)
-            # ktrans_lateral_PPHC_L_std = np.std(ktrans_lateral_PPHC_L)
-            # ktrans_lateral_PPHC_R_std = np.std(ktrans_lateral_PPHC_R)
-            # ktrans_ECPhG_L_std = np.std(ktrans_ECPhG_L)
-            # ktrans_ECPhG_R_std = np.std(ktrans_ECPhG_R)
-            # ktrans_TIPhG_L_std = np.std(ktrans_TIPhG_L)
-            # ktrans_TIPhG_R_std = np.std(ktrans_TIPhG_R)
-            # ktrans_THPhG_L_std = np.std(ktrans_THPhG_L)
-            # ktrans_THPhG_R_std = np.std(ktrans_THPhG_R)
-            # ktrans_rHipp_L_std = np.std(ktrans_rHipp_L)
-            # ktrans_rHipp_R_std = np.std(ktrans_rHipp_R)
-            # ktrans_cHipp_L_std = np.std(ktrans_cHipp_L)
-            # ktrans_cHipp_R_std = np.std(ktrans_cHipp_R)
-            # Ktrans_Hippo_std = np.std(Ktrans_Hippo)
-            # Ktrans_PhG_std = np.std(Ktrans_PhG)
-            # Ktrans_Putamen_std = np.std(Ktrans_Putamen)
-            # Ktrans_Pallidum_std = np.std(Ktrans_Pallidum)
-            # Ktrans_Thalamus_std = np.std(Ktrans_Thalamus)
-            # Ktrans_Caudate_std = np.std(Ktrans_Caudate)
-            # Ktrans_Amygdala_std = np.std(Ktrans_Amygdala)
-            # Ktrans_Entorhinal_cortex_std = np.std(Ktrans_Entorhinal_cortex)
-            # Ktrans_Fusiform_gyrus_cortex_std = np.std(Ktrans_Fusiform_gyrus_cortex)
-            # Ktrans_Fusiform_gyrus_WM_std = np.std(Ktrans_Fusiform_gyrus_WM)
-            # Ktrans_Insula_WM_std = np.std(Ktrans_Insula_WM)
-            # Ktrans_Superior_temporal_cortex_std = np.std(Ktrans_Superior_temporal_cortex)
-            
-            # successful_timepoints.append(subject_id + '/' + timepoint + "/" + output_dir)
             entry = subject_id + "_" + timepoint
             if stats_failed is False:
                 successful_timepoints.append(f'{subject_id}/{timepoint}')
@@ -913,7 +731,8 @@ for subject_id in subjects:
                     "insula_wm_vol": insula_wm_vol,
                     "superior_temporal_cortex_vol": superior_temporal_cortex_vol,
                     "posterior_cingulate_cortex_vol": posterior_cingulate_cortex_vol,
-                    "medial_temporal_cortex_vol": medial_temporal_cortex_vol
+                    "medial_temporal_cortex_vol": medial_temporal_cortex_vol,
+                    "manual_aif_status": manual_aif_status,
                 }
             else:
                 population_data_failed[entry] = {
@@ -973,9 +792,81 @@ for subject_id in subjects:
                     "insula_wm_vol": insula_wm_vol,
                     "superior_temporal_cortex_vol": superior_temporal_cortex_vol,
                     "posterior_cingulate_cortex_vol": posterior_cingulate_cortex_vol,
-                    "medial_temporal_cortex_vol": medial_temporal_cortex_vol
+                    "medial_temporal_cortex_vol": medial_temporal_cortex_vol,
+                    "manual_aif_status": manual_aif_status,
                 }
 
+# get flagged cases
+flagged_cases = []
+flagged_links = []
+MOTION_THRESHOLD = 3.8
+AIFITNESS_THRESHOLD = 75
+for case in successful_timepoints:
+    entry = case.replace('/', '_')
+    flag_str = ""
+    subject = case.split('/')[0]
+    session = case.split('/')[1]
+    save_name = f"{case}/reports/{subject}_{session}_desc-casereport.html"
+    flag = False
+    if population_data[entry]['max_disp'] > MOTION_THRESHOLD:
+        flag = True
+        flag_str += "motion"
+        save_name += "#MCFLIRT"
+    if population_data[entry]['AIFitness'] < AIFITNESS_THRESHOLD:
+        flag = True
+        if flag_str != "":
+            flag_str += ", "
+        flag_str += "AIFitness"
+        if not save_name[-1].endswith("MCFLIRT"):
+            save_name += "#AIF"
+    if flag_str != "":
+        flagged_cases.append(f'{case} ({flag_str})')
+        flagged_links.append(save_name)
+    if flag:
+        # move to population_data_exclude
+        # put AUTO at beginning of flag_str
+        flag_str = "AUTO: " + flag_str
+        population_data_exclude[entry] = population_data.pop(entry)
+        population_data_exclude[entry]['Reason'] = flag_str
+        # move outliers to exclude
+        if case in whole_hippo_outliers:
+            whole_hippo_outliers_exclude.append(whole_hippo_outliers.pop(whole_hippo_outliers.index(case)))
+        if case in whole_phg_outliers:
+            whole_phg_outliers_exclude.append(whole_phg_outliers.pop(whole_phg_outliers.index(case)))
+        if case in whole_putamen_outliers:
+            whole_putamen_outliers_exclude.append(whole_putamen_outliers.pop(whole_putamen_outliers.index(case)))
+        if case in whole_pallidum_outliers:
+            whole_pallidum_outliers_exclude.append(whole_pallidum_outliers.pop(whole_pallidum_outliers.index(case)))
+        if case in whole_thalamus_outliers:
+            whole_thalamus_outliers_exclude.append(whole_thalamus_outliers.pop(whole_thalamus_outliers.index(case)))
+        if case in whole_caudate_outliers:
+            whole_caudate_outliers_exclude.append(whole_caudate_outliers.pop(whole_caudate_outliers.index(case)))
+        if case in whole_amygdala_outliers:
+            whole_amygdala_outliers_exclude.append(whole_amygdala_outliers.pop(whole_amygdala_outliers.index(case)))
+        if case in whole_entorhinal_cortex_outliers:
+            whole_entorhinal_cortex_outliers_exclude.append(whole_entorhinal_cortex_outliers.pop(whole_entorhinal_cortex_outliers.index(case)))
+        if case in whole_fusiform_gyrus_cortex_outliers:
+            whole_fusiform_gyrus_cortex_outliers_exclude.append(whole_fusiform_gyrus_cortex_outliers.pop(whole_fusiform_gyrus_cortex_outliers.index(case)))
+        if case in whole_fusiform_gyrus_WM_outliers:
+            whole_fusiform_gyrus_WM_outliers_exclude.append(whole_fusiform_gyrus_WM_outliers.pop(whole_fusiform_gyrus_WM_outliers.index(case)))
+        if case in whole_insula_WM_outliers:
+            whole_insula_WM_outliers_exclude.append(whole_insula_WM_outliers.pop(whole_insula_WM_outliers.index(case)))
+        if case in whole_superior_temporal_cortex_outliers:
+            whole_superior_temporal_cortex_outliers_exclude.append(whole_superior_temporal_cortex_outliers.pop(whole_superior_temporal_cortex_outliers.index(case)))
+        if case in whole_posterior_cingulate_cortex_outliers:
+            whole_posterior_cingulate_cortex_outliers_exclude.append(whole_posterior_cingulate_cortex_outliers.pop(whole_posterior_cingulate_cortex_outliers.index(case)))
+        if case in whole_medial_temporal_cortex_outliers:
+            whole_medial_temporal_cortex_outliers_exclude.append(whole_medial_temporal_cortex_outliers.pop(whole_medial_temporal_cortex_outliers.index(case)))
+
+# remove cases with Machine == Signa HDxt from population_data_exclude and population_data
+population_data_exclude_signa = {}
+for entry in list(population_data_exclude.keys()):
+    if population_data_exclude[entry]["Machine"] == "Signa HDxt":
+        population_data_exclude_signa[entry] = population_data_exclude.pop(entry)
+
+for entry in list(population_data.keys()):
+    if population_data[entry]["Machine"] == "Signa HDxt":
+        population_data_exclude_signa[entry] = population_data.pop(entry)
 
 try:
     AIFitness_values = [float(population_data[entry]["AIFitness"]) for entry in population_data]
@@ -989,6 +880,19 @@ except Exception as e:
     AIFitness_median = -1
     AIFitness_std = -1
     AIFitness_5th_percentile = -1
+
+try:
+    AIFitness_exclude = [float(population_data_exclude[entry]["AIFitness"]) for entry in population_data_exclude]
+    AIFitness_exclude_mean = np.mean(AIFitness_exclude)
+    AIFitness_exclude_median = np.median(AIFitness_exclude)
+    AIFitness_exclude_std = np.std(AIFitness_exclude)
+    AIFitness_exclude_5th_percentile = np.percentile(AIFitness_exclude, 5)
+except Exception as e:
+    print("AIFitness issue.", e)
+    AIFitness_exclude_mean = -1
+    AIFitness_exclude_median = -1
+    AIFitness_exclude_std = -1
+    AIFitness_exclude_5th_percentile = -1
 
 try:
     aif_mmol_mean = np.mean([population_data[entry]["aif_mmol"] for entry in population_data])
@@ -1005,6 +909,21 @@ except Exception as e:
     aif_mmol_95th_percentile = -1
 
 try:
+    aif_mmol_exclude = [population_data_exclude[entry]["aif_mmol"] for entry in population_data_exclude]
+    aif_mmol_mean_exclude = np.mean(aif_mmol_exclude)
+    aif_mmol_median_exclude = np.median(aif_mmol_exclude)
+    aif_mmol_std_exclude = np.std(aif_mmol_exclude)
+    aif_mmol_5th_percentile_exclude = np.percentile(aif_mmol_exclude, 5)
+    aif_mmol_95th_percentile_exclude = np.percentile(aif_mmol_exclude, 95)
+except Exception as e:
+    print(e)
+    aif_mmol_mean_exclude = -1
+    aif_mmol_median_exclude = -1
+    aif_mmol_std_exclude = -1
+    aif_mmol_5th_percentile_exclude = -1
+    aif_mmol_95th_percentile_exclude = -1
+
+try:
     T1_wm_mean = np.mean([population_data[entry]["T1_wm_median"] for entry in population_data])
     T1_wm_median = np.median([population_data[entry]["T1_wm_median"] for entry in population_data])
     T1_wm_std = np.std([population_data[entry]["T1_wm_median"] for entry in population_data])
@@ -1017,6 +936,20 @@ except Exception as e:
     T1_wm_std = -1
     T1_wm_5th_percentile = -1
     T1_wm_95th_percentile = -1
+
+try:
+    T1_wm_mean_exclude = np.mean([population_data_exclude[entry]["T1_wm_median"] for entry in population_data_exclude])
+    T1_wm_median_exclude = np.median([population_data_exclude[entry]["T1_wm_median"] for entry in population_data_exclude])
+    T1_wm_std_exclude = np.std([population_data_exclude[entry]["T1_wm_median"] for entry in population_data_exclude])
+    T1_wm_5th_percentile_exclude = np.percentile([population_data_exclude[entry]["T1_wm_median"] for entry in population_data_exclude], 5)
+    T1_wm_95th_percentile_exclude = np.percentile([population_data_exclude[entry]["T1_wm_median"] for entry in population_data_exclude], 95)
+except Exception as e:
+    print(e)
+    T1_wm_mean_exclude = -1
+    T1_wm_median_exclude = -1
+    T1_wm_std_exclude = -1
+    T1_wm_5th_percentile_exclude = -1
+    T1_wm_95th_percentile_exclude = -1
 
 try:
     T1_gm_mean = np.mean([population_data[entry]["T1_gm_median"] for entry in population_data])
@@ -1033,6 +966,20 @@ except Exception as e:
     T1_gm_95th_percentile = -1
 
 try:
+    T1_gm_mean_exclude = np.mean([population_data_exclude[entry]["T1_gm_median"] for entry in population_data_exclude])
+    T1_gm_median_exclude = np.median([population_data_exclude[entry]["T1_gm_median"] for entry in population_data_exclude])
+    T1_gm_std_exclude = np.std([population_data_exclude[entry]["T1_gm_median"] for entry in population_data_exclude])
+    T1_gm_5th_percentile_exclude = np.percentile([population_data_exclude[entry]["T1_gm_median"] for entry in population_data_exclude], 5)
+    T1_gm_95th_percentile_exclude = np.percentile([population_data_exclude[entry]["T1_gm_median"] for entry in population_data_exclude], 95)
+except Exception as e:
+    print(e)
+    T1_gm_mean_exclude = -1
+    T1_gm_median_exclude = -1
+    T1_gm_std_exclude = -1
+    T1_gm_5th_percentile_exclude = -1
+    T1_gm_95th_percentile_exclude = -1
+
+try:
     T1_blood_mean = np.mean([population_data[entry]["T1_blood"] for entry in population_data])
     T1_blood_median = np.median([population_data[entry]["T1_blood"] for entry in population_data])
     T1_blood_std = np.std([population_data[entry]["T1_blood"] for entry in population_data])
@@ -1046,6 +993,19 @@ except Exception as e:
     T1_blood_5th_percentile = -1
     T1_blood_95th_percentile = -1
 
+try:
+    T1_blood_mean_exclude = np.mean([population_data_exclude[entry]["T1_blood"] for entry in population_data_exclude])
+    T1_blood_median_exclude = np.median([population_data_exclude[entry]["T1_blood"] for entry in population_data_exclude])
+    T1_blood_std_exclude = np.std([population_data_exclude[entry]["T1_blood"] for entry in population_data_exclude])
+    T1_blood_5th_percentile_exclude = np.percentile([population_data_exclude[entry]["T1_blood"] for entry in population_data_exclude], 5)
+    T1_blood_95th_percentile_exclude = np.percentile([population_data_exclude[entry]["T1_blood"] for entry in population_data_exclude], 95)
+except Exception as e:
+    print(e)
+    T1_blood_mean_exclude = -1
+    T1_blood_median_exclude = -1
+    T1_blood_std_exclude = -1
+    T1_blood_5th_percentile_exclude = -1
+    T1_blood_95th_percentile_exclude = -1
 
 try:
     wm_mean = np.mean([population_data[entry]["wm_median"] for entry in population_data])
@@ -1063,109 +1023,133 @@ except Exception as e:
     gm_median = -1
     gm_std = -1
 
-# rPhG_L_mean = np.mean([population_data[entry]["ktrans_rPhG_L_median"] for entry in population_data])
-# rPhG_L_median = np.median([population_data[entry]["ktrans_rPhG_L_median"] for entry in population_data])
-# rPhG_L_std = np.std([population_data[entry]["ktrans_rPhG_L_median"] for entry in population_data])
-# rPhG_R_mean = np.mean([population_data[entry]["ktrans_rPhG_R_median"] for entry in population_data])
-# rPhG_R_median = np.median([population_data[entry]["ktrans_rPhG_R_median"] for entry in population_data])
-# rPhG_R_std = np.std([population_data[entry]["ktrans_rPhG_R_median"] for entry in population_data])
-# cPhG_L_mean = np.mean([population_data[entry]["ktrans_cPhG_L_median"] for entry in population_data])
-# cPhG_L_median = np.median([population_data[entry]["ktrans_cPhG_L_median"] for entry in population_data])
-# cPhG_L_std = np.std([population_data[entry]["ktrans_cPhG_L_median"] for entry in population_data])
-# cPhG_R_mean = np.mean([population_data[entry]["ktrans_cPhG_R_median"] for entry in population_data])
-# cPhG_R_median = np.median([population_data[entry]["ktrans_cPhG_R_median"] for entry in population_data])
-# cPhG_R_std = np.std([population_data[entry]["ktrans_cPhG_R_median"] for entry in population_data])
-# lateral_PPHC_L_mean = np.mean([population_data[entry]["ktrans_lateral_PPHC_L_median"] for entry in population_data])
-# lateral_PPHC_L_median = np.median([population_data[entry]["ktrans_lateral_PPHC_L_median"] for entry in population_data])
-# lateral_PPHC_L_std = np.std([population_data[entry]["ktrans_lateral_PPHC_L_median"] for entry in population_data])
-# lateral_PPHC_R_mean = np.mean([population_data[entry]["ktrans_lateral_PPHC_R_median"] for entry in population_data])
-# lateral_PPHC_R_median = np.median([population_data[entry]["ktrans_lateral_PPHC_R_median"] for entry in population_data])
-# lateral_PPHC_R_std = np.std([population_data[entry]["ktrans_lateral_PPHC_R_median"] for entry in population_data])
-# ECPhG_L_mean = np.mean([population_data[entry]["ktrans_ECPhG_L_median"] for entry in population_data])
-# ECPhG_L_median = np.median([population_data[entry]["ktrans_ECPhG_L_median"] for entry in population_data])
-# ECPhG_L_std = np.std([population_data[entry]["ktrans_ECPhG_L_median"] for entry in population_data])
-# ECPhG_R_mean = np.mean([population_data[entry]["ktrans_ECPhG_R_median"] for entry in population_data])
-# ECPhG_R_median = np.median([population_data[entry]["ktrans_ECPhG_R_median"] for entry in population_data])
-# ECPhG_R_std = np.std([population_data[entry]["ktrans_ECPhG_R_median"] for entry in population_data])
-# TIPhG_L_mean = np.mean([population_data[entry]["ktrans_TIPhG_L_median"] for entry in population_data])
-# TIPhG_L_median = np.median([population_data[entry]["ktrans_TIPhG_L_median"] for entry in population_data])
-# TIPhG_L_std = np.std([population_data[entry]["ktrans_TIPhG_L_median"] for entry in population_data])
-# TIPhG_R_mean = np.mean([population_data[entry]["ktrans_TIPhG_R_median"] for entry in population_data])
-# TIPhG_R_median = np.median([population_data[entry]["ktrans_TIPhG_R_median"] for entry in population_data])
-# TIPhG_R_std = np.std([population_data[entry]["ktrans_TIPhG_R_median"] for entry in population_data])
-# THPhG_L_mean = np.mean([population_data[entry]["ktrans_THPhG_L_median"] for entry in population_data])
-# THPhG_L_median = np.median([population_data[entry]["ktrans_THPhG_L_median"] for entry in population_data])
-# THPhG_L_std = np.std([population_data[entry]["ktrans_THPhG_L_median"] for entry in population_data])
-# THPhG_R_mean = np.mean([population_data[entry]["ktrans_THPhG_R_median"] for entry in population_data])
-# THPhG_R_median = np.median([population_data[entry]["ktrans_THPhG_R_median"] for entry in population_data])
-# THPhG_R_std = np.std([population_data[entry]["ktrans_THPhG_R_median"] for entry in population_data])
-# rHipp_L_mean = np.mean([population_data[entry]["ktrans_rHipp_L_median"] for entry in population_data])
-# rHipp_L_median = np.median([population_data[entry]["ktrans_rHipp_L_median"] for entry in population_data])
-# rHipp_L_std = np.std([population_data[entry]["ktrans_rHipp_L_median"] for entry in population_data])
-# rHipp_R_mean = np.mean([population_data[entry]["ktrans_rHipp_R_median"] for entry in population_data])
-# rHipp_R_median = np.median([population_data[entry]["ktrans_rHipp_R_median"] for entry in population_data])
-# rHipp_R_std = np.std([population_data[entry]["ktrans_rHipp_R_median"] for entry in population_data])
-# cHipp_L_mean = np.mean([population_data[entry]["ktrans_cHipp_L_median"] for entry in population_data])
-# cHipp_L_median = np.median([population_data[entry]["ktrans_cHipp_L_median"] for entry in population_data])
-# cHipp_L_std = np.std([population_data[entry]["ktrans_cHipp_L_median"] for entry in population_data])
-# cHipp_R_mean = np.mean([population_data[entry]["ktrans_cHipp_R_median"] for entry in population_data])
-# cHipp_R_median = np.median([population_data[entry]["ktrans_cHipp_R_median"] for entry in population_data])
-# cHipp_R_std = np.std([population_data[entry]["ktrans_cHipp_R_median"] for entry in population_data])
+try:
+    wm_mean_exclude = np.mean([population_data_exclude[entry]["wm_median"] for entry in population_data_exclude])
+    wm_median_exclude = np.median([population_data_exclude[entry]["wm_median"] for entry in population_data_exclude])
+    wm_std_exclude = np.std([population_data_exclude[entry]["wm_median"] for entry in population_data_exclude])
+    gm_mean_exclude = np.mean([population_data_exclude[entry]["gm_median"] for entry in population_data_exclude])
+    gm_median_exclude = np.median([population_data_exclude[entry]["gm_median"] for entry in population_data_exclude])
+    gm_std_exclude = np.std([population_data_exclude[entry]["gm_median"] for entry in population_data_exclude])
+except Exception as e:
+    print(e)
+    wm_mean_exclude = -1
+    wm_median_exclude = -1
+    wm_std_exclude = -1
+    gm_mean_exclude = -1
+    gm_median_exclude = -1
+    gm_std_exclude = -1
+
 whole_hippo_mean = np.mean([population_data[entry]["Ktrans_Hippo_median"] for entry in population_data])
 whole_hippo_median = np.median([population_data[entry]["Ktrans_Hippo_median"] for entry in population_data])
 whole_hippo_std = np.std([population_data[entry]["Ktrans_Hippo_median"] for entry in population_data])
+
+whole_hippo_mean_exclude = np.mean([population_data_exclude[entry]["Ktrans_Hippo_median"] for entry in population_data_exclude])
+whole_hippo_median_exclude = np.median([population_data_exclude[entry]["Ktrans_Hippo_median"] for entry in population_data_exclude])
+whole_hippo_std_exclude = np.std([population_data_exclude[entry]["Ktrans_Hippo_median"] for entry in population_data_exclude])
 
 whole_phg_mean = np.mean([population_data[entry]["Ktrans_PhG_median"] for entry in population_data])
 whole_phg_median = np.median([population_data[entry]["Ktrans_PhG_median"] for entry in population_data])
 whole_phg_std = np.std([population_data[entry]["Ktrans_PhG_median"] for entry in population_data])
 
+whole_phg_mean_exclude = np.mean([population_data_exclude[entry]["Ktrans_PhG_median"] for entry in population_data_exclude])
+whole_phg_median_exclude = np.median([population_data_exclude[entry]["Ktrans_PhG_median"] for entry in population_data_exclude])
+whole_phg_std_exclude = np.std([population_data_exclude[entry]["Ktrans_PhG_median"] for entry in population_data_exclude])
+
 whole_putamen_mean = np.mean([population_data[entry]["Ktrans_Putamen_median"] for entry in population_data])
 whole_putamen_median = np.median([population_data[entry]["Ktrans_Putamen_median"] for entry in population_data])
 whole_putamen_std = np.std([population_data[entry]["Ktrans_Putamen_median"] for entry in population_data])
+
+whole_putamen_mean_exclude = np.mean([population_data_exclude[entry]["Ktrans_Putamen_median"] for entry in population_data_exclude])
+whole_putamen_median_exclude = np.median([population_data_exclude[entry]["Ktrans_Putamen_median"] for entry in population_data_exclude])
+whole_putamen_std_exclude = np.std([population_data_exclude[entry]["Ktrans_Putamen_median"] for entry in population_data_exclude])
 
 whole_pallidum_mean = np.mean([population_data[entry]["Ktrans_Pallidum_median"] for entry in population_data])
 whole_pallidum_median = np.median([population_data[entry]["Ktrans_Pallidum_median"] for entry in population_data])
 whole_pallidum_std = np.std([population_data[entry]["Ktrans_Pallidum_median"] for entry in population_data])
 
+whole_pallidum_mean_exclude = np.mean([population_data_exclude[entry]["Ktrans_Pallidum_median"] for entry in population_data_exclude])
+whole_pallidum_median_exclude = np.median([population_data_exclude[entry]["Ktrans_Pallidum_median"] for entry in population_data_exclude])
+whole_pallidum_std_exclude = np.std([population_data_exclude[entry]["Ktrans_Pallidum_median"] for entry in population_data_exclude])
+
 whole_thalamus_mean = np.mean([population_data[entry]["Ktrans_Thalamus_median"] for entry in population_data])
 whole_thalamus_median = np.median([population_data[entry]["Ktrans_Thalamus_median"] for entry in population_data])
 whole_thalamus_std = np.std([population_data[entry]["Ktrans_Thalamus_median"] for entry in population_data])
+
+whole_thalamus_mean_exclude = np.mean([population_data_exclude[entry]["Ktrans_Thalamus_median"] for entry in population_data_exclude])
+whole_thalamus_median_exclude = np.median([population_data_exclude[entry]["Ktrans_Thalamus_median"] for entry in population_data_exclude])
+whole_thalamus_std_exclude = np.std([population_data_exclude[entry]["Ktrans_Thalamus_median"] for entry in population_data_exclude])
 
 whole_caudate_mean = np.mean([population_data[entry]["Ktrans_Caudate_median"] for entry in population_data])
 whole_caudate_median = np.median([population_data[entry]["Ktrans_Caudate_median"] for entry in population_data])
 whole_caudate_std = np.std([population_data[entry]["Ktrans_Caudate_median"] for entry in population_data])
 
+whole_caudate_mean_exclude = np.mean([population_data_exclude[entry]["Ktrans_Caudate_median"] for entry in population_data_exclude])
+whole_caudate_median_exclude = np.median([population_data_exclude[entry]["Ktrans_Caudate_median"] for entry in population_data_exclude])
+whole_caudate_std_exclude = np.std([population_data_exclude[entry]["Ktrans_Caudate_median"] for entry in population_data_exclude])
+
 whole_amygdala_mean = np.mean([population_data[entry]["Ktrans_Amygdala_median"] for entry in population_data])
 whole_amygdala_median = np.median([population_data[entry]["Ktrans_Amygdala_median"] for entry in population_data])
 whole_amygdala_std = np.std([population_data[entry]["Ktrans_Amygdala_median"] for entry in population_data])
+
+whole_amygdala_mean_exclude = np.mean([population_data_exclude[entry]["Ktrans_Amygdala_median"] for entry in population_data_exclude])
+whole_amygdala_median_exclude = np.median([population_data_exclude[entry]["Ktrans_Amygdala_median"] for entry in population_data_exclude])
+whole_amygdala_std_exclude = np.std([population_data_exclude[entry]["Ktrans_Amygdala_median"] for entry in population_data_exclude])
 
 whole_entorhinal_cortex_mean = np.mean([population_data[entry]["Ktrans_Entorhinal_cortex_median"] for entry in population_data])
 whole_entorhinal_cortex_median = np.median([population_data[entry]["Ktrans_Entorhinal_cortex_median"] for entry in population_data])
 whole_entorhinal_cortex_std = np.std([population_data[entry]["Ktrans_Entorhinal_cortex_median"] for entry in population_data])
 
+whole_entorhinal_cortex_mean_exclude = np.mean([population_data_exclude[entry]["Ktrans_Entorhinal_cortex_median"] for entry in population_data_exclude])
+whole_entorhinal_cortex_median_exclude = np.median([population_data_exclude[entry]["Ktrans_Entorhinal_cortex_median"] for entry in population_data_exclude])
+whole_entorhinal_cortex_std_exclude = np.std([population_data_exclude[entry]["Ktrans_Entorhinal_cortex_median"] for entry in population_data_exclude])
+
 whole_fusiform_gyrus_cortex_mean = np.mean([population_data[entry]["Ktrans_Fusiform_gyrus_cortex_median"] for entry in population_data])
 whole_fusiform_gyrus_cortex_median = np.median([population_data[entry]["Ktrans_Fusiform_gyrus_cortex_median"] for entry in population_data])
 whole_fusiform_gyrus_cortex_std = np.std([population_data[entry]["Ktrans_Fusiform_gyrus_cortex_median"] for entry in population_data])
+
+whole_fusiform_gyrus_cortex_mean_exclude = np.mean([population_data_exclude[entry]["Ktrans_Fusiform_gyrus_cortex_median"] for entry in population_data_exclude])
+whole_fusiform_gyrus_cortex_median_exclude = np.median([population_data_exclude[entry]["Ktrans_Fusiform_gyrus_cortex_median"] for entry in population_data_exclude])
+whole_fusiform_gyrus_cortex_std_exclude = np.std([population_data_exclude[entry]["Ktrans_Fusiform_gyrus_cortex_median"] for entry in population_data_exclude])
 
 whole_fusiform_gyrus_WM_mean = np.mean([population_data[entry]["Ktrans_Fusiform_gyrus_WM_median"] for entry in population_data])
 whole_fusiform_gyrus_WM_median = np.median([population_data[entry]["Ktrans_Fusiform_gyrus_WM_median"] for entry in population_data])
 whole_fusiform_gyrus_WM_std = np.std([population_data[entry]["Ktrans_Fusiform_gyrus_WM_median"] for entry in population_data])
 
+whole_fusiform_gyrus_WM_mean_exclude = np.mean([population_data_exclude[entry]["Ktrans_Fusiform_gyrus_WM_median"] for entry in population_data_exclude])
+whole_fusiform_gyrus_WM_median_exclude = np.median([population_data_exclude[entry]["Ktrans_Fusiform_gyrus_WM_median"] for entry in population_data_exclude])
+whole_fusiform_gyrus_WM_std_exclude = np.std([population_data_exclude[entry]["Ktrans_Fusiform_gyrus_WM_median"] for entry in population_data_exclude])
+
 whole_insula_WM_mean = np.mean([population_data[entry]["Ktrans_Insula_WM_median"] for entry in population_data])
 whole_insula_WM_median = np.median([population_data[entry]["Ktrans_Insula_WM_median"] for entry in population_data])
 whole_insula_WM_std = np.std([population_data[entry]["Ktrans_Insula_WM_median"] for entry in population_data])
+
+whole_insula_WM_mean_exclude = np.mean([population_data_exclude[entry]["Ktrans_Insula_WM_median"] for entry in population_data_exclude])
+whole_insula_WM_median_exclude = np.median([population_data_exclude[entry]["Ktrans_Insula_WM_median"] for entry in population_data_exclude])
+whole_insula_WM_std_exclude = np.std([population_data_exclude[entry]["Ktrans_Insula_WM_median"] for entry in population_data_exclude])
 
 whole_superior_temporal_cortex_mean = np.mean([population_data[entry]["Ktrans_Superior_temporal_cortex_median"] for entry in population_data])
 whole_superior_temporal_cortex_median = np.median([population_data[entry]["Ktrans_Superior_temporal_cortex_median"] for entry in population_data])
 whole_superior_temporal_cortex_std = np.std([population_data[entry]["Ktrans_Superior_temporal_cortex_median"] for entry in population_data])
 
+whole_superior_temporal_cortex_mean_exclude = np.mean([population_data_exclude[entry]["Ktrans_Superior_temporal_cortex_median"] for entry in population_data_exclude])
+whole_superior_temporal_cortex_median_exclude = np.median([population_data_exclude[entry]["Ktrans_Superior_temporal_cortex_median"] for entry in population_data_exclude])
+whole_superior_temporal_cortex_std_exclude = np.std([population_data_exclude[entry]["Ktrans_Superior_temporal_cortex_median"] for entry in population_data_exclude])
+
 whole_posterior_cingulate_cortex_mean = np.mean([population_data[entry]["Ktrans_Posterior_cingulate_cortex_median"] for entry in population_data])
 whole_posterior_cingulate_cortex_median = np.median([population_data[entry]["Ktrans_Posterior_cingulate_cortex_median"] for entry in population_data])
 whole_posterior_cingulate_cortex_std = np.std([population_data[entry]["Ktrans_Posterior_cingulate_cortex_median"] for entry in population_data])
 
+whole_posterior_cingulate_cortex_mean_exclude = np.mean([population_data_exclude[entry]["Ktrans_Posterior_cingulate_cortex_median"] for entry in population_data_exclude])
+whole_posterior_cingulate_cortex_median_exclude = np.median([population_data_exclude[entry]["Ktrans_Posterior_cingulate_cortex_median"] for entry in population_data_exclude])
+whole_posterior_cingulate_cortex_std_exclude = np.std([population_data_exclude[entry]["Ktrans_Posterior_cingulate_cortex_median"] for entry in population_data_exclude])
+
 whole_medial_temporal_cortex_mean = np.mean([population_data[entry]["Ktrans_Medial_temporal_cortex_median"] for entry in population_data])
 whole_medial_temporal_cortex_median = np.median([population_data[entry]["Ktrans_Medial_temporal_cortex_median"] for entry in population_data])
 whole_medial_temporal_cortex_std = np.std([population_data[entry]["Ktrans_Medial_temporal_cortex_median"] for entry in population_data])
+
+whole_medial_temporal_cortex_mean_exclude = np.mean([population_data_exclude[entry]["Ktrans_Medial_temporal_cortex_median"] for entry in population_data_exclude])
+whole_medial_temporal_cortex_median_exclude = np.median([population_data_exclude[entry]["Ktrans_Medial_temporal_cortex_median"] for entry in population_data_exclude])
+whole_medial_temporal_cortex_std_exclude = np.std([population_data_exclude[entry]["Ktrans_Medial_temporal_cortex_median"] for entry in population_data_exclude])
 
 # if no outliers, set to "None"
 if len(wm_outliers) == 0:
@@ -1187,8 +1171,21 @@ plt.hist(T1_blood_histogram, bins=30)
 plt.title("T1 Blood")
 plt.xlabel("T1 Blood")
 # T1_blood_histogram_path = os.path.join("figures/", output_dir + "T1_blood_histogram.png")
-T1_blood_histogram_path = os.path.join("figures/", "T1_blood_histogram.png")
+T1_blood_histogram_path = os.path.join("figures/", "T1_blood_histogram" + output_dir + ".png")
 plt.savefig(T1_blood_histogram_path, bbox_inches='tight')
+plt.close()
+
+T1_blood_histogram_exclude = []
+for entry in population_data_exclude.keys():
+    T1_blood_histogram_exclude.append(population_data_exclude[entry]["T1_blood"])
+
+# plot histogram
+plt.hist(T1_blood_histogram_exclude, bins=30)
+plt.title("T1 Blood (Exclude)")
+plt.xlabel("T1 Blood")
+# T1_blood_histogram_exclude_path = os.path.join("figures/", output_dir + "T1_blood_histogram_exclude.png")
+T1_blood_histogram_exclude_path = os.path.join("figures/", "T1_blood_histogram_exclude" + output_dir + ".png")
+plt.savefig(T1_blood_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
 # make AIFitness histogram
@@ -1196,8 +1193,16 @@ plt.hist(AIFitness_values, bins=30)
 plt.title("AIFitness Median")
 plt.xlabel("AIFitness")
 # aifitness_histogram_path = os.path.join("figures/", output_dir + "aifitness_histogram.png")
-aifitness_histogram_path = os.path.join("figures/", "aifitness_histogram.png")
+aifitness_histogram_path = os.path.join("figures/", "aifitness_histogram" + output_dir + ".png")
 plt.savefig(aifitness_histogram_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(AIFitness_exclude, bins=30)
+plt.title("AIFitness Median (Exclude)")
+plt.xlabel("AIFitness")
+# aifitness_histogram_exclude_path = os.path.join("figures/", output_dir + "aifitness_histogram_exclude.png")
+aifitness_histogram_exclude_path = os.path.join("figures/", "aifitness_histogram_exclude" + output_dir + ".png")
+plt.savefig(aifitness_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
 # make aif_mmol histogram
@@ -1210,8 +1215,21 @@ plt.hist(aif_mmol_histogram, bins=30)
 plt.title("AIF mmol (mean of last 1/3)")
 plt.xlabel("AIF mmol")
 # aif_mmol_histogram_path = os.path.join("figures/", output_dir + "aif_mmol_histogram.png")
-aif_mmol_histogram_path = os.path.join("figures/", "aif_mmol_histogram.png")
+aif_mmol_histogram_path = os.path.join("figures/", "aif_mmol_histogram" + output_dir + ".png")
 plt.savefig(aif_mmol_histogram_path, bbox_inches='tight')
+plt.close()
+
+aif_mmol_histogram_exclude = []
+for entry in population_data_exclude.keys():
+    aif_mmol_histogram_exclude.append(population_data_exclude[entry]["aif_mmol"])
+
+# plot histogram
+plt.hist(aif_mmol_histogram_exclude, bins=30)
+plt.title("AIF mmol (mean of last 1/3) (Exclude)")
+plt.xlabel("AIF mmol")
+# aif_mmol_histogram_exclude_path = os.path.join("figures/", output_dir + "aif_mmol_histogram_exclude.png")
+aif_mmol_histogram_exclude_path = os.path.join("figures/", "aif_mmol_histogram_exclude" + output_dir + ".png")
+plt.savefig(aif_mmol_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
 # make ktrans histograms from each timepoint mean
@@ -1224,8 +1242,21 @@ plt.hist(wm_histogram, bins=50, range=(0, 5))
 plt.title("White Matter Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # ktrans_wm_histogram_path = os.path.join("figures/", output_dir + "wm_histogram.png")
-ktrans_wm_histogram_path = os.path.join("figures/", "wm_histogram.png")
+ktrans_wm_histogram_path = os.path.join("figures/", "wm_histogram" + output_dir + ".png")
 plt.savefig(ktrans_wm_histogram_path, bbox_inches='tight')
+plt.close()
+
+ktrans_wm_histogram_exclude = []
+for entry in population_data_exclude.keys():
+    ktrans_wm_histogram_exclude.append(population_data_exclude[entry]["wm_median"])
+
+# plot histogram
+plt.hist(ktrans_wm_histogram_exclude, bins=50, range=(0, 5))
+plt.title("White Matter Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# ktrans_wm_histogram_exclude_path = os.path.join("figures/", output_dir + "wm_histogram_exclude.png")
+ktrans_wm_histogram_exclude_path = os.path.join("figures/", "wm_histogram_exclude" + output_dir + ".png")
+plt.savefig(ktrans_wm_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
 # now get gm mean histogram
@@ -1238,97 +1269,65 @@ plt.hist(gm_histogram, bins=50, range=(0, 5))
 plt.title("Gray Matter Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # ktrans_gm_histogram_path = os.path.join("figures/", output_dir + "gm_histogram.png")
-ktrans_gm_histogram_path = os.path.join("figures/", "gm_histogram.png")
+ktrans_gm_histogram_path = os.path.join("figures/", "gm_histogram" + output_dir + ".png")
 # save range of histogram for later use
 gm_histogram_range = plt.xlim()
 plt.savefig(ktrans_gm_histogram_path, bbox_inches='tight')
 plt.close()
 
+ktrans_gm_histogram_exclude = []
+for entry in population_data_exclude.keys():
+    ktrans_gm_histogram_exclude.append(population_data_exclude[entry]["gm_median"])
+
+# plot histogram
+plt.hist(ktrans_gm_histogram_exclude, bins=50, range=(0, 5))
+plt.title("Gray Matter Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# ktrans_gm_histogram_exclude_path = os.path.join("figures/", output_dir + "gm_histogram_exclude.png")
+ktrans_gm_histogram_exclude_path = os.path.join("figures/", "gm_histogram_exclude" + output_dir + ".png")
+plt.xlim(gm_histogram_range)
+plt.savefig(ktrans_gm_histogram_exclude_path, bbox_inches='tight')
+plt.close()
+
 try:
-    avg_curve = np.asarray(aif_curves)
-    avg_curve = np.mean(avg_curve, axis=0)
+    pop_avg_AIF = np.asarray(popAIF_curves)
+    pop_avg_AIF = np.mean(pop_avg_AIF, axis=0)
     # save average curve to export into MATLAB
-    np.savetxt("average_aif_curve.csv", avg_curve, delimiter=",")
+    np.savetxt("average_aif_curve_bu.csv", pop_avg_AIF, delimiter=",")
+    for aif in popAIF_curves:
+        plt.plot(aif, linewidth=0.5, color='grey', alpha=0.5)
+    plt.plot(pop_avg_AIF, linewidth=1, color='black')
+    # plot stdev per timepoint
+    plt.fill_between(np.arange(0, len(pop_avg_AIF)), pop_avg_AIF - np.std(popAIF_curves, axis=0), pop_avg_AIF + np.std(popAIF_curves, axis=0), alpha=0.3)
+    plt.xlabel('Time (s)')
+    plt.ylabel('Normalized Intensity')
+    plt.title('AIF Curves (Modified for MATLAB Import)')
+    # aif_pop_avg_path = os.path.join("figures/", output_dir + "aif_pop_avg_AIF.png")
+    aif_pop_avg_path = os.path.join("figures/", "aif_pop_avg_AIF_bu" + output_dir + ".png")
+    plt.savefig(aif_pop_avg_path, bbox_inches='tight', dpi=300)  # Increase dpi for higher resolution
+    plt.close()
+except Exception as e:
+    print("Error plotting population AIF curve.", e)
+    aif_pop_avg_path = None
+
+try:
+    # plot true AIFs
+    aif_curves = np.asarray(aif_curves)
+    aif_curves_avg = np.mean(aif_curves, axis=0)
     for aif in aif_curves:
         plt.plot(aif, linewidth=0.5, color='grey', alpha=0.5)
-    plt.plot(avg_curve, linewidth=1, color='black')
-    # plot stdev per timepoint
-    plt.fill_between(np.arange(0, len(avg_curve)), avg_curve - np.std(aif_curves, axis=0), avg_curve + np.std(aif_curves, axis=0), alpha=0.3)
+    plt.plot(aif_curves_avg, linewidth=1, color='black')
+    # plot 95% confidence interval
+    plt.fill_between(np.arange(0, len(aif_curves_avg)), aif_curves_avg - np.std(aif_curves, axis=0), aif_curves_avg + np.std(aif_curves, axis=0), alpha=0.3)
     plt.xlabel('Time (s)')
     plt.ylabel('Normalized Intensity')
     plt.title('AIF Curves')
-    # aif_avg_curve_path = os.path.join("figures/", output_dir + "aif_avg_curve.png")
-    aif_avg_curve_path = os.path.join("figures/", "aif_avg_curve.png")
-    plt.savefig(aif_avg_curve_path, bbox_inches='tight', dpi=300)  # Increase dpi for higher resolution
+    aif_curves_path = os.path.join("figures/", "aif_pop_AIF" + output_dir + ".png")
+    plt.savefig(aif_curves_path, bbox_inches='tight', dpi=300)  # Increase dpi for higher resolution
     plt.close()
 except Exception as e:
-    print("Error plotting AIF curve.", e)
-    aif_avg_curve_path = None
-
-# time for hippocampus histograms
-# rPhG_L_histogram = []
-# for entry in population_data.keys():
-#     rPhG_L_histogram.append(population_data[entry]["ktrans_rPhG_L_median"])
-
-# rPhG_R_histogram = []
-# for entry in population_data.keys():
-#     rPhG_R_histogram.append(population_data[entry]["ktrans_rPhG_R_median"])
-
-# cPhG_L_histogram = []
-# for entry in population_data.keys():
-#     cPhG_L_histogram.append(population_data[entry]["ktrans_cPhG_L_median"])
-
-# cPhG_R_histogram = []
-# for entry in population_data.keys():
-#     cPhG_R_histogram.append(population_data[entry]["ktrans_cPhG_R_median"])
-
-# lateral_PPHC_L_histogram = []
-# for entry in population_data.keys():
-#     lateral_PPHC_L_histogram.append(population_data[entry]["ktrans_lateral_PPHC_L_median"])
-
-# lateral_PPHC_R_histogram = []
-# for entry in population_data.keys():
-#     lateral_PPHC_R_histogram.append(population_data[entry]["ktrans_lateral_PPHC_R_median"])
-
-# ECPhG_L_histogram = []
-# for entry in population_data.keys():
-#     ECPhG_L_histogram.append(population_data[entry]["ktrans_ECPhG_L_median"])
-
-# ECPhG_R_histogram = []
-# for entry in population_data.keys():
-#     ECPhG_R_histogram.append(population_data[entry]["ktrans_ECPhG_R_median"])
-
-# TIPhG_L_histogram = []
-# for entry in population_data.keys():
-#     TIPhG_L_histogram.append(population_data[entry]["ktrans_TIPhG_L_median"])
-
-# TIPhG_R_histogram = []
-# for entry in population_data.keys():
-#     TIPhG_R_histogram.append(population_data[entry]["ktrans_TIPhG_R_median"])
-
-# THPhG_L_histogram = []
-# for entry in population_data.keys():
-#     THPhG_L_histogram.append(population_data[entry]["ktrans_THPhG_L_median"])
-
-# THPhG_R_histogram = []
-# for entry in population_data.keys():
-#     THPhG_R_histogram.append(population_data[entry]["ktrans_THPhG_R_median"])
-
-# rHipp_L_histogram = []
-# for entry in population_data.keys():
-#     rHipp_L_histogram.append(population_data[entry]["ktrans_rHipp_L_median"])
-    
-# rHipp_R_histogram = []
-# for entry in population_data.keys():
-#     rHipp_R_histogram.append(population_data[entry]["ktrans_rHipp_R_median"])
-
-# cHipp_L_histogram = []
-# for entry in population_data.keys():
-#     cHipp_L_histogram.append(population_data[entry]["ktrans_cHipp_L_median"])
-
-# cHipp_R_histogram = []
-# for entry in population_data.keys():
-#     cHipp_R_histogram.append(population_data[entry]["ktrans_cHipp_R_median"])
+    print("Error plotting population AIF curve.", e)
+    aif_curves_path = None
 
 whole_hippo_histogram = []
 whole_phg_histogram = []
@@ -1360,129 +1359,41 @@ for entry in population_data.keys():
     whole_posterior_cingulate_cortex_histogram.append(population_data[entry]["Ktrans_Posterior_cingulate_cortex_median"])
     whole_medial_temporal_cortex_histogram.append(population_data[entry]["Ktrans_Medial_temporal_cortex_median"])
 
-# make figures directory
-# figures_dir = os.path.join("figures")
-# if not os.path.exists(figures_dir):
-#     os.makedirs(figures_dir)
-
-# plot hippocampustograms
-# plt.hist(rPhG_L_histogram, bins=50, range=(0, 5))
-# plt.title("Left Rostral Parahippocampal Gyrus Median Ktrans")
-# plt.xlabel("Ktrans (10^-3/min)")
-# rPhG_L_histogram_path = os.path.join("figures/", output_dir + "rPhG_L_histogram.png")
-# plt.savefig(rPhG_L_histogram_path, bbox_inches='tight')
-# plt.close()
-
-# plt.hist(rPhG_R_histogram, bins=50, range=(0, 5))
-# plt.title("Right Rostral Parahippocampal Gyrus Median Ktrans")
-# plt.xlabel("Ktrans (10^-3/min)")
-# rPhG_R_histogram_path = os.path.join("figures/", output_dir + "rPhG_R_histogram.png")
-# plt.savefig(rPhG_R_histogram_path, bbox_inches='tight')
-# plt.close()
-
-# plt.hist(cPhG_L_histogram, bins=50, range=(0, 5))
-# plt.title("Left Caudal Parahippocampal Gyrus Median Ktrans")
-# plt.xlabel("Ktrans (10^-3/min)")
-# cPhG_L_histogram_path = os.path.join("figures/", output_dir + "cPhG_L_histogram.png")
-# plt.savefig(cPhG_L_histogram_path, bbox_inches='tight')
-# plt.close()
-
-# plt.hist(cPhG_R_histogram, bins=50, range=(0, 5))
-# plt.title("Right Caudal Parahippocampal Gyrus Median Ktrans")
-# plt.xlabel("Ktrans (10^-3/min)")
-# cPhG_R_histogram_path = os.path.join("figures/", output_dir + "cPhG_R_histogram.png")
-# plt.savefig(cPhG_R_histogram_path, bbox_inches='tight')
-# plt.close()
-
-# plt.hist(lateral_PPHC_L_histogram, bins=50, range=(0, 5))
-# plt.title("Left Lateral Parahippocampal Gyrus Median Ktrans")
-# plt.xlabel("Ktrans (10^-3/min)")
-# lateral_PPHC_L_histogram_path = os.path.join("figures/", output_dir + "lateral_PPHC_L_histogram.png")
-# plt.savefig(lateral_PPHC_L_histogram_path, bbox_inches='tight')
-# plt.close()
-
-# plt.hist(lateral_PPHC_R_histogram, bins=50, range=(0, 5))
-# plt.title("Right Lateral Parahippocampal Gyrus Median Ktrans")
-# plt.xlabel("Ktrans (10^-3/min)")
-# lateral_PPHC_R_histogram_path = os.path.join("figures/", output_dir + "lateral_PPHC_R_histogram.png")
-# plt.savefig(lateral_PPHC_R_histogram_path, bbox_inches='tight')
-# plt.close()
-
-# plt.hist(ECPhG_L_histogram, bins=50, range=(0, 5))
-# plt.title("Left Entorhinal Cortex and Parahippocampal Gyrus Median Ktrans")
-# plt.xlabel("Ktrans (10^-3/min)")
-# ECPhG_L_histogram_path = os.path.join("figures/", output_dir + "ECPhG_L_histogram.png")
-# plt.savefig(ECPhG_L_histogram_path, bbox_inches='tight')
-# plt.close()
-
-# plt.hist(ECPhG_R_histogram, bins=50, range=(0, 5))
-# plt.title("Right Entorhinal Cortex and Parahippocampal Gyrus Median Ktrans")
-# plt.xlabel("Ktrans (10^-3/min)")
-# ECPhG_R_histogram_path = os.path.join("figures/", output_dir + "ECPhG_R_histogram.png")
-# plt.savefig(ECPhG_R_histogram_path, bbox_inches='tight')
-# plt.close()
-
-# plt.hist(TIPhG_L_histogram, bins=50, range=(0, 5))
-# plt.title("Left Temporal Inferior Parahippocampal Gyrus Median Ktrans")
-# plt.xlabel("Ktrans (10^-3/min)")
-# TIPhG_L_histogram_path = os.path.join("figures/", output_dir + "TIPhG_L_histogram.png")
-# plt.savefig(TIPhG_L_histogram_path, bbox_inches='tight')
-# plt.close()
-
-# plt.hist(TIPhG_R_histogram, bins=50, range=(0, 5))
-# plt.title("Right Temporal Inferior Parahippocampal Gyrus Median Ktrans")
-# plt.xlabel("Ktrans (10^-3/min)")
-# TIPhG_R_histogram_path = os.path.join("figures/", output_dir + "TIPhG_R_histogram.png")
-# plt.savefig(TIPhG_R_histogram_path, bbox_inches='tight')
-# plt.close()
-
-# plt.hist(THPhG_L_histogram, bins=50, range=(0, 5))
-# plt.title("Left Temporal Inferior Parahippocampal Gyrus Median Ktrans")
-# plt.xlabel("Ktrans (10^-3/min)")
-# THPhG_L_histogram_path = os.path.join("figures/", output_dir + "THPhG_L_histogram.png")
-# plt.savefig(THPhG_L_histogram_path, bbox_inches='tight')
-# plt.close()
-
-# plt.hist(THPhG_R_histogram, bins=50, range=(0, 5))
-# plt.title("Right Temporal Inferior Parahippocampal Gyrus Median Ktrans")
-# plt.xlabel("Ktrans (10^-3/min)")
-# THPhG_R_histogram_path = os.path.join("figures/", output_dir + "THPhG_R_histogram.png")
-# plt.savefig(THPhG_R_histogram_path, bbox_inches='tight')
-# plt.close()
-
-# plt.hist(rHipp_L_histogram, bins=50, range=(0, 5))
-# plt.title("Left Rostral Hippocampus Median Ktrans")
-# plt.xlabel("Ktrans (10^-3/min)")
-# rHipp_L_histogram_path = os.path.join("figures/", output_dir + "rHipp_L_histogram.png")
-# plt.savefig(rHipp_L_histogram_path, bbox_inches='tight')
-# plt.close()
-
-# plt.hist(rHipp_R_histogram, bins=50, range=(0, 5))
-# plt.title("Right Rostral Hippocampus Median Ktrans")
-# plt.xlabel("Ktrans (10^-3/min)")
-# rHipp_R_histogram_path = os.path.join("figures/", output_dir + "rHipp_R_histogram.png")
-# plt.savefig(rHipp_R_histogram_path, bbox_inches='tight')
-# plt.close()
-
-# plt.hist(cHipp_L_histogram, bins=50, range=(0, 5))
-# plt.title("Left Caudal Hippocampus Median Ktrans")
-# plt.xlabel("Ktrans (10^-3/min)")
-# cHipp_L_histogram_path = os.path.join("figures/", output_dir + "cHipp_L_histogram.png")
-# plt.savefig(cHipp_L_histogram_path, bbox_inches='tight')
-# plt.close()
-
-# plt.hist(cHipp_R_histogram, bins=50, range=(0, 5))
-# plt.title("Right Caudal Hippocampus Median Ktrans")
-# plt.xlabel("Ktrans (10^-3/min)")
-# cHipp_R_histogram_path = os.path.join("figures/", output_dir + "cHipp_R_histogram.png")
-# plt.savefig(cHipp_R_histogram_path, bbox_inches='tight')
-# plt.close()
+whole_hippo_histogram_exclude = []
+whole_phg_histogram_exclude = []
+whole_putamen_histogram_exclude = []
+whole_pallidum_histogram_exclude = []
+whole_thalamus_histogram_exclude = []
+whole_caudate_histogram_exclude = []
+whole_amygdala_histogram_exclude = []
+whole_entorhinal_cortex_histogram_exclude = []
+whole_fusiform_gyrus_cortex_histogram_exclude = []
+whole_fusiform_gyrus_WM_histogram_exclude = []
+whole_insula_WM_histogram_exclude = []
+whole_superior_temporal_cortex_histogram_exclude = []
+whole_posterior_cingulate_cortex_histogram_exclude = []
+whole_medial_temporal_cortex_histogram_exclude = []
+for entry in population_data_exclude.keys():
+    whole_hippo_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Hippo_median"])
+    whole_phg_histogram_exclude.append(population_data_exclude[entry]["Ktrans_PhG_median"])
+    whole_putamen_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Putamen_median"])
+    whole_pallidum_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Pallidum_median"])
+    whole_thalamus_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Thalamus_median"])
+    whole_caudate_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Caudate_median"])
+    whole_amygdala_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Amygdala_median"])
+    whole_entorhinal_cortex_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Entorhinal_cortex_median"])
+    whole_fusiform_gyrus_cortex_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Fusiform_gyrus_cortex_median"])
+    whole_fusiform_gyrus_WM_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Fusiform_gyrus_WM_median"])
+    whole_insula_WM_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Insula_WM_median"])
+    whole_superior_temporal_cortex_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Superior_temporal_cortex_median"])
+    whole_posterior_cingulate_cortex_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Posterior_cingulate_cortex_median"])
+    whole_medial_temporal_cortex_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Medial_temporal_cortex_median"])
 
 plt.hist(whole_hippo_histogram, bins=50, range=(0, 5))
 plt.title("Whole Hippocampus Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_hippo_histogram_path = os.path.join("figures/", output_dir + "whole_hippo_histogram.png")
-whole_hippo_histogram_path = os.path.join("figures/", "whole_hippo_histogram.png")
+whole_hippo_histogram_path = os.path.join("figures/", "whole_hippo_histogram" + output_dir + ".png")
 plt.savefig(whole_hippo_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1490,7 +1401,7 @@ plt.hist(whole_phg_histogram, bins=50, range=(0, 5))
 plt.title("Whole Parahippocampal Gyrus Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_phg_histogram_path = os.path.join("figures/", output_dir + "whole_phg_histogram.png")
-whole_phg_histogram_path = os.path.join("figures/", "whole_phg_histogram.png")
+whole_phg_histogram_path = os.path.join("figures/", "whole_phg_histogram" + output_dir + ".png")
 plt.savefig(whole_phg_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1498,7 +1409,7 @@ plt.hist(whole_putamen_histogram, bins=50, range=(0, 5))
 plt.title("Whole Putamen Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_putamen_histogram_path = os.path.join("figures/", output_dir + "whole_putamen_histogram.png")
-whole_putamen_histogram_path = os.path.join("figures/", "whole_putamen_histogram.png")
+whole_putamen_histogram_path = os.path.join("figures/", "whole_putamen_histogram" + output_dir + ".png")
 plt.savefig(whole_putamen_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1506,7 +1417,7 @@ plt.hist(whole_pallidum_histogram, bins=50, range=(0, 5))
 plt.title("Whole Pallidum Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_pallidum_histogram_path = os.path.join("figures/", output_dir + "whole_pallidum_histogram.png")
-whole_pallidum_histogram_path = os.path.join("figures/", "whole_pallidum_histogram.png")
+whole_pallidum_histogram_path = os.path.join("figures/", "whole_pallidum_histogram" + output_dir + ".png")
 plt.savefig(whole_pallidum_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1514,7 +1425,7 @@ plt.hist(whole_thalamus_histogram, bins=50, range=(0, 5))
 plt.title("Whole Thalamus Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_thalamus_histogram_path = os.path.join("figures/", output_dir + "whole_thalamus_histogram.png")
-whole_thalamus_histogram_path = os.path.join("figures/", "whole_thalamus_histogram.png")
+whole_thalamus_histogram_path = os.path.join("figures/", "whole_thalamus_histogram" + output_dir + ".png")
 plt.savefig(whole_thalamus_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1522,7 +1433,7 @@ plt.hist(whole_caudate_histogram, bins=50, range=(0, 5))
 plt.title("Whole Caudate Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_caudate_histogram_path = os.path.join("figures/", output_dir + "whole_caudate_histogram.png")
-whole_caudate_histogram_path = os.path.join("figures/", "whole_caudate_histogram.png")
+whole_caudate_histogram_path = os.path.join("figures/", "whole_caudate_histogram" + output_dir + ".png")
 plt.savefig(whole_caudate_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1530,7 +1441,7 @@ plt.hist(whole_amygdala_histogram, bins=50, range=(0, 5))
 plt.title("Whole Amygdala Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_amygdala_histogram_path = os.path.join("figures/", output_dir + "whole_amygdala_histogram.png")
-whole_amygdala_histogram_path = os.path.join("figures/", "whole_amygdala_histogram.png")
+whole_amygdala_histogram_path = os.path.join("figures/", "whole_amygdala_histogram" + output_dir + ".png")
 plt.savefig(whole_amygdala_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1538,7 +1449,7 @@ plt.hist(whole_entorhinal_cortex_histogram, bins=50, range=(0, 5))
 plt.title("Whole Entorhinal Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_entorhinal_cortex_histogram_path = os.path.join("figures/", output_dir + "whole_entorhinal_cortex_histogram.png")
-whole_entorhinal_cortex_histogram_path = os.path.join("figures/", "whole_entorhinal_cortex_histogram.png")
+whole_entorhinal_cortex_histogram_path = os.path.join("figures/", "whole_entorhinal_cortex_histogram" + output_dir + ".png")
 plt.savefig(whole_entorhinal_cortex_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1546,7 +1457,7 @@ plt.hist(whole_fusiform_gyrus_cortex_histogram, bins=50, range=(0, 5))
 plt.title("Whole Fusiform Gyrus Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_fusiform_gyrus_cortex_histogram_path = os.path.join("figures/", output_dir + "whole_fusiform_gyrus_cortex_histogram.png")
-whole_fusiform_gyrus_cortex_histogram_path = os.path.join("figures/", "whole_fusiform_gyrus_cortex_histogram.png")
+whole_fusiform_gyrus_cortex_histogram_path = os.path.join("figures/", "whole_fusiform_gyrus_cortex_histogram" + output_dir + ".png")
 plt.savefig(whole_fusiform_gyrus_cortex_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1554,7 +1465,7 @@ plt.hist(whole_fusiform_gyrus_WM_histogram, bins=50, range=(0, 5))
 plt.title("Whole Fusiform Gyrus WM Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_fusiform_gyrus_WM_histogram_path = os.path.join("figures/", output_dir + "whole_fusiform_gyrus_WM_histogram.png")
-whole_fusiform_gyrus_WM_histogram_path = os.path.join("figures/", "whole_fusiform_gyrus_WM_histogram.png")
+whole_fusiform_gyrus_WM_histogram_path = os.path.join("figures/", "whole_fusiform_gyrus_WM_histogram" + output_dir + ".png")
 plt.savefig(whole_fusiform_gyrus_WM_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1562,7 +1473,7 @@ plt.hist(whole_insula_WM_histogram, bins=50, range=(0, 5))
 plt.title("Whole Insula WM Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_insula_WM_histogram_path = os.path.join("figures/", output_dir + "whole_insula_WM_histogram.png")
-whole_insula_WM_histogram_path = os.path.join("figures/", "whole_insula_WM_histogram.png")
+whole_insula_WM_histogram_path = os.path.join("figures/", "whole_insula_WM_histogram" + output_dir + ".png")
 plt.savefig(whole_insula_WM_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1570,7 +1481,7 @@ plt.hist(whole_superior_temporal_cortex_histogram, bins=50, range=(0, 5))
 plt.title("Whole Superior Temporal Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_superior_temporal_cortex_histogram_path = os.path.join("figures/", output_dir + "whole_superior_temporal_cortex_histogram.png")
-whole_superior_temporal_cortex_histogram_path = os.path.join("figures/", "whole_superior_temporal_cortex_histogram.png")
+whole_superior_temporal_cortex_histogram_path = os.path.join("figures/", "whole_superior_temporal_cortex_histogram" + output_dir + ".png")
 plt.savefig(whole_superior_temporal_cortex_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1578,7 +1489,7 @@ plt.hist(whole_posterior_cingulate_cortex_histogram, bins=50, range=(0, 5))
 plt.title("Whole Posterior Cingulate Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_posterior_cingulate_cortex_histogram_path = os.path.join("figures/", output_dir + "whole_posterior_cingulate_cortex_histogram.png")
-whole_posterior_cingulate_cortex_histogram_path = os.path.join("figures/", "whole_posterior_cingulate_cortex_histogram.png")
+whole_posterior_cingulate_cortex_histogram_path = os.path.join("figures/", "whole_posterior_cingulate_cortex_histogram" + output_dir + ".png")
 plt.savefig(whole_posterior_cingulate_cortex_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1586,8 +1497,120 @@ plt.hist(whole_medial_temporal_cortex_histogram, bins=50, range=(0, 5))
 plt.title("Whole Medial Temporal Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_medial_temporal_cortex_histogram_path = os.path.join("figures/", output_dir + "whole_medial_temporal_cortex_histogram.png")
-whole_medial_temporal_cortex_histogram_path = os.path.join("figures/", "whole_medial_temporal_cortex_histogram.png")
+whole_medial_temporal_cortex_histogram_path = os.path.join("figures/", "whole_medial_temporal_cortex_histogram" + output_dir + ".png")
 plt.savefig(whole_medial_temporal_cortex_histogram_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(whole_hippo_histogram_exclude, bins=50, range=(0, 5))
+plt.title("Whole Hippocampus Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# whole_hippo_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_hippo_histogram_exclude.png")
+whole_hippo_histogram_exclude_path = os.path.join("figures/", "whole_hippo_histogram_exclude" + output_dir + ".png")
+plt.savefig(whole_hippo_histogram_exclude_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(whole_phg_histogram_exclude, bins=50, range=(0, 5))
+plt.title("Whole Parahippocampal Gyrus Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# whole_phg_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_phg_histogram_exclude.png")
+whole_phg_histogram_exclude_path = os.path.join("figures/", "whole_phg_histogram_exclude" + output_dir + ".png")
+plt.savefig(whole_phg_histogram_exclude_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(whole_putamen_histogram_exclude, bins=50, range=(0, 5))
+plt.title("Whole Putamen Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# whole_putamen_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_putamen_histogram_exclude.png")
+whole_putamen_histogram_exclude_path = os.path.join("figures/", "whole_putamen_histogram_exclude" + output_dir + ".png")
+plt.savefig(whole_putamen_histogram_exclude_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(whole_pallidum_histogram_exclude, bins=50, range=(0, 5))
+plt.title("Whole Pallidum Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# whole_pallidum_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_pallidum_histogram_exclude.png")
+whole_pallidum_histogram_exclude_path = os.path.join("figures/", "whole_pallidum_histogram_exclude" + output_dir + ".png")
+plt.savefig(whole_pallidum_histogram_exclude_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(whole_thalamus_histogram_exclude, bins=50, range=(0, 5))
+plt.title("Whole Thalamus Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# whole_thalamus_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_thalamus_histogram_exclude.png")
+whole_thalamus_histogram_exclude_path = os.path.join("figures/", "whole_thalamus_histogram_exclude" + output_dir + ".png")
+plt.savefig(whole_thalamus_histogram_exclude_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(whole_caudate_histogram_exclude, bins=50, range=(0, 5))
+plt.title("Whole Caudate Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# whole_caudate_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_caudate_histogram_exclude.png")
+whole_caudate_histogram_exclude_path = os.path.join("figures/", "whole_caudate_histogram_exclude" + output_dir + ".png")
+plt.savefig(whole_caudate_histogram_exclude_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(whole_amygdala_histogram_exclude, bins=50, range=(0, 5))
+plt.title("Whole Amygdala Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# whole_amygdala_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_amygdala_histogram_exclude.png")
+whole_amygdala_histogram_exclude_path = os.path.join("figures/", "whole_amygdala_histogram_exclude" + output_dir + ".png")
+plt.savefig(whole_amygdala_histogram_exclude_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(whole_entorhinal_cortex_histogram_exclude, bins=50, range=(0, 5))
+plt.title("Whole Entorhinal Cortex Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# whole_entorhinal_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_entorhinal_cortex_histogram_exclude.png")
+whole_entorhinal_cortex_histogram_exclude_path = os.path.join("figures/", "whole_entorhinal_cortex_histogram_exclude" + output_dir + ".png")
+plt.savefig(whole_entorhinal_cortex_histogram_exclude_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(whole_fusiform_gyrus_cortex_histogram_exclude, bins=50, range=(0, 5))
+plt.title("Whole Fusiform Gyrus Cortex Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# whole_fusiform_gyrus_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_fusiform_gyrus_cortex_histogram_exclude.png")
+whole_fusiform_gyrus_cortex_histogram_exclude_path = os.path.join("figures/", "whole_fusiform_gyrus_cortex_histogram_exclude" + output_dir + ".png")
+plt.savefig(whole_fusiform_gyrus_cortex_histogram_exclude_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(whole_fusiform_gyrus_WM_histogram_exclude, bins=50, range=(0, 5))
+plt.title("Whole Fusiform Gyrus WM Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# whole_fusiform_gyrus_WM_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_fusiform_gyrus_WM_histogram_exclude.png")
+whole_fusiform_gyrus_WM_histogram_exclude_path = os.path.join("figures/", "whole_fusiform_gyrus_WM_histogram_exclude" + output_dir + ".png")
+plt.savefig(whole_fusiform_gyrus_WM_histogram_exclude_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(whole_insula_WM_histogram_exclude, bins=50, range=(0, 5))
+plt.title("Whole Insula WM Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# whole_insula_WM_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_insula_WM_histogram_exclude.png")
+whole_insula_WM_histogram_exclude_path = os.path.join("figures/", "whole_insula_WM_histogram_exclude" + output_dir + ".png")
+plt.savefig(whole_insula_WM_histogram_exclude_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(whole_superior_temporal_cortex_histogram_exclude, bins=50, range=(0, 5))
+plt.title("Whole Superior Temporal Cortex Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# whole_superior_temporal_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_superior_temporal_cortex_histogram_exclude.png")
+whole_superior_temporal_cortex_histogram_exclude_path = os.path.join("figures/", "whole_superior_temporal_cortex_histogram_exclude" + output_dir + ".png")
+plt.savefig(whole_superior_temporal_cortex_histogram_exclude_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(whole_posterior_cingulate_cortex_histogram_exclude, bins=50, range=(0, 5))
+plt.title("Whole Posterior Cingulate Cortex Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# whole_posterior_cingulate_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_posterior_cingulate_cortex_histogram_exclude.png")
+whole_posterior_cingulate_cortex_histogram_exclude_path = os.path.join("figures/", "whole_posterior_cingulate_cortex_histogram_exclude" + output_dir + ".png")
+plt.savefig(whole_posterior_cingulate_cortex_histogram_exclude_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(whole_medial_temporal_cortex_histogram_exclude, bins=50, range=(0, 5))
+plt.title("Whole Medial Temporal Cortex Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# whole_medial_temporal_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_medial_temporal_cortex_histogram_exclude.png")
+whole_medial_temporal_cortex_histogram_exclude_path = os.path.join("figures/", "whole_medial_temporal_cortex_histogram_exclude" + output_dir + ".png")
+plt.savefig(whole_medial_temporal_cortex_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
 # round to 4 decimal places
@@ -1597,6 +1620,13 @@ wm_std = round(wm_std, 4)
 gm_mean = round(gm_mean, 4)
 gm_median = round(gm_median, 4)
 gm_std = round(gm_std, 4)
+
+wm_mean_exclude = round(wm_mean_exclude, 4)
+wm_median_exclude = round(wm_median_exclude, 4)
+wm_std_exclude = round(wm_std_exclude, 4)
+gm_mean_exclude = round(gm_mean_exclude, 4)
+gm_median_exclude = round(gm_median_exclude, 4)
+gm_std_exclude = round(gm_std_exclude, 4)
 
 # make population report
 # df = pd.DataFrame(population_data)
@@ -1648,6 +1678,36 @@ except Exception as e:
     print("Error in getting manufacturer, field strength, machine, and institution data.")
     print(e)
 
+manufacturers_exclude = {}
+field_strengths_exclude = {}
+machines_exclude = {}
+institutions_exclude = {}
+try:
+    for entry in population_data_exclude.keys():
+        manufacturer = population_data_exclude[entry]["Manufacturer"]
+        field_strength = population_data_exclude[entry]["Field_strength"]
+        machine = population_data_exclude[entry]["Machine"]
+        institution = population_data_exclude[entry]["Institution"]
+        if manufacturer in manufacturers_exclude.keys():
+            manufacturers_exclude[manufacturer] += 1
+        else:
+            manufacturers_exclude[manufacturer] = 1
+        if field_strength in field_strengths_exclude.keys():
+            field_strengths_exclude[field_strength] += 1
+        else:
+            field_strengths_exclude[field_strength] = 1
+        if machine in machines_exclude.keys():
+            machines_exclude[machine] += 1
+        else:
+            machines_exclude[machine] = 1
+        if institution in institutions_exclude.keys():
+            institutions_exclude[institution] += 1
+        else:
+            institutions_exclude[institution] = 1
+except Exception as e:
+    print("Error in getting manufacturer, field strength, machine, and institution data.")
+    print(e)
+
 successful_timepoints = list(set(successful_timepoints))
 successful_timepoints.sort()
 # num_timepoints = len(successful_timepoints)
@@ -1662,39 +1722,6 @@ for timepoint in successful_timepoints:
 failed_cases = [timepoint for timepoint in total_timepoints if timepoint not in successful_timepoints]
 # get links for each failed case's directory
 failed_links = [os.path.join(dceprep_dir, case) for case in failed_cases]
-
-# get flagged cases 
-flagged_cases = []
-flagged_links = []
-MOTION_THRESHOLD = 3.8
-AIFITNESS_THRESHOLD = 75
-for case in successful_timepoints:
-    entry = case.replace('/', '_')
-    flag_str = ""
-    subject = case.split('/')[0]
-    session = case.split('/')[1]
-    save_name = f"{case}/reports/{subject}_{session}_desc-casereport.html"
-    flag = False
-    if population_data[entry]['max_disp'] > MOTION_THRESHOLD:
-        flag = True
-        flag_str += "motion"
-        save_name += "#MCFLIRT"
-    if population_data[entry]['AIFitness'] < AIFITNESS_THRESHOLD:
-        flag = True
-        if flag_str != "":
-            flag_str += ", "
-        flag_str += "AIFitness"
-        if not save_name[-1].endswith("MCFLIRT"):
-            save_name += "#AIF"
-    if flag_str != "":
-        flagged_cases.append(f'{case} ({flag_str})')
-        flagged_links.append(save_name)
-    if flag:
-        # move to population_data_exclude
-        # put AUTO at beginning of flag_str
-        flag_str = "AUTO: " + flag_str
-        population_data_exclude[entry] = population_data.pop(entry)
-        population_data_exclude[entry]['Reason'] = flag_str
 
 # read ROCKETSHIP preference file
 with open(ROCKETSHIP_dir + "/script_preferences.txt", "r") as f:
@@ -1743,7 +1770,8 @@ data = {
     'AIFitness_threshold': AIFITNESS_THRESHOLD,
     'Flagged_combo': zip(flagged_links, flagged_cases),
     'Subject_count': len(subjects),
-    'Successes': str(len(population_data)+len(population_data_exclude)) + '/' + str(len(total_timepoints)) + ' (' + str(round((len(population_data) / len(total_timepoints)) * 100, 2)) + '%)',
+    'Successes': str(len(population_data)) + '/' + str(len(total_timepoints)) + ' (' + str(round((len(population_data) / len(total_timepoints)) * 100, 2)) + '%)',
+    'Excludes': str(len(population_data_exclude)) + '/' + str(len(total_timepoints)) + ' (' + str(round((len(population_data_exclude) / len(total_timepoints)) * 100, 2)) + '%)',
     'Date': date,
     'Commit': commit_hash,
     'Manufacturers': manufacturers,
@@ -1786,6 +1814,8 @@ data = {
     'aif_mmol_95th_percentile': round(aif_mmol_95th_percentile, 4),
     'AIFitness_histogram' : "../" + aifitness_histogram_path,
     'aif_mmol_histogram': "../" + aif_mmol_histogram_path,
+    'aif_pop_avg_AIF': "../" + aif_pop_avg_path,
+    'aif_curves': "../" + aif_curves_path,
     'wm_mean': wm_mean,
     'wm_median': wm_median,
     'wm_std': wm_std,
@@ -1951,6 +1981,151 @@ data = {
 
 output = template.render(data)
 
+data = {
+    'Subjects' : subjects,
+    # 'base_url': dceprep_dir,
+    'Links': successful_links,
+    'Failed_links': failed_links,
+    'Cases': cases,
+    'Failed_cases': failed_cases,
+    'Flagged_cases': flagged_cases,
+    'Combo': zip(successful_links, cases),
+    'Failed_combo': zip(failed_links, failed_cases),
+    'Motion_threshold': MOTION_THRESHOLD,
+    'AIFitness_threshold': AIFITNESS_THRESHOLD,
+    'Flagged_combo': zip(flagged_links, flagged_cases),
+    'Subject_count': len(subjects),
+    'Successes': str(len(population_data)) + '/' + str(len(total_timepoints)) + ' (' + str(round((len(population_data) / len(total_timepoints)) * 100, 2)) + '%)',
+    'Excludes': str(len(population_data_exclude)) + '/' + str(len(total_timepoints)) + ' (' + str(round((len(population_data_exclude) / len(total_timepoints)) * 100, 2)) + '%)',
+    'Date': date,
+    'Commit': commit_hash,
+    'Manufacturers': manufacturers_exclude,
+    'Field_strengths': field_strengths_exclude,
+    'Machines': machines,
+    'Institutions': institutions_exclude,
+    'pref_tr': pref_tr,
+    'pref_fa': pref_fa,
+    'pref_hematocrit': pref_hematocrit,
+    'pref_SNR': pref_SNR,
+    'pref_relaxivity': pref_relaxivity,
+    'pref_t1blood': pref_t1blood,
+    'pref_start_t': pref_start_t,
+    'pref_end_t': pref_end_t,
+    'pref_timeres': pref_timeres,
+    'pref_model': DCE_model,
+    'T1_wm_mean': round(T1_wm_mean_exclude, 4),
+    'T1_wm_median': round(T1_wm_median_exclude, 4),
+    'T1_wm_std': round(T1_wm_std_exclude, 4),
+    'T1_wm_5th_percentile': round(T1_wm_5th_percentile_exclude, 4),
+    'T1_wm_95th_percentile': round(T1_wm_95th_percentile_exclude, 4),
+    'T1_gm_mean': round(T1_gm_mean_exclude, 4),
+    'T1_gm_median': round(T1_gm_median_exclude, 4),
+    'T1_gm_std': round(T1_gm_std_exclude, 4),
+    'T1_gm_5th_percentile': round(T1_gm_5th_percentile_exclude, 4),
+    'T1_gm_95th_percentile': round(T1_gm_95th_percentile_exclude, 4),
+    'T1_blood_mean': round(T1_blood_mean_exclude, 4),
+    'T1_blood_median': round(T1_blood_median_exclude, 4),
+    'T1_blood_std': round(T1_blood_std_exclude, 4),
+    'T1_blood_5th_percentile': round(T1_blood_5th_percentile_exclude, 4),
+    'T1_blood_95th_percentile': round(T1_blood_95th_percentile_exclude, 4),
+    'AIFitness_mean': round(AIFitness_exclude_mean, 4),
+    'AIFitness_median': round(AIFitness_exclude_median, 4),
+    'AIFitness_std': round(AIFitness_exclude_std, 4),
+    'AIFitness_5th_percentile': round(AIFitness_exclude_5th_percentile, 4),
+    'aif_mmol_mean': round(aif_mmol_mean_exclude, 4),
+    'aif_mmol_median': round(aif_mmol_median_exclude, 4),
+    'aif_mmol_std': round(aif_mmol_std_exclude, 4),
+    'aif_mmol_5th_percentile': round(aif_mmol_5th_percentile_exclude, 4),
+    'aif_mmol_95th_percentile': round(aif_mmol_95th_percentile_exclude, 4),
+    'AIFitness_histogram' : "../" + aifitness_histogram_exclude_path,
+    'aif_mmol_histogram': "../" + aif_mmol_histogram_exclude_path,
+    'aif_pop_avg_AIF': "../" + aif_pop_avg_path,
+    'aif_curves': "../" + aif_curves_path,
+    'wm_mean': wm_mean_exclude,
+    'wm_median': wm_median_exclude,
+    'wm_std': wm_std_exclude,
+    'gm_mean': gm_mean_exclude,
+    'gm_median': gm_median_exclude,
+    'gm_std': gm_std_exclude,
+    'whole_hippo_mean': round(whole_hippo_mean_exclude, 4),
+    'whole_hippo_median': round(whole_hippo_median_exclude, 4),
+    'whole_hippo_std': round(whole_hippo_std_exclude, 4),
+    'whole_phg_mean': round(whole_phg_mean_exclude, 4),
+    'whole_phg_median': round(whole_phg_median_exclude, 4),
+    'whole_phg_std': round(whole_phg_std_exclude, 4),
+    'whole_putamen_mean': round(whole_putamen_mean_exclude, 4),
+    'whole_putamen_median': round(whole_putamen_median_exclude, 4),
+    'whole_putamen_std': round(whole_putamen_std_exclude, 4),
+    'whole_pallidum_mean': round(whole_pallidum_mean_exclude, 4),
+    'whole_pallidum_median': round(whole_pallidum_median_exclude, 4),
+    'whole_pallidum_std': round(whole_pallidum_std_exclude, 4),
+    'whole_thalamus_mean': round(whole_thalamus_mean_exclude, 4),
+    'whole_thalamus_median': round(whole_thalamus_median_exclude, 4),
+    'whole_thalamus_std': round(whole_thalamus_std_exclude, 4),
+    'whole_caudate_mean': round(whole_caudate_mean_exclude, 4),
+    'whole_caudate_median': round(whole_caudate_median_exclude, 4),
+    'whole_caudate_std': round(whole_caudate_std_exclude, 4),
+    'whole_amygdala_mean': round(whole_amygdala_mean_exclude, 4),
+    'whole_amygdala_median': round(whole_amygdala_median_exclude, 4),
+    'whole_amygdala_std': round(whole_amygdala_std_exclude, 4),
+    'whole_entorhinal_cortex_mean': round(whole_entorhinal_cortex_mean_exclude, 4),
+    'whole_entorhinal_cortex_median': round(whole_entorhinal_cortex_median_exclude, 4),
+    'whole_entorhinal_cortex_std': round(whole_entorhinal_cortex_std_exclude, 4),
+    'whole_fusiform_gyrus_cortex_mean': round(whole_fusiform_gyrus_cortex_mean_exclude, 4),
+    'whole_fusiform_gyrus_cortex_median': round(whole_fusiform_gyrus_cortex_median_exclude, 4),
+    'whole_fusiform_gyrus_cortex_std': round(whole_fusiform_gyrus_cortex_std_exclude, 4),
+    'whole_fusiform_gyrus_WM_mean': round(whole_fusiform_gyrus_WM_mean_exclude, 4),
+    'whole_fusiform_gyrus_WM_median': round(whole_fusiform_gyrus_WM_median_exclude, 4),
+    'whole_fusiform_gyrus_WM_std': round(whole_fusiform_gyrus_WM_std_exclude, 4),
+    'whole_insula_WM_mean': round(whole_insula_WM_mean_exclude, 4),
+    'whole_insula_WM_median': round(whole_insula_WM_median_exclude, 4),
+    'whole_insula_WM_std': round(whole_insula_WM_std_exclude, 4),
+    'whole_superior_temporal_cortex_mean': round(whole_superior_temporal_cortex_mean_exclude, 4),
+    'whole_superior_temporal_cortex_median': round(whole_superior_temporal_cortex_median_exclude, 4),
+    'whole_superior_temporal_cortex_std': round(whole_superior_temporal_cortex_std_exclude, 4),
+    'whole_posterior_cingulate_cortex_mean': round(whole_posterior_cingulate_cortex_mean_exclude, 4),
+    'whole_posterior_cingulate_cortex_median': round(whole_posterior_cingulate_cortex_median_exclude, 4),
+    'whole_posterior_cingulate_cortex_std': round(whole_posterior_cingulate_cortex_std_exclude, 4),
+    'whole_medial_temporal_cortex_mean': round(whole_medial_temporal_cortex_mean_exclude, 4),
+    'whole_medial_temporal_cortex_median': round(whole_medial_temporal_cortex_median_exclude, 4),
+    'whole_medial_temporal_cortex_std': round(whole_medial_temporal_cortex_std_exclude, 4),
+    'ktrans_wm_outliers': wm_outliers,
+    'ktrans_gm_outliers': gm_outliers,
+    'T1_blood_histogram': "../" + T1_blood_histogram_exclude_path,
+    'wm_histogram': "../" + ktrans_wm_histogram_exclude_path,
+    'gm_histogram': "../" + ktrans_gm_histogram_exclude_path,
+    'whole_hippo_outliers': whole_hippo_outliers,
+    'whole_phg_outliers': whole_phg_outliers,
+    'whole_putamen_outliers': whole_putamen_outliers,
+    'whole_pallidum_outliers': whole_pallidum_outliers,
+    'whole_thalamus_outliers': whole_thalamus_outliers,
+    'whole_caudate_outliers': whole_caudate_outliers,
+    'whole_amygdala_outliers': whole_amygdala_outliers,
+    'whole_entorhinal_cortex_outliers': whole_entorhinal_cortex_outliers,
+    'whole_fusiform_gyrus_cortex_outliers': whole_fusiform_gyrus_cortex_outliers,
+    'whole_fusiform_gyrus_WM_outliers': whole_fusiform_gyrus_WM_outliers,
+    'whole_insula_WM_outliers': whole_insula_WM_outliers,
+    'whole_superior_temporal_cortex_outliers': whole_superior_temporal_cortex_outliers,
+    'whole_posterior_cingulate_cortex_outliers': whole_posterior_cingulate_cortex_outliers,
+    'whole_medial_temporal_cortex_outliers': whole_medial_temporal_cortex_outliers,
+    'whole_hippo_histogram': "../" + whole_hippo_histogram_exclude_path,
+    'whole_phg_histogram': "../" + whole_phg_histogram_exclude_path,
+    'whole_putamen_histogram': "../" + whole_putamen_histogram_exclude_path,
+    'whole_pallidum_histogram': "../" + whole_pallidum_histogram_exclude_path,
+    'whole_thalamus_histogram': "../" + whole_thalamus_histogram_exclude_path,
+    'whole_caudate_histogram': "../" + whole_caudate_histogram_exclude_path,
+    'whole_amygdala_histogram': "../" + whole_amygdala_histogram_exclude_path,
+    'whole_entorhinal_cortex_histogram': "../" + whole_entorhinal_cortex_histogram_exclude_path,
+    'whole_fusiform_gyrus_cortex_histogram': "../" + whole_fusiform_gyrus_cortex_histogram_exclude_path,
+    'whole_fusiform_gyrus_WM_histogram': "../" + whole_fusiform_gyrus_WM_histogram_exclude_path,
+    'whole_insula_WM_histogram': "../" + whole_insula_WM_histogram_exclude_path,
+    'whole_superior_temporal_cortex_histogram': "../" + whole_superior_temporal_cortex_histogram_exclude_path,
+    'whole_posterior_cingulate_cortex_histogram': "../" + whole_posterior_cingulate_cortex_histogram_exclude_path,
+    'whole_medial_temporal_cortex_histogram': "../" + whole_medial_temporal_cortex_histogram_exclude_path
+}
+
+output_exclude = template.render(data)
+
 # make reports directory if it doesn't exist
 if not os.path.exists(dir + '/reports'):
     os.makedirs(dir + '/reports')
@@ -1959,7 +2134,11 @@ if not os.path.exists(dir + '/reports'):
 with open(dir + '/reports/population_report' + output_dir + '.html', 'w') as f:
     f.write(output)
 
+with open(dir + '/reports/population_report_exclude' + output_dir + '.html', 'w') as f:
+    f.write(output_exclude)
+
 print('Report generated in ' + dir + '/reports/population_report' + output_dir + '.html')
+print('Excluded report generated in ' + dir + '/reports/population_report_exclude' + output_dir + '.html')
 
 # add apoe and cdr fields to population_data
 df = pd.read_excel('/media/network_mriphysics/USC-PPG/bids_test/dce_available_3524_ac.xlsx', sheet_name="main")
@@ -2012,6 +2191,30 @@ for subject in population_data_exclude.keys():
     population_data_exclude[subject]["APOE"] = apoe
     population_data_exclude[subject]["CDR"] = cdr
     population_data_exclude[subject]["BMI"] = bmi
+
+for subject in population_data_exclude_signa.keys():
+    # get subject's ID
+    subject_id = subject.split("_")[0]
+    subject_id = subject_id.split("-")[1]
+    # get subject's timepoint
+    timepoint = subject.split("_")[1]
+    # get subject's apoe and cdr values
+    if subject_id.startswith("4") or subject_id.startswith("3"):
+        # insert underscore after 1st character
+        subject_id = subject_id[:1] + "_" + subject_id[1:]
+    try:
+        apoe = df.loc[df['Subject_ID'] == int(subject_id), 'APOE'].values[0]
+        cdr = df.loc[df['Subject_ID'] == int(subject_id), 'CDR'].values[0]
+        bmi = df.loc[df['Subject_ID'] == int(subject_id), 'BMI'].values[0]
+        # add to population_data
+    except Exception as e:
+        print(e)
+        print("Subject " + subject_id + " not found in dce_available_3524_ac.xlsx")
+        apoe = "N/A"
+        cdr = "N/A"
+    population_data_exclude_signa[subject]["APOE"] = apoe
+    population_data_exclude_signa[subject]["CDR"] = cdr
+    population_data_exclude_signa[subject]["BMI"] = bmi
 
 for subject in population_data_failed.keys():
     # get subject's ID
@@ -2067,7 +2270,17 @@ for subject, timepoint, exclusion_reason in zip(subjects_excluded, timepoints_ex
         # population_data_exclude[entry]["Date"] = dates_excluded[subjects_excluded == subject].values[0]
         # remove from population_data
         # del population_data[entry]
-
+    elif entry not in population_data.keys() and entry not in population_data_failed.keys() and entry not in population_data_exclude.keys() and entry not in population_data_exclude_signa.keys():
+        # read whole row from dce_available_3524_ac.xlsx
+        row = df.loc[df['Subject_ID'] == subject_id]
+        population_data_exclude[entry] = {}
+        population_data_exclude[entry]["Reason"] = exclusion_reason
+        population_data_exclude[entry]["Timepoint"] = row['Timepoint'].values[0]
+        population_data_exclude[entry]["APOE"] = row['APOE'].values[0]
+        population_data_exclude[entry]["CDR"] = row['CDR'].values[0]
+        population_data_exclude[entry]["Sex"] = row['Sex'].values[0]
+        population_data_exclude[entry]["Age"] = row['Age'].values[0]
+        population_data_exclude[entry]["Date"] = row['Study_Date'].values[0]
 
 # make excel file
 writer = pd.ExcelWriter(os.path.join(dir, "dataset_ktrans" + output_dir + ".xlsx"), date_format='YYYY/MM/DD', datetime_format='YYYY/MM/DD') 
@@ -2076,7 +2289,7 @@ df_success = pd.DataFrame(population_data)
 # df_exclude = pd.DataFrame(population_data_exclude)
 
 order = ["Date", "APOE", "CDR", "BMI", "Sex", "Age", "Machine", "Institution", "Coil", "TR", "Time_resolution", "TE", "Flip_angle", "n_reps",
-         "AIFitness", "max_disp", "T1_blood", "T1_wm_median", "T1_gm_median",
+         "AIFitness", "manual_aif_status", "max_disp", "T1_blood", "T1_wm_median", "T1_gm_median",
          "wm_median", "gm_median", "Ktrans_Hippo_median", "Ktrans_PhG_median", "Ktrans_Putamen_median", "Ktrans_Pallidum_median",
          "Ktrans_Thalamus_median", "Ktrans_Caudate_median", "Ktrans_Amygdala_median", "Ktrans_Entorhinal_cortex_median",
          "Ktrans_Fusiform_gyrus_cortex_median", "Ktrans_Fusiform_gyrus_WM_median", "Ktrans_Insula_WM_median",
@@ -2091,17 +2304,13 @@ df_success = df_success[order]
 
 order_exclude = order.copy()
 order_exclude.insert(0, "Reason")
-# df_exclude = df_exclude.T
-# df_exclude = df_exclude[order_exclude]
 
 # name first column
 df_success.index.name = "Subject_ID"
-# df_exclude.index.name = "Subject_ID"
 
 # write to excel
 # df_success.to_excel(os.path.join(dir, "dataset_ktrans" + output_dir + ".xlsx"))
 df_success.to_excel(writer, sheet_name='Success')
-# df_exclude.to_excel(writer, sheet_name='Pre-Exclude')
 cell_format = writer.book.add_format()
 cell_format.set_text_wrap()
 cell_format.set_align('center')
@@ -2136,6 +2345,13 @@ if len(population_data_failed) > 0:
     df_fail.index.name = "Subject_ID"
     df_fail.to_excel(writer, sheet_name='Fail')
 
+if len(population_data_exclude_signa) > 0:
+    df_exclude_signa = pd.DataFrame(population_data_exclude_signa)
+    df_exclude_signa = df_exclude_signa.T
+    df_exclude_signa = df_exclude_signa[order_exclude]
+    df_exclude_signa.index.name = "Subject_ID"
+    df_exclude_signa.to_excel(writer, sheet_name='Crazy GE Data')
+
 for column in df_success.columns:
     max_length = df_success[column].map(str).map(len).max()
     max_length = max(max_length, len(column))
@@ -2158,10 +2374,8 @@ for subject_id in subjects:
     # list _timepoint directories in subject directory
     for timepoint in sorted(os.listdir(os.path.join(dceprep_dir, subject_id))):
         if timepoint.startswith("ses-"):
-            # placement_wm_histogram_path = os.path.join(dir, subject_id, timepoint, output_dir, "figures/placement_wm_histogram.png")
-            # placement_gm_histogram_path = os.path.join(dir, subject_id, timepoint, output_dir, "figures/placement_gm_histogram.png")
-            placement_wm_histogram_path = os.path.join(dceprep_dir, subject_id, timepoint, "figures/placement_wm_histogram.png")
-            placement_gm_histogram_path = os.path.join(dceprep_dir, subject_id, timepoint, "figures/placement_gm_histogram.png")
+            placement_wm_histogram_path = os.path.join(dceprep_dir, subject_id, timepoint, "figures/placement_wm_histogram" + output_dir + ".png")
+            placement_gm_histogram_path = os.path.join(dceprep_dir, subject_id, timepoint, "figures/placement_gm_histogram" + output_dir + ".png")
             # get subject's wm_mean
             try:
                 case_wm_median = population_data[subject_id + "_" + timepoint]["wm_median"]
@@ -2205,8 +2419,6 @@ for entry in population_data.keys():
         with open(filename, 'w') as f:
             f.write(report_content)
 
-        # now take ses-* reports/{prefix}_desc-report.png and append it to scrollable report
-        # get desc-report.png path
         report_path = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-report.png")
         # append to imgs
         imgs.append(report_path)
@@ -2240,8 +2452,6 @@ for entry in population_data_exclude.keys():
         print(e)
 
 # make scrollable report
-
-from PIL import Image
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
