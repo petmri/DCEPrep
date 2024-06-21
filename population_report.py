@@ -106,11 +106,7 @@ total_timepoints = []
 successful_timepoints = []
 popAIF_curves = []
 aif_curves = []
-for subject_id in subjects:
-# for subject_id, timepoint in zip(subjects, timepoints):
-    # if subject_id in subject_list:
-    # list _timepoint directories in subject directory
-    for timepoint in os.listdir(os.path.join(dceprep_dir, subject_id)):
+def get_case_stats(subject_id, timepoint):
         AIFitness = 0
         T1_wm_median = 0
         T1_wm_std = 0
@@ -174,7 +170,7 @@ for subject_id in subjects:
             except Exception as e:
                 print("Error reading DCE or AIF for", subject_id, timepoint)
                 print(e)
-                continue
+                return
 
             # if use manual AIF and file exists, mark as manual
             manual_aif_path = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-AIF_mask.nii.gz")
@@ -262,6 +258,7 @@ for subject_id in subjects:
             try:
                 if os.path.isfile(B_log):
                     with open(B_log, 'r') as f:
+                        fitted_done = False
                         for line in f:
                             if "User selected time resolution (sec)" in line:
                                 # take next line as time resolution
@@ -289,6 +286,10 @@ for subject_id in subjects:
                                 aif_mmol = np.array(aif_mmol)
                                 # take mean
                                 aif_mmol = np.mean(aif_mmol)
+                            if "Adjusted R^2 of AIF fit = " in line and not fitted_done:
+                                aif_fitted_r2 = line.split()[-1]
+                                aif_fitted_r2 = float(aif_fitted_r2)
+                                fitted_done = True
                 elif os.path.isfile(B_imported_log):
                     with open(B_imported_log, 'r') as f:
                         for line in f:
@@ -322,6 +323,7 @@ for subject_id in subjects:
                 print("Error reading " + B_log)
                 print(e)
                 aif_mmol = -1
+                aif_fitted_r2 = -1
             # get max_disp from {prefix}_desc-hmcmaxdisp.txt
             max_disp_path = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-hmc_maxdisp.txt")
             try:
@@ -391,7 +393,7 @@ for subject_id in subjects:
             except:
                 print("Error reading " + ktrans_map)
                 stats_failed = True
-                continue
+                return
             # Numbers are locations of regions in freesurfer wmparc.mgz
             L_HIPPO = 17
             R_HIPPO = 53
@@ -674,128 +676,153 @@ for subject_id in subjects:
             
             entry = subject_id + "_" + timepoint
             if stats_failed is False:
-                successful_timepoints.append(f'{subject_id}/{timepoint}')
-                population_data[entry] = {
-                    "AIFitness": AIFitness,
-                    "aif_mmol": aif_mmol,
-                    "T1_wm_median": T1_wm_median,
-                    # T1_wm_std: T1_wm_std,
-                    "T1_gm_median": T1_gm_median,
-                    # T1_gm_std: T1_gm_std,
-                    "T1_blood": T1_blood,
-                    # "wm_mean": wm_mean,
-                    "wm_median": wm_median,
-                    # "wm_std": wm_std,
-                    # "gm_mean": gm_mean,
-                    "gm_median": gm_median,
-                    # "gm_std": gm_std,
-                    "max_disp": max_disp,
-                    "Manufacturer": manufacturer,
-                    "Field_strength": field_strength,
-                    "Machine": machine,
-                    "Institution": institution,
-                    "Date": date,
-                    "Sex" : sex,
-                    "Age": age,
-                    "Coil": coil,
-                    "Scan_options": scan_options,
-                    "TE": TE,
-                    "Time_resolution": time_resolution,
-                    "Flip_angle": flip_angle,
-                    "TR": TR,
-                    "n_reps": n_reps,
-                    "Ktrans_Hippo_median": Ktrans_Hippo_median,
-                    "Ktrans_PhG_median": Ktrans_PhG_median,
-                    "Ktrans_Putamen_median": Ktrans_Putamen_median,
-                    "Ktrans_Pallidum_median": Ktrans_Pallidum_median,
-                    "Ktrans_Thalamus_median": Ktrans_Thalamus_median,
-                    "Ktrans_Caudate_median": Ktrans_Caudate_median,
-                    "Ktrans_Amygdala_median": Ktrans_Amygdala_median,
-                    "Ktrans_Entorhinal_cortex_median": Ktrans_Entorhinal_cortex_median,
-                    "Ktrans_Fusiform_gyrus_cortex_median": Ktrans_Fusiform_gyrus_cortex_median,
-                    "Ktrans_Fusiform_gyrus_WM_median": Ktrans_Fusiform_gyrus_WM_median,
-                    "Ktrans_Insula_WM_median": Ktrans_Insula_WM_median,
-                    "Ktrans_Superior_temporal_cortex_median": Ktrans_Superior_temporal_cortex_median,
-                    "Ktrans_Posterior_cingulate_cortex_median": Ktrans_Posterior_cingulate_cortex_median,
-                    "Ktrans_Medial_temporal_cortex_median": Ktrans_Medial_temporal_cortex_median,
-                    "hippo_vol": hippo_vol,
-                    "phg_vol": phg_vol,
-                    "putamen_vol": putamen_vol,
-                    "pallidum_vol": pallidum_vol,
-                    "thalamus_vol": thalamus_vol,
-                    "caudate_vol": caudate_vol,
-                    "amygdala_vol": amygdala_vol,
-                    "entorhinal_cortex_vol": entorhinal_cortex_vol,
-                    "fusiform_gyrus_cortex_vol": fusiform_gyrus_cortex_vol,
-                    "fusiform_gyrus_wm_vol": fusiform_gyrus_wm_vol,
-                    "insula_wm_vol": insula_wm_vol,
-                    "superior_temporal_cortex_vol": superior_temporal_cortex_vol,
-                    "posterior_cingulate_cortex_vol": posterior_cingulate_cortex_vol,
-                    "medial_temporal_cortex_vol": medial_temporal_cortex_vol,
-                    "manual_aif_status": manual_aif_status,
-                }
+                with lock:
+                    successful_timepoints.append(f'{subject_id}/{timepoint}')
+                    population_data[entry] = {
+                        "AIFitness": AIFitness,
+                        "aif_mmol": aif_mmol,
+                        "aif_fitted_r2": aif_fitted_r2,
+                        "T1_wm_median": T1_wm_median,
+                        # T1_wm_std: T1_wm_std,
+                        "T1_gm_median": T1_gm_median,
+                        # T1_gm_std: T1_gm_std,
+                        "T1_blood": T1_blood,
+                        # "wm_mean": wm_mean,
+                        "wm_median": wm_median,
+                        # "wm_std": wm_std,
+                        # "gm_mean": gm_mean,
+                        "gm_median": gm_median,
+                        # "gm_std": gm_std,
+                        "max_disp": max_disp,
+                        "Manufacturer": manufacturer,
+                        "Field_strength": field_strength,
+                        "Machine": machine,
+                        "Institution": institution,
+                        "Date": date,
+                        "Sex" : sex,
+                        "Age": age,
+                        "Coil": coil,
+                        "Scan_options": scan_options,
+                        "TE": TE,
+                        "Time_resolution": time_resolution,
+                        "Flip_angle": flip_angle,
+                        "TR": TR,
+                        "n_reps": n_reps,
+                        "Ktrans_Hippo_median": Ktrans_Hippo_median,
+                        "Ktrans_PhG_median": Ktrans_PhG_median,
+                        "Ktrans_Putamen_median": Ktrans_Putamen_median,
+                        "Ktrans_Pallidum_median": Ktrans_Pallidum_median,
+                        "Ktrans_Thalamus_median": Ktrans_Thalamus_median,
+                        "Ktrans_Caudate_median": Ktrans_Caudate_median,
+                        "Ktrans_Amygdala_median": Ktrans_Amygdala_median,
+                        "Ktrans_Entorhinal_cortex_median": Ktrans_Entorhinal_cortex_median,
+                        "Ktrans_Fusiform_gyrus_cortex_median": Ktrans_Fusiform_gyrus_cortex_median,
+                        "Ktrans_Fusiform_gyrus_WM_median": Ktrans_Fusiform_gyrus_WM_median,
+                        "Ktrans_Insula_WM_median": Ktrans_Insula_WM_median,
+                        "Ktrans_Superior_temporal_cortex_median": Ktrans_Superior_temporal_cortex_median,
+                        "Ktrans_Posterior_cingulate_cortex_median": Ktrans_Posterior_cingulate_cortex_median,
+                        "Ktrans_Medial_temporal_cortex_median": Ktrans_Medial_temporal_cortex_median,
+                        "hippo_vol": hippo_vol,
+                        "phg_vol": phg_vol,
+                        "putamen_vol": putamen_vol,
+                        "pallidum_vol": pallidum_vol,
+                        "thalamus_vol": thalamus_vol,
+                        "caudate_vol": caudate_vol,
+                        "amygdala_vol": amygdala_vol,
+                        "entorhinal_cortex_vol": entorhinal_cortex_vol,
+                        "fusiform_gyrus_cortex_vol": fusiform_gyrus_cortex_vol,
+                        "fusiform_gyrus_wm_vol": fusiform_gyrus_wm_vol,
+                        "insula_wm_vol": insula_wm_vol,
+                        "superior_temporal_cortex_vol": superior_temporal_cortex_vol,
+                        "posterior_cingulate_cortex_vol": posterior_cingulate_cortex_vol,
+                        "medial_temporal_cortex_vol": medial_temporal_cortex_vol,
+                        "manual_aif_status": manual_aif_status,
+                    }
             else:
-                population_data_failed[entry] = {
-                    "Reason": error,
-                    "AIFitness": AIFitness,
-                    "aif_mmol": aif_mmol,
-                    "T1_wm_median": T1_wm_median,
-                    # T1_wm_std: T1_wm_std,
-                    "T1_gm_median": T1_gm_median,
-                    # T1_gm_std: T1_gm_std,
-                    "T1_blood": T1_blood,
-                    # "wm_mean": wm_mean,
-                    "wm_median": wm_median,
-                    # "wm_std": wm_std,
-                    # "gm_mean": gm_mean,
-                    "gm_median": gm_median,
-                    # "gm_std": gm_std,
-                    "max_disp": max_disp,
-                    "Manufacturer": manufacturer,
-                    "Field_strength": field_strength,
-                    "Machine": machine,
-                    "Institution": institution,
-                    "Date": date,
-                    "Sex" : sex,
-                    "Age": age,
-                    "Coil": coil,
-                    "Scan_options": scan_options,
-                    "TE": TE,
-                    "Time_resolution": time_resolution,
-                    "Flip_angle": flip_angle,
-                    "TR": TR,
-                    "n_reps": n_reps,
-                    "Ktrans_Hippo_median": Ktrans_Hippo_median,
-                    "Ktrans_PhG_median": Ktrans_PhG_median,
-                    "Ktrans_Putamen_median": Ktrans_Putamen_median,
-                    "Ktrans_Pallidum_median": Ktrans_Pallidum_median,
-                    "Ktrans_Thalamus_median": Ktrans_Thalamus_median,
-                    "Ktrans_Caudate_median": Ktrans_Caudate_median,
-                    "Ktrans_Amygdala_median": Ktrans_Amygdala_median,
-                    "Ktrans_Entorhinal_cortex_median": Ktrans_Entorhinal_cortex_median,
-                    "Ktrans_Fusiform_gyrus_cortex_median": Ktrans_Fusiform_gyrus_cortex_median,
-                    "Ktrans_Fusiform_gyrus_WM_median": Ktrans_Fusiform_gyrus_WM_median,
-                    "Ktrans_Insula_WM_median": Ktrans_Insula_WM_median,
-                    "Ktrans_Superior_temporal_cortex_median": Ktrans_Superior_temporal_cortex_median,
-                    "Ktrans_Posterior_cingulate_cortex_median": Ktrans_Posterior_cingulate_cortex_median,
-                    "Ktrans_Medial_temporal_cortex_median": Ktrans_Medial_temporal_cortex_median,
-                    "hippo_vol": hippo_vol,
-                    "phg_vol": phg_vol,
-                    "putamen_vol": putamen_vol,
-                    "pallidum_vol": pallidum_vol,
-                    "thalamus_vol": thalamus_vol,
-                    "caudate_vol": caudate_vol,
-                    "amygdala_vol": amygdala_vol,
-                    "entorhinal_cortex_vol": entorhinal_cortex_vol,
-                    "fusiform_gyrus_cortex_vol": fusiform_gyrus_cortex_vol,
-                    "fusiform_gyrus_wm_vol": fusiform_gyrus_wm_vol,
-                    "insula_wm_vol": insula_wm_vol,
-                    "superior_temporal_cortex_vol": superior_temporal_cortex_vol,
-                    "posterior_cingulate_cortex_vol": posterior_cingulate_cortex_vol,
-                    "medial_temporal_cortex_vol": medial_temporal_cortex_vol,
-                    "manual_aif_status": manual_aif_status,
-                }
+                with lock:
+                    population_data_failed[entry] = {
+                        "Reason": error,
+                        "AIFitness": AIFitness,
+                        "aif_mmol": aif_mmol,
+                        "aif_fitted_r2": aif_fitted_r2,
+                        "T1_wm_median": T1_wm_median,
+                        # T1_wm_std: T1_wm_std,
+                        "T1_gm_median": T1_gm_median,
+                        # T1_gm_std: T1_gm_std,
+                        "T1_blood": T1_blood,
+                        # "wm_mean": wm_mean,
+                        "wm_median": wm_median,
+                        # "wm_std": wm_std,
+                        # "gm_mean": gm_mean,
+                        "gm_median": gm_median,
+                        # "gm_std": gm_std,
+                        "max_disp": max_disp,
+                        "Manufacturer": manufacturer,
+                        "Field_strength": field_strength,
+                        "Machine": machine,
+                        "Institution": institution,
+                        "Date": date,
+                        "Sex" : sex,
+                        "Age": age,
+                        "Coil": coil,
+                        "Scan_options": scan_options,
+                        "TE": TE,
+                        "Time_resolution": time_resolution,
+                        "Flip_angle": flip_angle,
+                        "TR": TR,
+                        "n_reps": n_reps,
+                        "Ktrans_Hippo_median": Ktrans_Hippo_median,
+                        "Ktrans_PhG_median": Ktrans_PhG_median,
+                        "Ktrans_Putamen_median": Ktrans_Putamen_median,
+                        "Ktrans_Pallidum_median": Ktrans_Pallidum_median,
+                        "Ktrans_Thalamus_median": Ktrans_Thalamus_median,
+                        "Ktrans_Caudate_median": Ktrans_Caudate_median,
+                        "Ktrans_Amygdala_median": Ktrans_Amygdala_median,
+                        "Ktrans_Entorhinal_cortex_median": Ktrans_Entorhinal_cortex_median,
+                        "Ktrans_Fusiform_gyrus_cortex_median": Ktrans_Fusiform_gyrus_cortex_median,
+                        "Ktrans_Fusiform_gyrus_WM_median": Ktrans_Fusiform_gyrus_WM_median,
+                        "Ktrans_Insula_WM_median": Ktrans_Insula_WM_median,
+                        "Ktrans_Superior_temporal_cortex_median": Ktrans_Superior_temporal_cortex_median,
+                        "Ktrans_Posterior_cingulate_cortex_median": Ktrans_Posterior_cingulate_cortex_median,
+                        "Ktrans_Medial_temporal_cortex_median": Ktrans_Medial_temporal_cortex_median,
+                        "hippo_vol": hippo_vol,
+                        "phg_vol": phg_vol,
+                        "putamen_vol": putamen_vol,
+                        "pallidum_vol": pallidum_vol,
+                        "thalamus_vol": thalamus_vol,
+                        "caudate_vol": caudate_vol,
+                        "amygdala_vol": amygdala_vol,
+                        "entorhinal_cortex_vol": entorhinal_cortex_vol,
+                        "fusiform_gyrus_cortex_vol": fusiform_gyrus_cortex_vol,
+                        "fusiform_gyrus_wm_vol": fusiform_gyrus_wm_vol,
+                        "insula_wm_vol": insula_wm_vol,
+                        "superior_temporal_cortex_vol": superior_temporal_cortex_vol,
+                        "posterior_cingulate_cortex_vol": posterior_cingulate_cortex_vol,
+                        "medial_temporal_cortex_vol": medial_temporal_cortex_vol,
+                        "manual_aif_status": manual_aif_status,
+                    }
 
+# for subject_id in subjects:
+#     for timepoint in os.listdir(os.path.join(dceprep_dir, subject_id)):
+#         get_case_stats(subject_id, timepoint)
+
+from concurrent.futures import ThreadPoolExecutor
+import threading
+import time
+
+# time
+start = time.time()
+lock = threading.Lock()
+with ThreadPoolExecutor() as executor:
+    futures = [executor.submit(get_case_stats, subject_id, timepoint) for subject_id in subjects for timepoint in os.listdir(os.path.join(dceprep_dir, subject_id))]
+    for future in futures:
+        try:
+            future.result()
+        except Exception as e:
+            print(f"Error in future: {future}, {e}")
+
+end = time.time()
+print("Time taken:", end - start)
 # get flagged cases
 flagged_cases = []
 flagged_links = []
@@ -808,11 +835,11 @@ for case in successful_timepoints:
     session = case.split('/')[1]
     save_name = f"{case}/reports/{subject}_{session}_desc-casereport.html"
     flag = False
-    if population_data[entry]['max_disp'] > MOTION_THRESHOLD:
+    if entry in population_data.keys() and population_data[entry]['max_disp'] > MOTION_THRESHOLD:
         flag = True
         flag_str += "motion"
         save_name += "#MCFLIRT"
-    if population_data[entry]['AIFitness'] < AIFITNESS_THRESHOLD:
+    if entry in population_data.keys() and population_data[entry]['AIFitness'] < AIFITNESS_THRESHOLD:
         flag = True
         if flag_str != "":
             flag_str += ", "
@@ -2289,7 +2316,7 @@ df_success = pd.DataFrame(population_data)
 # df_exclude = pd.DataFrame(population_data_exclude)
 
 order = ["Date", "APOE", "CDR", "BMI", "Sex", "Age", "Machine", "Institution", "Coil", "TR", "Time_resolution", "TE", "Flip_angle", "n_reps",
-         "AIFitness", "manual_aif_status", "max_disp", "T1_blood", "T1_wm_median", "T1_gm_median",
+         "AIFitness", "aif_fitted_r2", "manual_aif_status", "max_disp", "T1_blood", "T1_wm_median", "T1_gm_median",
          "wm_median", "gm_median", "Ktrans_Hippo_median", "Ktrans_PhG_median", "Ktrans_Putamen_median", "Ktrans_Pallidum_median",
          "Ktrans_Thalamus_median", "Ktrans_Caudate_median", "Ktrans_Amygdala_median", "Ktrans_Entorhinal_cortex_median",
          "Ktrans_Fusiform_gyrus_cortex_median", "Ktrans_Fusiform_gyrus_WM_median", "Ktrans_Insula_WM_median",
@@ -2378,8 +2405,21 @@ for subject_id in subjects:
             placement_gm_histogram_path = os.path.join(dceprep_dir, subject_id, timepoint, "figures/placement_gm_histogram" + output_dir + ".png")
             # get subject's wm_mean
             try:
-                case_wm_median = population_data[subject_id + "_" + timepoint]["wm_median"]
-                case_gm_median = population_data[subject_id + "_" + timepoint]["gm_median"]
+                if f"{subject_id}_{timepoint}" in population_data.keys():
+                    case_wm_median = population_data[subject_id + "_" + timepoint]["wm_median"]
+                    case_gm_median = population_data[subject_id + "_" + timepoint]["gm_median"]
+                elif f"{subject_id}_{timepoint}" in population_data_exclude.keys():
+                    case_wm_median = population_data_exclude[subject_id + "_" + timepoint]["wm_median"]
+                    case_gm_median = population_data_exclude[subject_id + "_" + timepoint]["gm_median"]
+                elif f"{subject_id}_{timepoint}" in population_data_exclude_signa.keys():
+                    case_wm_median = population_data_exclude_signa[subject_id + "_" + timepoint]["wm_median"]
+                    case_gm_median = population_data_exclude_signa[subject_id + "_" + timepoint]["gm_median"]
+                elif f"{subject_id}_{timepoint}" in population_data_failed.keys():
+                    case_wm_median = population_data_failed[subject_id + "_" + timepoint]["wm_median"]
+                    case_gm_median = population_data_failed[subject_id + "_" + timepoint]["gm_median"]
+                else:
+                    case_wm_median = -1
+                    case_gm_median = -1
             except Exception as e:
                 print(e)
                 continue

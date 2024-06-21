@@ -449,7 +449,7 @@ except Exception as e:
 
 if RUNB_log:
     def extract_r2_values(log_text):
-        r2_pattern = r"R\^2 of AIF fit = (-*\d+\.\d+)"
+        r2_pattern = r"Adjusted R\^2 of AIF fit = (-*\d+\.\d+)"
         r2_values = re.findall(r2_pattern, log_text)
         return r2_values
 
