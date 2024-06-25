@@ -263,7 +263,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 		# flirt -in dce_patlak_fit_Ktrans.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out ktrans_2_MNI.nii.gz -init DCE2MNI.mat -applyxfm
 	fi
 	mkdir reports &> /dev/null
-	python3 $SCRIPT_PATH/case_report.py $DATA_DIR/$SUBJECT/$SESSION $PREFIX
+	python3 $SCRIPT_PATH/case_report.py $DATA_DIR/$SUBJECT/$SESSION $PREFIX $USE_FREESURFER
 	python3 $SCRIPT_PATH/ktrans_report.py $DATA_DIR/$SUBJECT/$SESSION $PREFIX
 	if [ $PURGE_INTERMEDIATES -eq 1 ]
 		then

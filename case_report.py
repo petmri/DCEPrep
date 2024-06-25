@@ -14,6 +14,7 @@ from matplotlib import colors as mcolors
 source_dir = sys.argv[1]
 # source_dir = sys.argv[2]
 prefix = sys.argv[2]
+freesurfer = bool(int(sys.argv[3]))
 # if source_dir[-1] == '/':
 #     source_dir = source_dir[:-1]
 
@@ -337,35 +338,37 @@ plt.close()
 #     # print error
 #     print(e)
 
-# wmparc overlay on DCE
-wmparc = nib.load(f'anat/{prefix}_space-DCEref_desc-wmparc_RAS.nii.gz')
-wmparc_data = wmparc.get_fdata()
-wmparc_flipped = np.flip(wmparc_data, axis=1)
-wmparc_flipped = nib.Nifti1Image(wmparc_flipped, wmparc.affine, wmparc.header)
+if freesurfer:
+    print("HUH", freesurfer)
+    # wmparc overlay on DCE
+    wmparc = nib.load(f'anat/{prefix}_space-DCEref_desc-wmparc_RAS.nii.gz')
+    wmparc_data = wmparc.get_fdata()
+    wmparc_flipped = np.flip(wmparc_data, axis=1)
+    wmparc_flipped = nib.Nifti1Image(wmparc_flipped, wmparc.affine, wmparc.header)
 
-dce = nib.load(f'dce/{prefix}_desc-hmc_DCEref_RAS.nii.gz')
-dce_data = dce.get_fdata()
-dce_flipped = np.flip(dce_data, axis=1)
-dce_flipped = nib.Nifti1Image(dce_flipped, dce.affine, dce.header)
-# get 95% percentile of DCE
-dce_95th = np.percentile(dce_flipped.get_fdata(), 95)
+    dce = nib.load(f'dce/{prefix}_desc-hmc_DCEref_RAS.nii.gz')
+    dce_data = dce.get_fdata()
+    dce_flipped = np.flip(dce_data, axis=1)
+    dce_flipped = nib.Nifti1Image(dce_flipped, dce.affine, dce.header)
+    # get 95% percentile of DCE
+    dce_95th = np.percentile(dce_flipped.get_fdata(), 95)
 
-# overlay wmparc on DCE
-plt.figure(figsize=(15,5), dpi=250)
-plt.subplot(1,2,1)
-plt.axis('off')
-# rotate images
-# wmparc_data = np.rot90(wmparc_data, axes=(0,1))
+    # overlay wmparc on DCE
+    plt.figure(figsize=(15,5), dpi=250)
+    plt.subplot(1,2,1)
+    plt.axis('off')
+    # rotate images
+    # wmparc_data = np.rot90(wmparc_data, axes=(0,1))
 
-# overlay wmparc mask on DCE per region
-try:
-    plotting.plot_roi(dce_flipped, bg_img=dce_flipped, output_file=f'figures/{prefix}_desc-hmc_DCEref.svg', display_mode='z', cut_coords=range(-140, -110, 10), vmin=0, vmax=dce_95th, dim=-1.55, annotate=False, colorbar=False, draw_cross=False, title='DCE', alpha=0)
-    plotting.plot_roi(wmparc_flipped, bg_img=dce_flipped, output_file='figures/wmparc_overlay.svg', display_mode='z', cut_coords=range(-140, -110, 10), cmap='tab20', dim=-1.55, annotate=False, colorbar=False, draw_cross=False, title='wmparc overlay', alpha=0.7)
-except Exception as e:
-    # plot with default coords
-    plotting.plot_roi(dce_flipped, bg_img=dce_flipped, output_file=f'figures/{prefix}_desc-hmc_DCEref.svg', display_mode='z', vmin=0, vmax=dce_95th, dim=-1, annotate=False, colorbar=False, draw_cross=False, title='DCE', alpha=0)
-    plotting.plot_roi(wmparc_flipped, bg_img=dce_flipped, output_file='figures/wmparc_overlay.svg', display_mode='z', cmap='tab20', dim=-1, annotate=False, colorbar=False, draw_cross=False, title='wmparc overlay', alpha=0.7)
-# T1 dynamic space
+    # overlay wmparc mask on DCE per region
+    try:
+        plotting.plot_roi(dce_flipped, bg_img=dce_flipped, output_file=f'figures/{prefix}_desc-hmc_DCEref.svg', display_mode='z', cut_coords=range(-140, -110, 10), vmin=0, vmax=dce_95th, dim=-1.55, annotate=False, colorbar=False, draw_cross=False, title='DCE', alpha=0)
+        plotting.plot_roi(wmparc_flipped, bg_img=dce_flipped, output_file='figures/wmparc_overlay.svg', display_mode='z', cut_coords=range(-140, -110, 10), cmap='tab20', dim=-1.55, annotate=False, colorbar=False, draw_cross=False, title='wmparc overlay', alpha=0.7)
+    except Exception as e:
+        # plot with default coords
+        plotting.plot_roi(dce_flipped, bg_img=dce_flipped, output_file=f'figures/{prefix}_desc-hmc_DCEref.svg', display_mode='z', vmin=0, vmax=dce_95th, dim=-1, annotate=False, colorbar=False, draw_cross=False, title='DCE', alpha=0)
+        plotting.plot_roi(wmparc_flipped, bg_img=dce_flipped, output_file='figures/wmparc_overlay.svg', display_mode='z', cmap='tab20', dim=-1, annotate=False, colorbar=False, draw_cross=False, title='wmparc overlay', alpha=0.7)
+    # T1 dynamic space
 
 # get DCE parameters
 def extract_value(pattern, text):

@@ -108,6 +108,8 @@ popAIF_curves = []
 aif_curves = []
 def get_case_stats(subject_id, timepoint):
         AIFitness = 0
+        aif_fitted_r2 = 0
+        max_disp = 0
         T1_wm_median = 0
         T1_wm_std = 0
         T1_gm_median = 0
@@ -463,19 +465,19 @@ def get_case_stats(subject_id, timepoint):
                 posterior_cingulate_cortex_vol = -1
                 medial_temporal_cortex_vol = -1
                 Ktrans_Hippo_median = -1
-                Ktrans_PHG_median = -1
+                Ktrans_PhG_median = -1
                 Ktrans_Putamen_median = -1
                 Ktrans_Pallidum_median = -1
                 Ktrans_Thalamus_median = -1
                 Ktrans_Caudate_median = -1
                 Ktrans_Amygdala_median = -1
-                Ktrans_Entorhinal_Cortex_median = -1
-                Ktrans_Fusiform_Gyrus_Cortex_median = -1
-                Ktrans_Fusiform_Gyrus_WM_median = -1
+                Ktrans_Entorhinal_cortex_median = -1
+                Ktrans_Fusiform_gyrus_cortex_median = -1
+                Ktrans_Fusiform_gyrus_WM_median = -1
                 Ktrans_Insula_WM_median = -1
-                Ktrans_Superior_Temporal_Cortex_median = -1
-                Ktrans_Posterior_Cingulate_Cortex_median = -1
-                Ktrans_Medial_Temporal_Cortex_median = -1
+                Ktrans_Superior_temporal_cortex_median = -1
+                Ktrans_Posterior_cingulate_cortex_median = -1
+                Ktrans_Medial_temporal_cortex_median = -1
                 stats_failed = True
             if not stats_failed:
                 with open(wmparc_stats, 'r') as f:
@@ -677,7 +679,7 @@ def get_case_stats(subject_id, timepoint):
             entry = subject_id + "_" + timepoint
             if stats_failed is False:
                 with lock:
-                    successful_timepoints.append(f'{subject_id}/{timepoint}')
+                    successful_timepoints.append(entry)
                     population_data[entry] = {
                         "AIFitness": AIFitness,
                         "aif_mmol": aif_mmol,
@@ -802,10 +804,6 @@ def get_case_stats(subject_id, timepoint):
                         "manual_aif_status": manual_aif_status,
                     }
 
-# for subject_id in subjects:
-#     for timepoint in os.listdir(os.path.join(dceprep_dir, subject_id)):
-#         get_case_stats(subject_id, timepoint)
-
 from concurrent.futures import ThreadPoolExecutor
 import threading
 import time
@@ -828,12 +826,11 @@ flagged_cases = []
 flagged_links = []
 MOTION_THRESHOLD = 3.8
 AIFITNESS_THRESHOLD = 75
-for case in successful_timepoints:
-    entry = case.replace('/', '_')
+for entry in successful_timepoints:
     flag_str = ""
-    subject = case.split('/')[0]
-    session = case.split('/')[1]
-    save_name = f"{case}/reports/{subject}_{session}_desc-casereport.html"
+    subject = entry.split('_')[0]
+    session = entry.split('_')[1]
+    save_name = f"{entry}/reports/{subject}_{session}_desc-casereport.html"
     flag = False
     if entry in population_data.keys() and population_data[entry]['max_disp'] > MOTION_THRESHOLD:
         flag = True
@@ -847,7 +844,7 @@ for case in successful_timepoints:
         if not save_name[-1].endswith("MCFLIRT"):
             save_name += "#AIF"
     if flag_str != "":
-        flagged_cases.append(f'{case} ({flag_str})')
+        flagged_cases.append(f'{entry} ({flag_str})')
         flagged_links.append(save_name)
     if flag:
         # move to population_data_exclude
@@ -856,34 +853,34 @@ for case in successful_timepoints:
         population_data_exclude[entry] = population_data.pop(entry)
         population_data_exclude[entry]['Reason'] = flag_str
         # move outliers to exclude
-        if case in whole_hippo_outliers:
-            whole_hippo_outliers_exclude.append(whole_hippo_outliers.pop(whole_hippo_outliers.index(case)))
-        if case in whole_phg_outliers:
-            whole_phg_outliers_exclude.append(whole_phg_outliers.pop(whole_phg_outliers.index(case)))
-        if case in whole_putamen_outliers:
-            whole_putamen_outliers_exclude.append(whole_putamen_outliers.pop(whole_putamen_outliers.index(case)))
-        if case in whole_pallidum_outliers:
-            whole_pallidum_outliers_exclude.append(whole_pallidum_outliers.pop(whole_pallidum_outliers.index(case)))
-        if case in whole_thalamus_outliers:
-            whole_thalamus_outliers_exclude.append(whole_thalamus_outliers.pop(whole_thalamus_outliers.index(case)))
-        if case in whole_caudate_outliers:
-            whole_caudate_outliers_exclude.append(whole_caudate_outliers.pop(whole_caudate_outliers.index(case)))
-        if case in whole_amygdala_outliers:
-            whole_amygdala_outliers_exclude.append(whole_amygdala_outliers.pop(whole_amygdala_outliers.index(case)))
-        if case in whole_entorhinal_cortex_outliers:
-            whole_entorhinal_cortex_outliers_exclude.append(whole_entorhinal_cortex_outliers.pop(whole_entorhinal_cortex_outliers.index(case)))
-        if case in whole_fusiform_gyrus_cortex_outliers:
-            whole_fusiform_gyrus_cortex_outliers_exclude.append(whole_fusiform_gyrus_cortex_outliers.pop(whole_fusiform_gyrus_cortex_outliers.index(case)))
-        if case in whole_fusiform_gyrus_WM_outliers:
-            whole_fusiform_gyrus_WM_outliers_exclude.append(whole_fusiform_gyrus_WM_outliers.pop(whole_fusiform_gyrus_WM_outliers.index(case)))
-        if case in whole_insula_WM_outliers:
-            whole_insula_WM_outliers_exclude.append(whole_insula_WM_outliers.pop(whole_insula_WM_outliers.index(case)))
-        if case in whole_superior_temporal_cortex_outliers:
-            whole_superior_temporal_cortex_outliers_exclude.append(whole_superior_temporal_cortex_outliers.pop(whole_superior_temporal_cortex_outliers.index(case)))
-        if case in whole_posterior_cingulate_cortex_outliers:
-            whole_posterior_cingulate_cortex_outliers_exclude.append(whole_posterior_cingulate_cortex_outliers.pop(whole_posterior_cingulate_cortex_outliers.index(case)))
-        if case in whole_medial_temporal_cortex_outliers:
-            whole_medial_temporal_cortex_outliers_exclude.append(whole_medial_temporal_cortex_outliers.pop(whole_medial_temporal_cortex_outliers.index(case)))
+        if entry in whole_hippo_outliers:
+            whole_hippo_outliers_exclude.append(whole_hippo_outliers.pop(whole_hippo_outliers.index(entry)))
+        if entry in whole_phg_outliers:
+            whole_phg_outliers_exclude.append(whole_phg_outliers.pop(whole_phg_outliers.index(entry)))
+        if entry in whole_putamen_outliers:
+            whole_putamen_outliers_exclude.append(whole_putamen_outliers.pop(whole_putamen_outliers.index(entry)))
+        if entry in whole_pallidum_outliers:
+            whole_pallidum_outliers_exclude.append(whole_pallidum_outliers.pop(whole_pallidum_outliers.index(entry)))
+        if entry in whole_thalamus_outliers:
+            whole_thalamus_outliers_exclude.append(whole_thalamus_outliers.pop(whole_thalamus_outliers.index(entry)))
+        if entry in whole_caudate_outliers:
+            whole_caudate_outliers_exclude.append(whole_caudate_outliers.pop(whole_caudate_outliers.index(entry)))
+        if entry in whole_amygdala_outliers:
+            whole_amygdala_outliers_exclude.append(whole_amygdala_outliers.pop(whole_amygdala_outliers.index(entry)))
+        if entry in whole_entorhinal_cortex_outliers:
+            whole_entorhinal_cortex_outliers_exclude.append(whole_entorhinal_cortex_outliers.pop(whole_entorhinal_cortex_outliers.index(entry)))
+        if entry in whole_fusiform_gyrus_cortex_outliers:
+            whole_fusiform_gyrus_cortex_outliers_exclude.append(whole_fusiform_gyrus_cortex_outliers.pop(whole_fusiform_gyrus_cortex_outliers.index(entry)))
+        if entry in whole_fusiform_gyrus_WM_outliers:
+            whole_fusiform_gyrus_WM_outliers_exclude.append(whole_fusiform_gyrus_WM_outliers.pop(whole_fusiform_gyrus_WM_outliers.index(entry)))
+        if entry in whole_insula_WM_outliers:
+            whole_insula_WM_outliers_exclude.append(whole_insula_WM_outliers.pop(whole_insula_WM_outliers.index(entry)))
+        if entry in whole_superior_temporal_cortex_outliers:
+            whole_superior_temporal_cortex_outliers_exclude.append(whole_superior_temporal_cortex_outliers.pop(whole_superior_temporal_cortex_outliers.index(entry)))
+        if entry in whole_posterior_cingulate_cortex_outliers:
+            whole_posterior_cingulate_cortex_outliers_exclude.append(whole_posterior_cingulate_cortex_outliers.pop(whole_posterior_cingulate_cortex_outliers.index(entry)))
+        if entry in whole_medial_temporal_cortex_outliers:
+            whole_medial_temporal_cortex_outliers_exclude.append(whole_medial_temporal_cortex_outliers.pop(whole_medial_temporal_cortex_outliers.index(entry)))
 
 # remove cases with Machine == Signa HDxt from population_data_exclude and population_data
 population_data_exclude_signa = {}
@@ -1193,12 +1190,14 @@ T1_blood_histogram = []
 for entry in population_data.keys():
     T1_blood_histogram.append(population_data[entry]["T1_blood"])
 
+date_filename = datetime.datetime.now().strftime("%Y-%m-%d")
+
 # plot histogram
 plt.hist(T1_blood_histogram, bins=30)
 plt.title("T1 Blood")
 plt.xlabel("T1 Blood")
 # T1_blood_histogram_path = os.path.join("figures/", output_dir + "T1_blood_histogram.png")
-T1_blood_histogram_path = os.path.join("figures/", "T1_blood_histogram" + output_dir + ".png")
+T1_blood_histogram_path = os.path.join("figures/", "T1_blood_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(T1_blood_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1211,7 +1210,7 @@ plt.hist(T1_blood_histogram_exclude, bins=30)
 plt.title("T1 Blood (Exclude)")
 plt.xlabel("T1 Blood")
 # T1_blood_histogram_exclude_path = os.path.join("figures/", output_dir + "T1_blood_histogram_exclude.png")
-T1_blood_histogram_exclude_path = os.path.join("figures/", "T1_blood_histogram_exclude" + output_dir + ".png")
+T1_blood_histogram_exclude_path = os.path.join("figures/", "T1_blood_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(T1_blood_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1220,7 +1219,7 @@ plt.hist(AIFitness_values, bins=30)
 plt.title("AIFitness Median")
 plt.xlabel("AIFitness")
 # aifitness_histogram_path = os.path.join("figures/", output_dir + "aifitness_histogram.png")
-aifitness_histogram_path = os.path.join("figures/", "aifitness_histogram" + output_dir + ".png")
+aifitness_histogram_path = os.path.join("figures/", "aifitness_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(aifitness_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1228,7 +1227,7 @@ plt.hist(AIFitness_exclude, bins=30)
 plt.title("AIFitness Median (Exclude)")
 plt.xlabel("AIFitness")
 # aifitness_histogram_exclude_path = os.path.join("figures/", output_dir + "aifitness_histogram_exclude.png")
-aifitness_histogram_exclude_path = os.path.join("figures/", "aifitness_histogram_exclude" + output_dir + ".png")
+aifitness_histogram_exclude_path = os.path.join("figures/", "aifitness_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(aifitness_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1242,7 +1241,7 @@ plt.hist(aif_mmol_histogram, bins=30)
 plt.title("AIF mmol (mean of last 1/3)")
 plt.xlabel("AIF mmol")
 # aif_mmol_histogram_path = os.path.join("figures/", output_dir + "aif_mmol_histogram.png")
-aif_mmol_histogram_path = os.path.join("figures/", "aif_mmol_histogram" + output_dir + ".png")
+aif_mmol_histogram_path = os.path.join("figures/", "aif_mmol_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(aif_mmol_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1255,7 +1254,7 @@ plt.hist(aif_mmol_histogram_exclude, bins=30)
 plt.title("AIF mmol (mean of last 1/3) (Exclude)")
 plt.xlabel("AIF mmol")
 # aif_mmol_histogram_exclude_path = os.path.join("figures/", output_dir + "aif_mmol_histogram_exclude.png")
-aif_mmol_histogram_exclude_path = os.path.join("figures/", "aif_mmol_histogram_exclude" + output_dir + ".png")
+aif_mmol_histogram_exclude_path = os.path.join("figures/", "aif_mmol_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(aif_mmol_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1269,7 +1268,7 @@ plt.hist(wm_histogram, bins=50, range=(0, 5))
 plt.title("White Matter Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # ktrans_wm_histogram_path = os.path.join("figures/", output_dir + "wm_histogram.png")
-ktrans_wm_histogram_path = os.path.join("figures/", "wm_histogram" + output_dir + ".png")
+ktrans_wm_histogram_path = os.path.join("figures/", "wm_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(ktrans_wm_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1282,7 +1281,7 @@ plt.hist(ktrans_wm_histogram_exclude, bins=50, range=(0, 5))
 plt.title("White Matter Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
 # ktrans_wm_histogram_exclude_path = os.path.join("figures/", output_dir + "wm_histogram_exclude.png")
-ktrans_wm_histogram_exclude_path = os.path.join("figures/", "wm_histogram_exclude" + output_dir + ".png")
+ktrans_wm_histogram_exclude_path = os.path.join("figures/", "wm_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(ktrans_wm_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1296,7 +1295,7 @@ plt.hist(gm_histogram, bins=50, range=(0, 5))
 plt.title("Gray Matter Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # ktrans_gm_histogram_path = os.path.join("figures/", output_dir + "gm_histogram.png")
-ktrans_gm_histogram_path = os.path.join("figures/", "gm_histogram" + output_dir + ".png")
+ktrans_gm_histogram_path = os.path.join("figures/", "gm_histogram" + output_dir + "_" + date_filename + ".png")
 # save range of histogram for later use
 gm_histogram_range = plt.xlim()
 plt.savefig(ktrans_gm_histogram_path, bbox_inches='tight')
@@ -1311,7 +1310,7 @@ plt.hist(ktrans_gm_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Gray Matter Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
 # ktrans_gm_histogram_exclude_path = os.path.join("figures/", output_dir + "gm_histogram_exclude.png")
-ktrans_gm_histogram_exclude_path = os.path.join("figures/", "gm_histogram_exclude" + output_dir + ".png")
+ktrans_gm_histogram_exclude_path = os.path.join("figures/", "gm_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.xlim(gm_histogram_range)
 plt.savefig(ktrans_gm_histogram_exclude_path, bbox_inches='tight')
 plt.close()
@@ -1320,7 +1319,7 @@ try:
     pop_avg_AIF = np.asarray(popAIF_curves)
     pop_avg_AIF = np.mean(pop_avg_AIF, axis=0)
     # save average curve to export into MATLAB
-    np.savetxt("average_aif_curve_bu.csv", pop_avg_AIF, delimiter=",")
+    np.savetxt("average_aif_curve.csv", pop_avg_AIF, delimiter=",")
     for aif in popAIF_curves:
         plt.plot(aif, linewidth=0.5, color='grey', alpha=0.5)
     plt.plot(pop_avg_AIF, linewidth=1, color='black')
@@ -1330,7 +1329,7 @@ try:
     plt.ylabel('Normalized Intensity')
     plt.title('AIF Curves (Modified for MATLAB Import)')
     # aif_pop_avg_path = os.path.join("figures/", output_dir + "aif_pop_avg_AIF.png")
-    aif_pop_avg_path = os.path.join("figures/", "aif_pop_avg_AIF_bu" + output_dir + ".png")
+    aif_pop_avg_path = os.path.join("figures/", "aif_pop_avg_AIF" + output_dir + "_" + date_filename + ".png")
     plt.savefig(aif_pop_avg_path, bbox_inches='tight', dpi=300)  # Increase dpi for higher resolution
     plt.close()
 except Exception as e:
@@ -1349,7 +1348,7 @@ try:
     plt.xlabel('Time (s)')
     plt.ylabel('Normalized Intensity')
     plt.title('AIF Curves')
-    aif_curves_path = os.path.join("figures/", "aif_pop_AIF" + output_dir + ".png")
+    aif_curves_path = os.path.join("figures/", "aif_pop_AIF" + output_dir + "_" + date_filename + ".png")
     plt.savefig(aif_curves_path, bbox_inches='tight', dpi=300)  # Increase dpi for higher resolution
     plt.close()
 except Exception as e:
@@ -1420,7 +1419,7 @@ plt.hist(whole_hippo_histogram, bins=50, range=(0, 5))
 plt.title("Whole Hippocampus Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_hippo_histogram_path = os.path.join("figures/", output_dir + "whole_hippo_histogram.png")
-whole_hippo_histogram_path = os.path.join("figures/", "whole_hippo_histogram" + output_dir + ".png")
+whole_hippo_histogram_path = os.path.join("figures/", "whole_hippo_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_hippo_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1428,7 +1427,7 @@ plt.hist(whole_phg_histogram, bins=50, range=(0, 5))
 plt.title("Whole Parahippocampal Gyrus Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_phg_histogram_path = os.path.join("figures/", output_dir + "whole_phg_histogram.png")
-whole_phg_histogram_path = os.path.join("figures/", "whole_phg_histogram" + output_dir + ".png")
+whole_phg_histogram_path = os.path.join("figures/", "whole_phg_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_phg_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1436,7 +1435,7 @@ plt.hist(whole_putamen_histogram, bins=50, range=(0, 5))
 plt.title("Whole Putamen Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_putamen_histogram_path = os.path.join("figures/", output_dir + "whole_putamen_histogram.png")
-whole_putamen_histogram_path = os.path.join("figures/", "whole_putamen_histogram" + output_dir + ".png")
+whole_putamen_histogram_path = os.path.join("figures/", "whole_putamen_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_putamen_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1444,7 +1443,7 @@ plt.hist(whole_pallidum_histogram, bins=50, range=(0, 5))
 plt.title("Whole Pallidum Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_pallidum_histogram_path = os.path.join("figures/", output_dir + "whole_pallidum_histogram.png")
-whole_pallidum_histogram_path = os.path.join("figures/", "whole_pallidum_histogram" + output_dir + ".png")
+whole_pallidum_histogram_path = os.path.join("figures/", "whole_pallidum_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_pallidum_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1452,7 +1451,7 @@ plt.hist(whole_thalamus_histogram, bins=50, range=(0, 5))
 plt.title("Whole Thalamus Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_thalamus_histogram_path = os.path.join("figures/", output_dir + "whole_thalamus_histogram.png")
-whole_thalamus_histogram_path = os.path.join("figures/", "whole_thalamus_histogram" + output_dir + ".png")
+whole_thalamus_histogram_path = os.path.join("figures/", "whole_thalamus_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_thalamus_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1460,7 +1459,7 @@ plt.hist(whole_caudate_histogram, bins=50, range=(0, 5))
 plt.title("Whole Caudate Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_caudate_histogram_path = os.path.join("figures/", output_dir + "whole_caudate_histogram.png")
-whole_caudate_histogram_path = os.path.join("figures/", "whole_caudate_histogram" + output_dir + ".png")
+whole_caudate_histogram_path = os.path.join("figures/", "whole_caudate_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_caudate_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1468,7 +1467,7 @@ plt.hist(whole_amygdala_histogram, bins=50, range=(0, 5))
 plt.title("Whole Amygdala Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_amygdala_histogram_path = os.path.join("figures/", output_dir + "whole_amygdala_histogram.png")
-whole_amygdala_histogram_path = os.path.join("figures/", "whole_amygdala_histogram" + output_dir + ".png")
+whole_amygdala_histogram_path = os.path.join("figures/", "whole_amygdala_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_amygdala_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1476,7 +1475,7 @@ plt.hist(whole_entorhinal_cortex_histogram, bins=50, range=(0, 5))
 plt.title("Whole Entorhinal Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_entorhinal_cortex_histogram_path = os.path.join("figures/", output_dir + "whole_entorhinal_cortex_histogram.png")
-whole_entorhinal_cortex_histogram_path = os.path.join("figures/", "whole_entorhinal_cortex_histogram" + output_dir + ".png")
+whole_entorhinal_cortex_histogram_path = os.path.join("figures/", "whole_entorhinal_cortex_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_entorhinal_cortex_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1484,7 +1483,7 @@ plt.hist(whole_fusiform_gyrus_cortex_histogram, bins=50, range=(0, 5))
 plt.title("Whole Fusiform Gyrus Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_fusiform_gyrus_cortex_histogram_path = os.path.join("figures/", output_dir + "whole_fusiform_gyrus_cortex_histogram.png")
-whole_fusiform_gyrus_cortex_histogram_path = os.path.join("figures/", "whole_fusiform_gyrus_cortex_histogram" + output_dir + ".png")
+whole_fusiform_gyrus_cortex_histogram_path = os.path.join("figures/", "whole_fusiform_gyrus_cortex_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_fusiform_gyrus_cortex_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1492,7 +1491,7 @@ plt.hist(whole_fusiform_gyrus_WM_histogram, bins=50, range=(0, 5))
 plt.title("Whole Fusiform Gyrus WM Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_fusiform_gyrus_WM_histogram_path = os.path.join("figures/", output_dir + "whole_fusiform_gyrus_WM_histogram.png")
-whole_fusiform_gyrus_WM_histogram_path = os.path.join("figures/", "whole_fusiform_gyrus_WM_histogram" + output_dir + ".png")
+whole_fusiform_gyrus_WM_histogram_path = os.path.join("figures/", "whole_fusiform_gyrus_WM_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_fusiform_gyrus_WM_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1500,7 +1499,7 @@ plt.hist(whole_insula_WM_histogram, bins=50, range=(0, 5))
 plt.title("Whole Insula WM Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_insula_WM_histogram_path = os.path.join("figures/", output_dir + "whole_insula_WM_histogram.png")
-whole_insula_WM_histogram_path = os.path.join("figures/", "whole_insula_WM_histogram" + output_dir + ".png")
+whole_insula_WM_histogram_path = os.path.join("figures/", "whole_insula_WM_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_insula_WM_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1508,7 +1507,7 @@ plt.hist(whole_superior_temporal_cortex_histogram, bins=50, range=(0, 5))
 plt.title("Whole Superior Temporal Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_superior_temporal_cortex_histogram_path = os.path.join("figures/", output_dir + "whole_superior_temporal_cortex_histogram.png")
-whole_superior_temporal_cortex_histogram_path = os.path.join("figures/", "whole_superior_temporal_cortex_histogram" + output_dir + ".png")
+whole_superior_temporal_cortex_histogram_path = os.path.join("figures/", "whole_superior_temporal_cortex_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_superior_temporal_cortex_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1516,7 +1515,7 @@ plt.hist(whole_posterior_cingulate_cortex_histogram, bins=50, range=(0, 5))
 plt.title("Whole Posterior Cingulate Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_posterior_cingulate_cortex_histogram_path = os.path.join("figures/", output_dir + "whole_posterior_cingulate_cortex_histogram.png")
-whole_posterior_cingulate_cortex_histogram_path = os.path.join("figures/", "whole_posterior_cingulate_cortex_histogram" + output_dir + ".png")
+whole_posterior_cingulate_cortex_histogram_path = os.path.join("figures/", "whole_posterior_cingulate_cortex_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_posterior_cingulate_cortex_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1524,7 +1523,7 @@ plt.hist(whole_medial_temporal_cortex_histogram, bins=50, range=(0, 5))
 plt.title("Whole Medial Temporal Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_medial_temporal_cortex_histogram_path = os.path.join("figures/", output_dir + "whole_medial_temporal_cortex_histogram.png")
-whole_medial_temporal_cortex_histogram_path = os.path.join("figures/", "whole_medial_temporal_cortex_histogram" + output_dir + ".png")
+whole_medial_temporal_cortex_histogram_path = os.path.join("figures/", "whole_medial_temporal_cortex_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_medial_temporal_cortex_histogram_path, bbox_inches='tight')
 plt.close()
 
@@ -1532,7 +1531,7 @@ plt.hist(whole_hippo_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Hippocampus Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_hippo_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_hippo_histogram_exclude.png")
-whole_hippo_histogram_exclude_path = os.path.join("figures/", "whole_hippo_histogram_exclude" + output_dir + ".png")
+whole_hippo_histogram_exclude_path = os.path.join("figures/", "whole_hippo_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_hippo_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1540,7 +1539,7 @@ plt.hist(whole_phg_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Parahippocampal Gyrus Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_phg_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_phg_histogram_exclude.png")
-whole_phg_histogram_exclude_path = os.path.join("figures/", "whole_phg_histogram_exclude" + output_dir + ".png")
+whole_phg_histogram_exclude_path = os.path.join("figures/", "whole_phg_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_phg_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1548,7 +1547,7 @@ plt.hist(whole_putamen_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Putamen Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_putamen_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_putamen_histogram_exclude.png")
-whole_putamen_histogram_exclude_path = os.path.join("figures/", "whole_putamen_histogram_exclude" + output_dir + ".png")
+whole_putamen_histogram_exclude_path = os.path.join("figures/", "whole_putamen_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_putamen_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1556,7 +1555,7 @@ plt.hist(whole_pallidum_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Pallidum Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_pallidum_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_pallidum_histogram_exclude.png")
-whole_pallidum_histogram_exclude_path = os.path.join("figures/", "whole_pallidum_histogram_exclude" + output_dir + ".png")
+whole_pallidum_histogram_exclude_path = os.path.join("figures/", "whole_pallidum_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_pallidum_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1564,7 +1563,7 @@ plt.hist(whole_thalamus_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Thalamus Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_thalamus_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_thalamus_histogram_exclude.png")
-whole_thalamus_histogram_exclude_path = os.path.join("figures/", "whole_thalamus_histogram_exclude" + output_dir + ".png")
+whole_thalamus_histogram_exclude_path = os.path.join("figures/", "whole_thalamus_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_thalamus_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1572,7 +1571,7 @@ plt.hist(whole_caudate_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Caudate Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_caudate_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_caudate_histogram_exclude.png")
-whole_caudate_histogram_exclude_path = os.path.join("figures/", "whole_caudate_histogram_exclude" + output_dir + ".png")
+whole_caudate_histogram_exclude_path = os.path.join("figures/", "whole_caudate_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_caudate_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1580,7 +1579,7 @@ plt.hist(whole_amygdala_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Amygdala Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_amygdala_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_amygdala_histogram_exclude.png")
-whole_amygdala_histogram_exclude_path = os.path.join("figures/", "whole_amygdala_histogram_exclude" + output_dir + ".png")
+whole_amygdala_histogram_exclude_path = os.path.join("figures/", "whole_amygdala_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_amygdala_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1588,7 +1587,7 @@ plt.hist(whole_entorhinal_cortex_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Entorhinal Cortex Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_entorhinal_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_entorhinal_cortex_histogram_exclude.png")
-whole_entorhinal_cortex_histogram_exclude_path = os.path.join("figures/", "whole_entorhinal_cortex_histogram_exclude" + output_dir + ".png")
+whole_entorhinal_cortex_histogram_exclude_path = os.path.join("figures/", "whole_entorhinal_cortex_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_entorhinal_cortex_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1596,7 +1595,7 @@ plt.hist(whole_fusiform_gyrus_cortex_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Fusiform Gyrus Cortex Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_fusiform_gyrus_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_fusiform_gyrus_cortex_histogram_exclude.png")
-whole_fusiform_gyrus_cortex_histogram_exclude_path = os.path.join("figures/", "whole_fusiform_gyrus_cortex_histogram_exclude" + output_dir + ".png")
+whole_fusiform_gyrus_cortex_histogram_exclude_path = os.path.join("figures/", "whole_fusiform_gyrus_cortex_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_fusiform_gyrus_cortex_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1604,7 +1603,7 @@ plt.hist(whole_fusiform_gyrus_WM_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Fusiform Gyrus WM Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_fusiform_gyrus_WM_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_fusiform_gyrus_WM_histogram_exclude.png")
-whole_fusiform_gyrus_WM_histogram_exclude_path = os.path.join("figures/", "whole_fusiform_gyrus_WM_histogram_exclude" + output_dir + ".png")
+whole_fusiform_gyrus_WM_histogram_exclude_path = os.path.join("figures/", "whole_fusiform_gyrus_WM_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_fusiform_gyrus_WM_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1612,7 +1611,7 @@ plt.hist(whole_insula_WM_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Insula WM Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_insula_WM_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_insula_WM_histogram_exclude.png")
-whole_insula_WM_histogram_exclude_path = os.path.join("figures/", "whole_insula_WM_histogram_exclude" + output_dir + ".png")
+whole_insula_WM_histogram_exclude_path = os.path.join("figures/", "whole_insula_WM_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_insula_WM_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1620,7 +1619,7 @@ plt.hist(whole_superior_temporal_cortex_histogram_exclude, bins=50, range=(0, 5)
 plt.title("Whole Superior Temporal Cortex Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_superior_temporal_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_superior_temporal_cortex_histogram_exclude.png")
-whole_superior_temporal_cortex_histogram_exclude_path = os.path.join("figures/", "whole_superior_temporal_cortex_histogram_exclude" + output_dir + ".png")
+whole_superior_temporal_cortex_histogram_exclude_path = os.path.join("figures/", "whole_superior_temporal_cortex_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_superior_temporal_cortex_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1628,7 +1627,7 @@ plt.hist(whole_posterior_cingulate_cortex_histogram_exclude, bins=50, range=(0, 
 plt.title("Whole Posterior Cingulate Cortex Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_posterior_cingulate_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_posterior_cingulate_cortex_histogram_exclude.png")
-whole_posterior_cingulate_cortex_histogram_exclude_path = os.path.join("figures/", "whole_posterior_cingulate_cortex_histogram_exclude" + output_dir + ".png")
+whole_posterior_cingulate_cortex_histogram_exclude_path = os.path.join("figures/", "whole_posterior_cingulate_cortex_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_posterior_cingulate_cortex_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1636,7 +1635,7 @@ plt.hist(whole_medial_temporal_cortex_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Medial Temporal Cortex Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
 # whole_medial_temporal_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_medial_temporal_cortex_histogram_exclude.png")
-whole_medial_temporal_cortex_histogram_exclude_path = os.path.join("figures/", "whole_medial_temporal_cortex_histogram_exclude" + output_dir + ".png")
+whole_medial_temporal_cortex_histogram_exclude_path = os.path.join("figures/", "whole_medial_temporal_cortex_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_medial_temporal_cortex_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
@@ -1742,8 +1741,8 @@ successful_timepoints.sort()
 cases = [timepoint for timepoint in successful_timepoints]
 successful_links = []
 for timepoint in successful_timepoints:
-    subject = timepoint.split('/')[0]
-    session = timepoint.split('/')[1]
+    subject = timepoint.split('_')[0]
+    session = timepoint.split('_')[1]
     successful_links.append(f"{timepoint}/reports/{subject}_{session}_desc-casereport.html")
 # get failed cases from total_timepoints not in successful_timepoints
 failed_cases = [timepoint for timepoint in total_timepoints if timepoint not in successful_timepoints]
@@ -2158,14 +2157,14 @@ if not os.path.exists(dir + '/reports'):
     os.makedirs(dir + '/reports')
 
 # write html to file
-with open(dir + '/reports/population_report' + output_dir + '.html', 'w') as f:
+with open(dir + '/reports/population_report' + output_dir + "_" + date_filename + '.html', 'w') as f:
     f.write(output)
 
-with open(dir + '/reports/population_report_exclude' + output_dir + '.html', 'w') as f:
+with open(dir + '/reports/population_report_exclude' + output_dir + "_" + date_filename + '.html', 'w') as f:
     f.write(output_exclude)
 
-print('Report generated in ' + dir + '/reports/population_report' + output_dir + '.html')
-print('Excluded report generated in ' + dir + '/reports/population_report_exclude' + output_dir + '.html')
+print('Report generated in ' + dir + '/reports/population_report' + output_dir + "_" + date_filename + '.html')
+print('Excluded report generated in ' + dir + '/reports/population_report_exclude' + output_dir + "_" + date_filename + '.html')
 
 # add apoe and cdr fields to population_data
 df = pd.read_excel('/media/network_mriphysics/USC-PPG/bids_test/dce_available_3524_ac.xlsx', sheet_name="main")
@@ -2310,7 +2309,7 @@ for subject, timepoint, exclusion_reason in zip(subjects_excluded, timepoints_ex
         population_data_exclude[entry]["Date"] = row['Study_Date'].values[0]
 
 # make excel file
-writer = pd.ExcelWriter(os.path.join(dir, "dataset_ktrans" + output_dir + ".xlsx"), date_format='YYYY/MM/DD', datetime_format='YYYY/MM/DD') 
+writer = pd.ExcelWriter(os.path.join(dir, "dataset_ktrans" + output_dir + "_" + date_filename + ".xlsx"), date_format='YYYY/MM/DD', datetime_format='YYYY/MM/DD') 
 # make dataframe
 df_success = pd.DataFrame(population_data)
 # df_exclude = pd.DataFrame(population_data_exclude)
@@ -2401,8 +2400,8 @@ for subject_id in subjects:
     # list _timepoint directories in subject directory
     for timepoint in sorted(os.listdir(os.path.join(dceprep_dir, subject_id))):
         if timepoint.startswith("ses-"):
-            placement_wm_histogram_path = os.path.join(dceprep_dir, subject_id, timepoint, "figures/placement_wm_histogram" + output_dir + ".png")
-            placement_gm_histogram_path = os.path.join(dceprep_dir, subject_id, timepoint, "figures/placement_gm_histogram" + output_dir + ".png")
+            placement_wm_histogram_path = os.path.join(dceprep_dir, subject_id, timepoint, "figures/placement_wm_histogram.png")
+            placement_gm_histogram_path = os.path.join(dceprep_dir, subject_id, timepoint, "figures/placement_gm_histogram.png")
             # get subject's wm_mean
             try:
                 if f"{subject_id}_{timepoint}" in population_data.keys():
@@ -2442,54 +2441,26 @@ for subject_id in subjects:
             plt.text(0.9, 0.95, "Percentile: " + str(round((len([x for x in gm_histogram if x < case_gm_median]) / len(gm_histogram)) * 100, 2)) + "%", horizontalalignment='center', verticalalignment='center', transform=plt.gca().transAxes)
             plt.savefig(placement_gm_histogram_path, bbox_inches='tight')
             plt.close()
+            
+            # append to html file
+            try:
+                filename = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-casereport.html")
+                with open(filename, "r") as f:
+                    report_content = f.read()
 
-for entry in population_data.keys():
-    subject_id = entry.split("_")[0]
-    timepoint = entry.split("_")[1]
-    # append to html file
-    try:
-        filename = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-casereport.html")
-        with open(filename, "r") as f:
-            report_content = f.read()
+                # replace placeholder with histogram path
+                report_content = report_content.replace("placeholder_wm", "../figures/placement_wm_histogram.png")
+                report_content = report_content.replace("placeholder_gm", "../figures/placement_gm_histogram.png")
+                # write html to file
+                with open(filename, 'w') as f:
+                    f.write(report_content)
 
-        # replace placeholder with histogram path
-        report_content = report_content.replace("placeholder_wm", placement_wm_histogram_path)
-        report_content = report_content.replace("placeholder_gm", placement_gm_histogram_path)
-        # write html to file
-        with open(filename, 'w') as f:
-            f.write(report_content)
-
-        report_path = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-report.png")
-        # append to imgs
-        imgs.append(report_path)
-    except Exception as e:
-        print(f"Error appending {subject_id} {timepoint} to scrollable report.")
-        print(e)
-
-for entry in population_data_exclude.keys():
-    subject_id = entry.split("_")[0]
-    timepoint = entry.split("_")[1]
-    # append to html file
-    try:
-        filename = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-casereport.html")
-        with open(filename, "r") as f:
-            report_content = f.read()
-
-        # replace placeholder with histogram path
-        report_content = report_content.replace("placeholder_wm", placement_wm_histogram_path)
-        report_content = report_content.replace("placeholder_gm", placement_gm_histogram_path)
-        # write html to file
-        with open(filename, 'w') as f:
-            f.write(report_content)
-
-        # now take ses-* reports/{prefix}_desc-report.png and append it to scrollable report
-        # get desc-report.png path
-        report_path = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-report.png")
-        # append to imgs
-        imgs_exclude.append(report_path)
-    except Exception as e:
-        print(f"Error appending {subject_id} {timepoint} to scrollable report.")
-        print(e)
+                report_path = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-report.png")
+                # append to imgs
+                imgs.append(report_path)
+            except Exception as e:
+                print(f"Error appending {subject_id} {timepoint} placement histograms.")
+                print(e)
 
 # make scrollable report
 from reportlab.lib.pagesizes import letter
@@ -2501,7 +2472,7 @@ def add_image_to_pdf(pdf, image_path):
     pdf.showPage()
 
 # Create a PDF canvas
-pdf_file = f"{dir}/reports/EZQCreport" + output_dir + ".pdf"
+pdf_file = f"{dir}/reports/EZQCreport" + output_dir + "_" + date_filename + ".pdf"
 pdf = canvas.Canvas(pdf_file, pagesize=letter)
 
 # Add images to the PDF
@@ -2515,7 +2486,7 @@ for report in imgs:
 # Save the PDF to dir/reports
 pdf.save()
 
-pdf_file = f"{dir}/reports/EZQCreport_exclude" + output_dir + ".pdf"
+pdf_file = f"{dir}/reports/EZQCreport_exclude" + output_dir + "_" + date_filename + ".pdf"
 pdf = canvas.Canvas(pdf_file, pagesize=letter)
 
 # Add images to the PDF

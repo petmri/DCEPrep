@@ -48,6 +48,7 @@ try:
     json_file.close()
 except:
     site = "no json"
+    date = "no json"
 
 dim = {0,1,2}
 ktrans_data = ktrans.get_fdata()
