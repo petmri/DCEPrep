@@ -201,6 +201,8 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		continue
 	fi
 
+	mkdir anat &> /dev/null
+	mkdir dce &> /dev/null
 	if [ $clean -eq 1 ]
 		then
 		echo Cleaning folder... $PWD
@@ -215,8 +217,6 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	SECONDS=0
 	echo -ne "HD-BET MP-RAGE [                                                  ] $prog% ($current/$count) Calculating runtime...   \r"
 
-	mkdir anat &> /dev/null
-	mkdir dce &> /dev/null
 	if [ ! -f "anat/${PREFIX}_desc-brain_mask.nii.gz" ]
 		then
 		if [ nvidia-smi ]

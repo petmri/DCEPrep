@@ -60,6 +60,7 @@ logs = [log for log in logs if log.startswith("preprocessing_log")]
 logs.sort()
 log = logs[-1]
 log = os.path.join(dir, "logs", log)
+command = ""
 with open(log, "r") as f:
     for line in f:
         if "Command: " in line:
@@ -809,7 +810,7 @@ import threading
 import time
 
 # time
-start = time.time()
+# start = time.time()
 lock = threading.Lock()
 with ThreadPoolExecutor() as executor:
     futures = [executor.submit(get_case_stats, subject_id, timepoint) for subject_id in subjects for timepoint in os.listdir(os.path.join(dceprep_dir, subject_id))]
@@ -819,8 +820,7 @@ with ThreadPoolExecutor() as executor:
         except Exception as e:
             print(f"Error in future: {future}, {e}")
 
-end = time.time()
-print("Time taken:", end - start)
+# end = time.time()
 # get flagged cases
 flagged_cases = []
 flagged_links = []
@@ -2456,8 +2456,11 @@ for subject_id in subjects:
                     f.write(report_content)
 
                 report_path = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-report.png")
-                # append to imgs
-                imgs.append(report_path)
+                
+                if f"{subject_id}_{timepoint}" in population_data.keys():
+                    imgs.append(report_path)
+                elif f"{subject_id}_{timepoint}" in population_data_exclude.keys():
+                    imgs_exclude.append(report_path)
             except Exception as e:
                 print(f"Error appending {subject_id} {timepoint} placement histograms.")
                 print(e)

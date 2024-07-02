@@ -339,7 +339,6 @@ plt.close()
 #     print(e)
 
 if freesurfer:
-    print("HUH", freesurfer)
     # wmparc overlay on DCE
     wmparc = nib.load(f'anat/{prefix}_space-DCEref_desc-wmparc_RAS.nii.gz')
     wmparc_data = wmparc.get_fdata()
@@ -637,6 +636,7 @@ data = {
 flips = ['flip-01', 'flip-02', 'flip-03', 'flip-04', 'flip-05', 'flip-06', 'flip-07']
 for i in range(len(FAs)):
     data['FA_' + str(i+1)] = 'FA ' + str(FAs[i])
+    data['num_FAs'] = len(FAs)
     data['Z_' + str(i+1)] = f'../figures/{prefix}_{flips[i]}_space-DCEref_desc-bfcz_VFA.svg'
 
 output = template.render(data)

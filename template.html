@@ -173,16 +173,10 @@
     <h2 id="T1w_to_DCEref">T1w Registration to DCEref Space</h2>
     <img src="{{ T1w_to_DCEref }}" alt="{{ image_alt1 }}"></img>
     <h2 id="VFA_Z-norm">VFA Z-Normalization</h2>
-    <h3> {{ FA_1 }} </h3>
-    <img src="{{ Z_1 }}" alt="{{ image_alt1 }}" width="1000"></img>
-    <h3> {{ FA_2 }} </h3>
-    <img src="{{ Z_2 }}" alt="{{ image_alt1 }}" width="1000"></img>
-    <h3> {{ FA_3 }} </h3>
-    <img src="{{ Z_3 }}" alt="{{ image_alt1 }}" width="1000"></img>
-    <h3> {{ FA_4 }} </h3>
-    <img src="{{ Z_4 }}" alt="{{ image_alt1 }}" width="1000"></img>
-    <h3> {{ FA_5 }} </h3>
-    <img src="{{ Z_5 }}" alt="{{ image_alt1 }}" width="1000"></img>
+    {% for i in range(1, num_FAs) %}
+        <h3> {{ FA_{{i}} }} </h3>
+        <img src="{{ Z_{{i}} }}" alt="{{ image_alt1 }}" width="1000"></img>
+    {% endfor %}
     <h2 id="T1_map">T1 Map</h2>
     <!-- <p>check for T1 ROCKETSHIP params</p> -->
     <li>{{ T1_TR }}</li>
