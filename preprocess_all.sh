@@ -201,6 +201,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		continue
 	fi
 
+	mkdir dce &> /dev/null
 	if [ $clean -eq 1 ]
 		then
 		echo Cleaning folder... $PWD
@@ -211,7 +212,6 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		cd $SUBJECT_TP_PATH
     fi
 	mkdir anat &> /dev/null
-	mkdir dce &> /dev/null
 
 	# HD-BET brain extraction & segmentations from MP-RAGE
 	SECONDS=0
