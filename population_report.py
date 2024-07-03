@@ -1334,7 +1334,7 @@ try:
     plt.close()
 except Exception as e:
     print("Error plotting population AIF curve.", e)
-    aif_pop_avg_path = None
+    aif_pop_avg_path = "Error plotting population average AIF curve."
 
 try:
     # plot true AIFs
@@ -1353,7 +1353,7 @@ try:
     plt.close()
 except Exception as e:
     print("Error plotting population AIF curve.", e)
-    aif_curves_path = None
+    aif_curves_path = "Error plotting population AIF curves."
 
 whole_hippo_histogram = []
 whole_phg_histogram = []
@@ -2166,147 +2166,152 @@ with open(dir + '/reports/population_report_exclude' + output_dir + "_" + date_f
 print('Report generated in ' + dir + '/reports/population_report' + output_dir + "_" + date_filename + '.html')
 print('Excluded report generated in ' + dir + '/reports/population_report_exclude' + output_dir + "_" + date_filename + '.html')
 
-# add apoe and cdr fields to population_data
-df = pd.read_excel('/media/network_mriphysics/USC-PPG/bids_test/dce_available_3524_ac.xlsx', sheet_name="main")
+if os.path.exists('/media/network_mriphysics/USC-PPG/bids_test/dce_available_3524_ac.xlsx'):
+    # add apoe and cdr fields to population_data
+    df = pd.read_excel('/media/network_mriphysics/USC-PPG/bids_test/dce_available_3524_ac.xlsx', sheet_name="main")
 
-# get apoe and cdr values for each subject
-for subject in population_data.keys():
-    # get subject's ID
-    subject_id = subject.split("_")[0]
-    subject_id = subject_id.split("-")[1]
-    # get subject's timepoint
-    timepoint = subject.split("_")[1]
-    # get subject's apoe and cdr values
-    if subject_id.startswith("4") or subject_id.startswith("3"):
-        # insert underscore after 1st character
-        subject_id = subject_id[:1] + "_" + subject_id[1:]
-    try:
-        apoe = df.loc[df['Subject_ID'] == int(subject_id), 'APOE'].values[0]
-        cdr = df.loc[df['Subject_ID'] == int(subject_id), 'CDR'].values[0]
-        bmi = df.loc[df['Subject_ID'] == int(subject_id), 'BMI'].values[0]
-        # add to population_data
-    except Exception as e:
-        print(e)
-        print("Subject " + subject_id + " not found in dce_available_3524_ac.xlsx")
-        apoe = "N/A"
-        cdr = "N/A"
-    population_data[subject]["APOE"] = apoe
-    population_data[subject]["CDR"] = cdr
-    population_data[subject]["BMI"] = bmi
+    # get apoe and cdr values for each subject
+    for subject in population_data.keys():
+        # get subject's ID
+        subject_id = subject.split("_")[0]
+        subject_id = subject_id.split("-")[1]
+        # get subject's timepoint
+        timepoint = subject.split("_")[1]
+        # get subject's apoe and cdr values
+        if subject_id.startswith("4") or subject_id.startswith("3"):
+            # insert underscore after 1st character
+            subject_id = subject_id[:1] + "_" + subject_id[1:]
+        try:
+            apoe = df.loc[df['Subject_ID'] == int(subject_id), 'APOE'].values[0]
+            cdr = df.loc[df['Subject_ID'] == int(subject_id), 'CDR'].values[0]
+            bmi = df.loc[df['Subject_ID'] == int(subject_id), 'BMI'].values[0]
+            # add to population_data
+        except Exception as e:
+            print(e)
+            print("Subject " + subject_id + " not found in dce_available_3524_ac.xlsx")
+            apoe = "N/A"
+            cdr = "N/A"
+            bmi = "N/A"
+        population_data[subject]["APOE"] = apoe
+        population_data[subject]["CDR"] = cdr
+        population_data[subject]["BMI"] = bmi
 
-for subject in population_data_exclude.keys():
-    # get subject's ID
-    subject_id = subject.split("_")[0]
-    subject_id = subject_id.split("-")[1]
-    # get subject's timepoint
-    timepoint = subject.split("_")[1]
-    # get subject's apoe and cdr values
-    if subject_id.startswith("4") or subject_id.startswith("3"):
-        # insert underscore after 1st character
-        subject_id = subject_id[:1] + "_" + subject_id[1:]
-    try:
-        apoe = df.loc[df['Subject_ID'] == int(subject_id), 'APOE'].values[0]
-        cdr = df.loc[df['Subject_ID'] == int(subject_id), 'CDR'].values[0]
-        bmi = df.loc[df['Subject_ID'] == int(subject_id), 'BMI'].values[0]
-        # add to population_data
-    except Exception as e:
-        print(e)
-        print("Subject " + subject_id + " not found in dce_available_3524_ac.xlsx")
-        apoe = "N/A"
-        cdr = "N/A"
-    population_data_exclude[subject]["APOE"] = apoe
-    population_data_exclude[subject]["CDR"] = cdr
-    population_data_exclude[subject]["BMI"] = bmi
+    for subject in population_data_exclude.keys():
+        # get subject's ID
+        subject_id = subject.split("_")[0]
+        subject_id = subject_id.split("-")[1]
+        # get subject's timepoint
+        timepoint = subject.split("_")[1]
+        # get subject's apoe and cdr values
+        if subject_id.startswith("4") or subject_id.startswith("3"):
+            # insert underscore after 1st character
+            subject_id = subject_id[:1] + "_" + subject_id[1:]
+        try:
+            apoe = df.loc[df['Subject_ID'] == int(subject_id), 'APOE'].values[0]
+            cdr = df.loc[df['Subject_ID'] == int(subject_id), 'CDR'].values[0]
+            bmi = df.loc[df['Subject_ID'] == int(subject_id), 'BMI'].values[0]
+            # add to population_data
+        except Exception as e:
+            print(e)
+            print("Subject " + subject_id + " not found in dce_available_3524_ac.xlsx")
+            apoe = "N/A"
+            cdr = "N/A"
+            bmi = "N/A"
+        population_data_exclude[subject]["APOE"] = apoe
+        population_data_exclude[subject]["CDR"] = cdr
+        population_data_exclude[subject]["BMI"] = bmi
 
-for subject in population_data_exclude_signa.keys():
-    # get subject's ID
-    subject_id = subject.split("_")[0]
-    subject_id = subject_id.split("-")[1]
-    # get subject's timepoint
-    timepoint = subject.split("_")[1]
-    # get subject's apoe and cdr values
-    if subject_id.startswith("4") or subject_id.startswith("3"):
-        # insert underscore after 1st character
-        subject_id = subject_id[:1] + "_" + subject_id[1:]
-    try:
-        apoe = df.loc[df['Subject_ID'] == int(subject_id), 'APOE'].values[0]
-        cdr = df.loc[df['Subject_ID'] == int(subject_id), 'CDR'].values[0]
-        bmi = df.loc[df['Subject_ID'] == int(subject_id), 'BMI'].values[0]
-        # add to population_data
-    except Exception as e:
-        print(e)
-        print("Subject " + subject_id + " not found in dce_available_3524_ac.xlsx")
-        apoe = "N/A"
-        cdr = "N/A"
-    population_data_exclude_signa[subject]["APOE"] = apoe
-    population_data_exclude_signa[subject]["CDR"] = cdr
-    population_data_exclude_signa[subject]["BMI"] = bmi
+    for subject in population_data_exclude_signa.keys():
+        # get subject's ID
+        subject_id = subject.split("_")[0]
+        subject_id = subject_id.split("-")[1]
+        # get subject's timepoint
+        timepoint = subject.split("_")[1]
+        # get subject's apoe and cdr values
+        if subject_id.startswith("4") or subject_id.startswith("3"):
+            # insert underscore after 1st character
+            subject_id = subject_id[:1] + "_" + subject_id[1:]
+        try:
+            apoe = df.loc[df['Subject_ID'] == int(subject_id), 'APOE'].values[0]
+            cdr = df.loc[df['Subject_ID'] == int(subject_id), 'CDR'].values[0]
+            bmi = df.loc[df['Subject_ID'] == int(subject_id), 'BMI'].values[0]
+            # add to population_data
+        except Exception as e:
+            print(e)
+            print("Subject " + subject_id + " not found in dce_available_3524_ac.xlsx")
+            apoe = "N/A"
+            cdr = "N/A"
+            bmi = "N/A"
+        population_data_exclude_signa[subject]["APOE"] = apoe
+        population_data_exclude_signa[subject]["CDR"] = cdr
+        population_data_exclude_signa[subject]["BMI"] = bmi
 
-for subject in population_data_failed.keys():
-    # get subject's ID
-    subject_id = subject.split("_")[0]
-    subject_id = subject_id.split("-")[1]
-    # get subject's timepoint
-    timepoint = subject.split("_")[1]
-    # get subject's apoe and cdr values
-    if subject_id.startswith("4") or subject_id.startswith("3"):
-        # insert underscore after 1st character
-        subject_id = subject_id[:1] + "_" + subject_id[1:]
-    try:
-        apoe = df.loc[df['Subject_ID'] == int(subject_id), 'APOE'].values[0]
-        cdr = df.loc[df['Subject_ID'] == int(subject_id), 'CDR'].values[0]
-        bmi = df.loc[df['Subject_ID'] == int(subject_id), 'BMI'].values[0]
-        # add to population_data
-    except Exception as e:
-        print(e)
-        print("Subject " + subject_id + " not found in dce_available_3524_ac.xlsx")
-        apoe = "N/A"
-        cdr = "N/A"
-    population_data_failed[subject]["APOE"] = apoe
-    population_data_failed[subject]["CDR"] = cdr
-    population_data_failed[subject]["BMI"] = bmi
+    for subject in population_data_failed.keys():
+        # get subject's ID
+        subject_id = subject.split("_")[0]
+        subject_id = subject_id.split("-")[1]
+        # get subject's timepoint
+        timepoint = subject.split("_")[1]
+        # get subject's apoe and cdr values
+        if subject_id.startswith("4") or subject_id.startswith("3"):
+            # insert underscore after 1st character
+            subject_id = subject_id[:1] + "_" + subject_id[1:]
+        try:
+            apoe = df.loc[df['Subject_ID'] == int(subject_id), 'APOE'].values[0]
+            cdr = df.loc[df['Subject_ID'] == int(subject_id), 'CDR'].values[0]
+            bmi = df.loc[df['Subject_ID'] == int(subject_id), 'BMI'].values[0]
+            # add to population_data
+        except Exception as e:
+            print(e)
+            print("Subject " + subject_id + " not found in dce_available_3524_ac.xlsx")
+            apoe = "N/A"
+            cdr = "N/A"
+            bmi = "N/A"
+        population_data_failed[subject]["APOE"] = apoe
+        population_data_failed[subject]["CDR"] = cdr
+        population_data_failed[subject]["BMI"] = bmi
 
-# read EXCLUDED sheet from dce_available_3524_ac.xlsx and move subjects to population_data_exclude
-df = pd.read_excel('/media/network_mriphysics/USC-PPG/bids_test/dce_available_3524_ac.xlsx', sheet_name="EXCLUDED")
-# get subject ID and timepoint (first and second columns)
-subjects_excluded = df['Subject_ID']
-timepoints_excluded = df['Timepoint']
-# get exclusion reasons (third column)
-exclusion_reasons = df['REASON']
-dates_excluded = df['Study_Date']
-# if excluded subject is in population_data, move to population_data_exclude
-for subject, timepoint, exclusion_reason in zip(subjects_excluded, timepoints_excluded, exclusion_reasons):
-    # get subject's ID
-    subject_id = subject
-    # get subject's timepoint
-    # if NaN, set to 1
-    if pd.isnull(timepoint):
-        timepoint = 1
-    timepoint = int(timepoint)
-    entry = f"{subject_id}_ses-0{timepoint}"
-    if entry in population_data.keys():
-        # move to population_data_exclude
-        population_data_exclude[entry] = population_data.pop(entry)
-        # add exclusion reason if not already there
-        if "Reason" not in population_data_exclude[entry].keys():
+    # read EXCLUDED sheet from dce_available_3524_ac.xlsx and move subjects to population_data_exclude
+    df = pd.read_excel('/media/network_mriphysics/USC-PPG/bids_test/dce_available_3524_ac.xlsx', sheet_name="EXCLUDED")
+    # get subject ID and timepoint (first and second columns)
+    subjects_excluded = df['Subject_ID']
+    timepoints_excluded = df['Timepoint']
+    # get exclusion reasons (third column)
+    exclusion_reasons = df['REASON']
+    dates_excluded = df['Study_Date']
+    # if excluded subject is in population_data, move to population_data_exclude
+    for subject, timepoint, exclusion_reason in zip(subjects_excluded, timepoints_excluded, exclusion_reasons):
+        # get subject's ID
+        subject_id = subject
+        # get subject's timepoint
+        # if NaN, set to 1
+        if pd.isnull(timepoint):
+            timepoint = 1
+        timepoint = int(timepoint)
+        entry = f"{subject_id}_ses-0{timepoint}"
+        if entry in population_data.keys():
+            # move to population_data_exclude
+            population_data_exclude[entry] = population_data.pop(entry)
+            # add exclusion reason if not already there
+            if "Reason" not in population_data_exclude[entry].keys():
+                population_data_exclude[entry]["Reason"] = exclusion_reason
+            else:
+                population_data_exclude[entry]["Reason"] += ", " + exclusion_reason
+            # add date
+            # population_data_exclude[entry]["Date"] = dates_excluded[subjects_excluded == subject].values[0]
+            # remove from population_data
+            # del population_data[entry]
+        elif entry not in population_data.keys() and entry not in population_data_failed.keys() and entry not in population_data_exclude.keys() and entry not in population_data_exclude_signa.keys():
+            # read whole row from dce_available_3524_ac.xlsx
+            row = df.loc[df['Subject_ID'] == subject_id]
+            population_data_exclude[entry] = {}
             population_data_exclude[entry]["Reason"] = exclusion_reason
-        else:
-            population_data_exclude[entry]["Reason"] += ", " + exclusion_reason
-        # add date
-        # population_data_exclude[entry]["Date"] = dates_excluded[subjects_excluded == subject].values[0]
-        # remove from population_data
-        # del population_data[entry]
-    elif entry not in population_data.keys() and entry not in population_data_failed.keys() and entry not in population_data_exclude.keys() and entry not in population_data_exclude_signa.keys():
-        # read whole row from dce_available_3524_ac.xlsx
-        row = df.loc[df['Subject_ID'] == subject_id]
-        population_data_exclude[entry] = {}
-        population_data_exclude[entry]["Reason"] = exclusion_reason
-        population_data_exclude[entry]["Timepoint"] = row['Timepoint'].values[0]
-        population_data_exclude[entry]["APOE"] = row['APOE'].values[0]
-        population_data_exclude[entry]["CDR"] = row['CDR'].values[0]
-        population_data_exclude[entry]["Sex"] = row['Sex'].values[0]
-        population_data_exclude[entry]["Age"] = row['Age'].values[0]
-        population_data_exclude[entry]["Date"] = row['Study_Date'].values[0]
+            population_data_exclude[entry]["Timepoint"] = row['Timepoint'].values[0]
+            population_data_exclude[entry]["APOE"] = row['APOE'].values[0]
+            population_data_exclude[entry]["CDR"] = row['CDR'].values[0]
+            population_data_exclude[entry]["Sex"] = row['Sex'].values[0]
+            population_data_exclude[entry]["Age"] = row['Age'].values[0]
+            population_data_exclude[entry]["Date"] = row['Study_Date'].values[0]
 
 # make excel file
 writer = pd.ExcelWriter(os.path.join(dir, "dataset_ktrans" + output_dir + "_" + date_filename + ".xlsx"), date_format='YYYY/MM/DD', datetime_format='YYYY/MM/DD') 
