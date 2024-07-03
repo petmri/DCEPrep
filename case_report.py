@@ -634,10 +634,12 @@ data = {
 
 # insert VFAs into template
 flips = ['flip-01', 'flip-02', 'flip-03', 'flip-04', 'flip-05', 'flip-06', 'flip-07']
+data['FAs'] = []
+data['Zs'] = []
 for i in range(len(FAs)):
-    data['FA_' + str(i+1)] = 'FA ' + str(FAs[i])
+    data['FAs'].append('FA ' + str(FAs[i]))
     data['num_FAs'] = len(FAs)
-    data['Z_' + str(i+1)] = f'../figures/{prefix}_{flips[i]}_space-DCEref_desc-bfcz_VFA.svg'
+    data['Zs'].append(f'../figures/{prefix}_{flips[i]}_space-DCEref_desc-bfcz_VFA.svg')
 
 output = template.render(data)
 
