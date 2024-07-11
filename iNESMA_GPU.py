@@ -12,15 +12,15 @@ def load_image(img_path):
 @cuda.jit
 def inesma_kernel(data, smoothed_data, x_dim, y_dim, z_dim, t_dim, 
                   local_neighborhood_x, local_neighborhood_y, local_neighborhood_z, 
-                  similarlity_threshold, h):
+                  similarity_threshold, h):
     x, y, z = cuda.grid(3)
     if x < x_dim and y < y_dim and z < z_dim:
         current_curve = cuda.local.array(shape=(100,), dtype=float32)  # Adjust size as needed
         for t in range(t_dim):
             current_curve[t] = data[x, y, z, t]
-        
-        similarities = cuda.local.array(shape=(27,), dtype=float32)
-        indices = cuda.local.array(shape=(27, 3), dtype=int32)
+        array_size=local_neighborhood_x*local_neighborhood_y*local_neighborhood_z
+        similarities = cuda.local.array(shape=(1024,), dtype=float32)
+        indices = cuda.local.array(shape=(1024, 3), dtype=int32)
         count = 0
 
         for i in range(max(0, x-local_neighborhood_x), min(x_dim, x+local_neighborhood_x+1)):
@@ -51,7 +51,7 @@ def inesma_kernel(data, smoothed_data, x_dim, y_dim, z_dim, t_dim,
                     count += 1
         
         # # Find the top 5% most similar voxels
-        # threshold_index = max(1, int(similarlity_threshold * count))
+        # threshold_index = max(1, int(similarity_threshold * count))
         
         # # Manual selection sort to find top 5% similarities
         # # Uhhh, there are library functions for this....
@@ -81,7 +81,7 @@ def inesma_kernel(data, smoothed_data, x_dim, y_dim, z_dim, t_dim,
         normalization_factor = 0.0
         
         for idx in range(count):
-            if similarities[idx] < similarlity_threshold:
+            if similarities[idx] < similarity_threshold:
                 # if constant_weighting:
                 if h == 0:
                     similarity = 1
@@ -106,8 +106,8 @@ def inesma_kernel(data, smoothed_data, x_dim, y_dim, z_dim, t_dim,
             for t in range(t_dim):
                 smoothed_data[x, y, z, t] = current_curve[t]
 
-def inesma_smoothing(data, num_iterations=4, local_neighborhood_x=5,local_neighborhood_y=5,local_neighborhood_z=2,
-                     similarlity_threshold=0.05 ,h=0):
+def inesma_smoothing(data, num_iterations=2, local_neighborhood_x=5,local_neighborhood_y=5,local_neighborhood_z=2,
+                     similarity_threshold=0.3, h=0.01):
     # num_iterations defines the number of iterations for smoothing
 
     # local_neighborhood defines radius in voxels of neightborhood for smoothing
@@ -116,7 +116,8 @@ def inesma_smoothing(data, num_iterations=4, local_neighborhood_x=5,local_neighb
     # similarity_threshold defines the threshold to accept a voxel for smoothing
 
     # h defines the exponential decay of the weighting, h=0 means constant weighting
-
+    if (local_neighborhood_x*2+1)*(local_neighborhood_y*2+1)*(local_neighborhood_z*2+1) > 1024:
+        raise ValueError("The neighborhood size exceeds the fixed array size in the kernel. Adjust the array size in the kernel.")
 
     x_dim, y_dim, z_dim, t_dim = data.shape
     smoothed_data = np.copy(data)
@@ -133,7 +134,7 @@ def inesma_smoothing(data, num_iterations=4, local_neighborhood_x=5,local_neighb
         inesma_kernel[(blocks_per_grid_x, blocks_per_grid_y, blocks_per_grid_z), threads_per_block](
             data_device, smoothed_data_device, x_dim, y_dim, z_dim, t_dim, 
             local_neighborhood_x, local_neighborhood_y, local_neighborhood_z,
-            similarlity_threshold, h
+            similarity_threshold, h
         )
         data_device = cuda.to_device(smoothed_data_device.copy_to_host())
     
