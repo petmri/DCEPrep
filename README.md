@@ -1,6 +1,6 @@
 # in-house_toolbox
 The `main` branch is stable. Checkout a tag if you want something super stable.
-# Requires FSL, ANTS, Matlab, ROCKETSHIP + parametric_scripts, and Python.
+## Requires FSL, ANTS, Matlab, ROCKETSHIP + parametric_scripts, Python, and BIDS compliant data.
 Used FSL 6.0, ANTS, freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0-2beb96c (wm parcellation), Python 3.8.10/3.10
 
 ## Installation
@@ -30,7 +30,9 @@ Inputs: `2.nii` `5.nii` `10.nii` `12.nii` `15.nii` `DCE.nii` `aif.nii`
 
 Outputs: `DCE_mc_bfc_norm.nii.gz`, T1 map, a bunch of other intermediate files
 
-Options: `-d: specify main data directory (required)`
+Options: `-d [rawdata_path]: REQUIRED - specify path to your BIDS raw data folder`
+
+`-a: specify AIF suffix (default is 'desc-AIF_mask'). ".nii.gz" will be appended to the suffix.`
 
 `-A: enable automated drawing of AIF ROI` (requires [vascular_function repo and weights](https://github.com/petmri/vascular_function))
 
@@ -46,12 +48,14 @@ Options: `-d: specify main data directory (required)`
 
 `-s: skip preprocessing if DCE_mc_bfc_norm.nii.gz exists in a case`
 
+`-S [dir_path]: specify the subject(s)/session(s) to run (default is 'sub-*/ses-*/')`
+
 `-t: only run up to T1 mapping`
 
 `-Z: enable z-slice normalization`
 
 
-Example call: `./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/GIGA_DATA/USC/CBF -b -c -Z -A -C noMC`
+Example: `./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/bids_test/rawdata -b -c -Z -A -C noMC`
 #### Step Summary
 1. **Brain Extraction** of T1 MPRAGE using `HD-BET` (does not brain mask VFAs).
 2. **DCE Motion Correction** using FSL `mcflirt`
@@ -73,17 +77,19 @@ Inputs: `DCE_mc_bfc_norm.nii.gz`, `aif.nii` `T1_map_t1_fa_fit_VFA.nii` `T1_bet_m
 
 Outputs: `dce_patlak_fit_Ktrans.nii` + other DCE outputs like vp and CIs, `case_report.html`, `population_report.html`
 
-Options: `-d: specify main data directory (required)`
-
-`-b: enable first round of bias field correction` (do this if you did it before)
+Options: `-d: specify raw data directory (required)`
 
 `-C: enable comparison mode. Requires a preprocessed -C of the same name.`
 
+`-f: enable Freesurfer wm parcellation for subregion analysis`
+
 `-s: skip cases already processed`
 
-Example call: `./DCE_all.sh -d /media/network_mriphysics/USC-PPG/data -b -s`
+`-S [dir_path]: specify the subject(s)/session(s) to run (default is 'sub-*/ses-*/')`
+
+Example: `./DCE_all.sh -d /media/network_mriphysics/USC-PPG/bids_test/rawdata -s -C noMC`
 #### Step Summary
-1. Run DCE (ROCKETSHIP)
+1. **Ktrans Mapping with ROCKETSHIP**
 2. Create, align, and apply gray matter and CSF masks with antsApplyTransforms and fslmaths
 3. Run QC scripts `ktrans_analysis.py` and `ktrans_report.py`
 4. Generate a QC report `case_report.html` for the case with `case_report.py`

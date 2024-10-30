@@ -302,7 +302,34 @@ def quality_ultimate(aif_curve):
     return peak_ratio*0.3 + end_ratio*0.3 + peak_to_end*0.3 + peak_time*0.1
     # return peak_ratio + 0.3*end_ratio + 0.3*peak_to_end + 0.1*peak_time
 
-aif_metric = quality_ultimate(aif_curve_ratio)
+def quality_peak_new(aif_curve):
+    peak_ratio = max(aif_curve) / np.mean(aif_curve)
+    return (1 / (1 + np.exp(-3.5 * peak_ratio + 7.5))) * (100 / 1)
+
+def quality_tail_new(aif_curve):
+    end_ratio = np.mean(aif_curve[-int(len(aif_curve) * 0.2):]) / aif_curve[0]
+    quality = (1 - (end_ratio / (1.1 * np.mean(aif_curve))) ** 2)
+    return quality * (100 / 0.7194740924786208)
+
+def quality_base_to_mean_new(aif_curve):
+    return (1 - (aif_curve[0] / np.mean(aif_curve)) ** 2) * (100 / 0.886713712992177)
+
+def quality_peak_time_new(aif_curve):
+    peak_time = np.argmax(aif_curve)
+    num_timeslices = len(aif_curve)
+    qpt = (num_timeslices - peak_time) / num_timeslices
+    return qpt * (100 / 0.9107566964285715)
+
+def quality_ultimate_new(aif_curve):
+    peak_ratio = quality_peak_new(aif_curve)
+    end_ratio = quality_tail_new(aif_curve)
+    base_to_mean = quality_base_to_mean_new(aif_curve)
+    peak_time = quality_peak_time_new(aif_curve)
+
+    # take weighted average
+    return peak_ratio * 0.3 + end_ratio * 0.3 + base_to_mean * 0.3 + peak_time * 0.1
+
+aif_metric = quality_ultimate_new(aif_curve_ratio)
 
 # plot AIF
 plt.plot(aif_curve_ratio)

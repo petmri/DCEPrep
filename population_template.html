@@ -129,7 +129,7 @@
         <li>
             Successful Cases:
             {% for link, case in Combo %}
-                <a href="../dceprep/{{ link }}">{{ case }}</a>{% if not loop.last %}, {% endif %}
+                <a href="../{{ link }}">{{ case }}</a>{% if not loop.last %}, {% endif %}
             {% endfor %}
         </li>
         <li>

@@ -6,6 +6,7 @@ COMPARISON_MODE=0
 EN_BIAS1=0
 fail=0
 count=0
+total=0
 successes=0
 SKIP_IF_SUCCESS=0
 USE_FREESURFER=0
@@ -52,7 +53,7 @@ while getopts ":d:C:fhl:sS:" options; do
 			echo "-d: specify main data directory containing all subject folders"
 			echo "-f: enable Freesurfer wm parcellation for subregion analysis"
 			echo "-h: display this message"
-			echo "-l: specify a list of subjects to process (filename only, place in code folder)"
+			# echo "-l: specify a list of subjects to process (filename only, place in code folder)"
 			echo "-s: skip subjects that have already been processed"
 			echo "-S [dir_path]: specify the subject(s)/session(s) to run (default is 'sub-*/ses-*/')"
 			exit 0
@@ -96,13 +97,48 @@ cd $DERIV_DIR || exit 1
 # 	SUBJECT=sub-$(echo $line | awk '{print $1}')
 # 	echo $SUBJECT
 # 	SESSION=$(echo $line | awk '{print $3}')
+# Function to calculate and display progress and estimated remaining time
+function show_progress {
+    local current_iteration=$1
+    local start_time=$2
+    local total_iterations=$3
+	local runtime=$4
+
+    # Calculate elapsed time
+    current_time=$(date +%s)
+    elapsed_time=$((current_time - start_time))
+
+    # Calculate estimated total time
+    estimated_total_time=$((runtime * total_iterations))
+
+    # Calculate remaining time
+    remaining_time=$((estimated_total_time - elapsed_time))
+
+    # Display progress and estimated remaining time
+    echo -ne "Progress: $((elapsed_time * 100 / estimated_total_time))% - Elapsed time: $(($elapsed_time / 60))m $(($elapsed_time % 60))s - "
+	if [ $remaining_time -lt 0 ]
+		then
+		echo -ne "Estimated remaining time: calculating...                    \r"
+	else
+    	echo -ne "Estimated remaining time: $(($remaining_time / 60))m $(($remaining_time % 60))s                     \r"
+	fi
+}
+if [ $COMPARISON_MODE -eq 1 ]
+	then
+	SCRIPT_LOOP_DIR=dceprep-$OUTPUT_DIR/sub-*/ses-*
+fi
 for der_dir in $SCRIPT_LOOP_DIR; do
-	# dir=$DATA_DIR/${dir::-1}
-	# der_dir=dceprep/$SUBJECT/$SESSION
+	((total++))
+done
+runtime=70
+start_time=$(date +%s)
+for der_dir in $SCRIPT_LOOP_DIR; do
 	dir=$der_dir
 	date >> $LOG_FILE
-	echo "DCE processing ${dir}..."
+
 	((count++))
+	show_progress $count $start_time $total $runtime
+
 	# get subject ID and session
 	SUBJECT=$(echo $der_dir | grep -o 'sub-[0-9]*')
 	SESSION=$(echo $der_dir | grep -o 'ses-[0-9]*')
@@ -168,8 +204,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	mv dce/dce_patlak_fit_vp_ci_low.nii dce/${PREFIX}_vp_ci_low.nii
 	mv dce/dce_patlak_fit_vp_ci_high.nii dce/${PREFIX}_vp_ci_high.nii
 	mv dce/dce_patlak_fit_sse.nii dce/${PREFIX}_sse.nii
-	
-	# # move images into figures folder
+	# move images into figures folder
 	mv dce/dce*.png figures/
 	rm -f dce/*.fig
 	if [ ! -f "dce/${PREFIX}_Ktrans.nii" ]
@@ -178,6 +213,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 			tail -1 dce/A_dceR1info.log >> $LOG_FILE
 			cd $DATA_DIR/../derivatives
 			fail=1
+			rm lock.txt
 			continue
 	fi
 	

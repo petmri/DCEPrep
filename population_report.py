@@ -680,7 +680,7 @@ def get_case_stats(subject_id, timepoint):
             entry = subject_id + "_" + timepoint
             if stats_failed is False:
                 with lock:
-                    successful_timepoints.append(entry)
+                    successful_timepoints.append(entry.replace("_", "/"))
                     population_data[entry] = {
                         "AIFitness": AIFitness,
                         "aif_mmol": aif_mmol,
@@ -828,8 +828,8 @@ MOTION_THRESHOLD = 3.8
 AIFITNESS_THRESHOLD = 75
 for entry in successful_timepoints:
     flag_str = ""
-    subject = entry.split('_')[0]
-    session = entry.split('_')[1]
+    subject = entry.split('/')[0]
+    session = entry.split('/')[1]
     save_name = f"{entry}/reports/{subject}_{session}_desc-casereport.html"
     flag = False
     if entry in population_data.keys() and population_data[entry]['max_disp'] > MOTION_THRESHOLD:
@@ -887,10 +887,12 @@ population_data_exclude_signa = {}
 for entry in list(population_data_exclude.keys()):
     if population_data_exclude[entry]["Machine"] == "Signa HDxt":
         population_data_exclude_signa[entry] = population_data_exclude.pop(entry)
+        population_data_exclude_signa[entry]['Reason'] = "AUTO: Crazy GE Data"
 
 for entry in list(population_data.keys()):
     if population_data[entry]["Machine"] == "Signa HDxt":
         population_data_exclude_signa[entry] = population_data.pop(entry)
+        population_data_exclude_signa[entry]['Reason'] = "AUTO: Crazy GE Data"
 
 try:
     AIFitness_values = [float(population_data[entry]["AIFitness"]) for entry in population_data]
@@ -1741,9 +1743,9 @@ successful_timepoints.sort()
 cases = [timepoint for timepoint in successful_timepoints]
 successful_links = []
 for timepoint in successful_timepoints:
-    subject = timepoint.split('_')[0]
-    session = timepoint.split('_')[1]
-    successful_links.append(f"{timepoint}/reports/{subject}_{session}_desc-casereport.html")
+    subject = timepoint.split('/')[0]
+    session = timepoint.split('/')[1]
+    successful_links.append(f"dceprep{output_dir}/{subject}/{session}/reports/{subject}_{session}_desc-casereport.html")
 # get failed cases from total_timepoints not in successful_timepoints
 failed_cases = [timepoint for timepoint in total_timepoints if timepoint not in successful_timepoints]
 # get links for each failed case's directory
