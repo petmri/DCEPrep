@@ -24,6 +24,7 @@ while getopts ":d:C:fhl:sS:" options; do
 		C)
 			COMPARISON_MODE=1
 			OUTPUT_DIR=${OPTARG}
+			SCRIPT_LOOP_DIR=dceprep-${OPTARG}/sub-*/ses-*
 			;;
 		d)
 			DATA_DIR=${OPTARG}
@@ -65,7 +66,12 @@ while getopts ":d:C:fhl:sS:" options; do
 			SKIP_IF_SUCCESS=1
 			;;
 		S)
-			SCRIPT_LOOP_DIR=dceprep/$OPTARG
+			if [ $COMPARISON_MODE -eq 1 ]
+				then
+				SCRIPT_LOOP_DIR=dceprep-$OUTPUT_DIR/$OPTARG
+			else
+				SCRIPT_LOOP_DIR=dceprep/$OPTARG
+			fi
 			;;
 		*)
 			echo "Invalid option ${OPTARG}. Please use -h for a list of valid options."
@@ -123,9 +129,11 @@ function show_progress {
     	echo -ne "Estimated remaining time: $(($remaining_time / 60))m $(($remaining_time % 60))s                     \r"
 	fi
 }
-if [ $COMPARISON_MODE -eq 1 ]
+if [ $COMPARISON_MODE -eq 1 ] && [ -d dceprep-$OUTPUT_DIR ]
 	then
 	SCRIPT_LOOP_DIR=dceprep-$OUTPUT_DIR/sub-*/ses-*
+else
+	SCRIPT_LOOP_DIR=dceprep/sub-*/ses-*
 fi
 for der_dir in $SCRIPT_LOOP_DIR; do
 	((total++))
@@ -140,7 +148,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	show_progress $count $start_time $total $runtime
 
 	# get subject ID and session
-	SUBJECT=$(echo $der_dir | grep -o 'sub-[0-9]*')
+	SUBJECT=$(echo $der_dir | grep -o 'sub-[^/]*')
 	SESSION=$(echo $der_dir | grep -o 'ses-[0-9]*')
 	PREFIX=${SUBJECT}_${SESSION}
 	cd $der_dir || exit 1

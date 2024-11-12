@@ -804,7 +804,6 @@ def get_case_stats(subject_id, timepoint):
                         "medial_temporal_cortex_vol": medial_temporal_cortex_vol,
                         "manual_aif_status": manual_aif_status,
                     }
-
 from concurrent.futures import ThreadPoolExecutor
 import threading
 import time
@@ -2159,14 +2158,14 @@ if not os.path.exists(dir + '/reports'):
     os.makedirs(dir + '/reports')
 
 # write html to file
-with open(dir + '/reports/population_report' + output_dir + "_" + date_filename + '.html', 'w') as f:
+with open(dir + '/reports/population_report/' + output_dir + "_" + date_filename + '.html', 'w') as f:
     f.write(output)
 
-with open(dir + '/reports/population_report_exclude' + output_dir + "_" + date_filename + '.html', 'w') as f:
+with open(dir + '/reports/population_report_exclude/' + output_dir + "_" + date_filename + '.html', 'w') as f:
     f.write(output_exclude)
 
-print('Report generated in ' + dir + '/reports/population_report' + output_dir + "_" + date_filename + '.html')
-print('Excluded report generated in ' + dir + '/reports/population_report_exclude' + output_dir + "_" + date_filename + '.html')
+print('Report generated in ' + dir + '/reports/population_report/' + output_dir + "_" + date_filename + '.html')
+print('Excluded report generated in ' + dir + '/reports/population_report_exclude/' + output_dir + "_" + date_filename + '.html')
 
 if os.path.exists('/media/network_mriphysics/USC-PPG/bids_test/dce_available_3524_ac.xlsx'):
     # add apoe and cdr fields to population_data
@@ -2316,7 +2315,9 @@ if os.path.exists('/media/network_mriphysics/USC-PPG/bids_test/dce_available_352
             population_data_exclude[entry]["Date"] = row['Study_Date'].values[0]
 
 # make excel file
-writer = pd.ExcelWriter(os.path.join(dir, "dataset_ktrans" + output_dir + "_" + date_filename + ".xlsx"), date_format='YYYY/MM/DD', datetime_format='YYYY/MM/DD') 
+if not os.path.exists(os.path.join(dir, "spreadsheets", output_dir[1:])):
+    os.makedirs(os.path.join(dir, "spreadsheets", output_dir[1:]))
+writer = pd.ExcelWriter(os.path.join(dir, "spreadsheets", output_dir[1:], "dataset_ktrans" + output_dir + "_" + date_filename + ".xlsx"), date_format='YYYY/MM/DD', datetime_format='YYYY/MM/DD') 
 # make dataframe
 df_success = pd.DataFrame(population_data)
 # df_exclude = pd.DataFrame(population_data_exclude)
