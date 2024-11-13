@@ -66,3 +66,7 @@ def quality_ultimate_new(aif_curve):
 
     # take weighted average
     return peak_ratio * 0.3 + end_ratio * 0.3 + base_to_mean * 0.3 + peak_time * 0.1
+
+def get_baseline_from_curve(curve):
+    peak_index = np.argmax(curve)
+    return np.mean(curve[:peak_index-1][np.where(curve[:peak_index-1] < curve[0] * 1.75)])
