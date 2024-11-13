@@ -45,7 +45,7 @@ def quality_peak_new(aif_curve):
     return (1 / (1 + np.exp(-3.5 * peak_ratio + 7.5))) * (100 / 0.4499714351078607)
 
 def quality_tail_new(aif_curve):
-    end_ratio = np.mean(aif_curve[-int(len(aif_curve) * 0.2):]) / aif_curve[0]
+    end_ratio = np.mean(aif_curve[-int(len(aif_curve) * 0.2):])
     quality = (1 - (end_ratio / (1.1 * np.mean(aif_curve))) ** 2)
     return quality * (100 / 0.7051136881511276)
 
