@@ -1,16 +1,18 @@
 import datetime
 import sys
-import jinja2
 import json
-import nibabel as nib
-import numpy as np
 import os
 import subprocess
-import matplotlib.pyplot as plt
 import re
-import aif_metric
+
+import jinja2
+import nibabel as nib
+import numpy as np
+import matplotlib.pyplot as plt
 from nilearn import plotting
 from matplotlib import colors as mcolors
+
+from aif_metric import *
 
 source_dir = sys.argv[1]
 # source_dir = sys.argv[2]
@@ -260,10 +262,9 @@ if len(aif_data.shape) < len(img_data.shape):
 aif_data_roi = img_data * aif_data
 # sum AIF data for each time point, z-slice independent
 aif_curve = np.sum(aif_data_roi, axis=(0, 1, 2)) / np.sum(aif_data[aif_data > 0])
-# divide by AIF mean of first timepoint
-aif_curve_ratio = aif_curve / aif_curve[0]
-
-
+# divide by AIF mean of timepoints before contrast agent arrival
+baseline = get_baseline_from_curve(aif_curve)
+aif_curve_ratio = aif_curve / baseline
 
 aif_metric = quality_ultimate_new(aif_curve_ratio)
 
