@@ -58,8 +58,11 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     mri_final = mri_data
     wm_final = wm_data
 
-    gaussian_params = []
+    gaussian_params = [0 for i in range(slice_num)]
     if GAUSSFIT:
+        startat = 0
+        endat = slice_num
+        hadSuccess = False
         # get histogram of each wm slice
         for i in range(slice_num):
             a = np.where(wm_data[:, :, i, :] > 0)
@@ -83,22 +86,27 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
             # check if slice is empty
             if area == 0:
                 # just get from next slice
-                if i == slice_num - 1:
-                    a = np.where(wm_data[:,:,i-1,:] > 0)
-                    area = np.count_nonzero(wm_data[:,:,i-1,:][a])
-                    amp_guess = area / pstdev(wm_data[:,:,i-1,:][a]) * 0.3989 * bin_width
-                    params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i-1], sigma1=pstdev(wm_data[:,:,i-1,:][a]), A2=amp_guess, mu2=median(wm_data[:,:,i-1,:][a]), sigma2=pstdev(wm_data[:,:,i-1,:][a]))
-                else:
-                    a = np.where(wm_data[:,:,i+1,:] > 0)
-                    area = np.count_nonzero(wm_data[:,:,i+1,:][a])
-                    amp_guess = area / pstdev(wm_data[:,:,i+1,:][a]) * 0.3989 * bin_width
-                    params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i+1], sigma1=pstdev(wm_data[:,:,i+1,:][a]), A2=amp_guess, mu2=median(wm_data[:,:,i+1,:][a]), sigma2=pstdev(wm_data[:,:,i+1,:][a]))
+                # if i == slice_num - 1:
+                #     a = np.where(wm_data[:,:,i-1,:] > 0)
+                #     area = np.count_nonzero(wm_data[:,:,i-1,:][a])
+                #     amp_guess = area / pstdev(wm_data[:,:,i-1,:][a]) * 0.3989 * bin_width
+                #     params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i-1], sigma1=pstdev(wm_data[:,:,i-1,:][a]), A2=amp_guess, mu2=median(wm_data[:,:,i-1,:][a]), sigma2=pstdev(wm_data[:,:,i-1,:][a]))
+                # else:
+                #     a = np.where(wm_data[:,:,i+1,:] > 0)
+                #     area = np.count_nonzero(wm_data[:,:,i+1,:][a])
+                #     amp_guess = area / pstdev(wm_data[:,:,i+1,:][a]) * 0.3989 * bin_width
+                #     params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i+1], sigma1=pstdev(wm_data[:,:,i+1,:][a]), A2=amp_guess, mu2=median(wm_data[:,:,i+1,:][a]), sigma2=pstdev(wm_data[:,:,i+1,:][a]))
+                if hadSuccess and i < endat:
+                    endat = i
+                elif not hadSuccess:
+                    startat = i + 1
+                continue
             else:
+                hadSuccess = True
                 amp_guess = area / pstdev(wm_data[:,:,i,:][a]) * 0.3989 * bin_width
                 params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i], sigma1=pstdev(wm_data[:,:,i,:][a]), A2=amp_guess, mu2=median(wm_data[:,:,i,:][a]), sigma2=pstdev(wm_data[:,:,i,:][a]))
-                    
             result = model.fit(hist, params, x=bins[:-1])
-            gaussian_params.append(result.best_values)
+            gaussian_params[i] = result.best_values
 
             # Plot the histogram
             plt.figure()
@@ -123,21 +131,23 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
 
         # apply normalizations
         print("Using Gaussian fitting to normalize DCE")
-        mu = []
-        for i in range(slice_num):            
+        mu = [0 for i in range(slice_num)]
+        for i in range(startat, endat):
             if gaussian_params[i]['A1'] > gaussian_params[i]['A2'] and gaussian_params[i]['mu1'] > 0 and gaussian_params[i]['mu1'] > gaussian_params[i]['mu2'] and gaussian_params[i]['mu1'] < 1500:
-                mu.append(gaussian_params[i]['mu1'])
+                mu[i] = gaussian_params[i]['mu1']
             else:
-                mu.append(gaussian_params[i]['mu2'])
+                mu[i] = gaussian_params[i]['mu2']
             # print("mu " + str(mu[i]))
             # print("SLICE: " + str(i + 1))
             # print("mu: " + str(gaussian_params[i]['mu1']) + " " + str(gaussian_params[i]['mu2']))
             # print("A: " + str(gaussian_params[i]['A1']) + " " + str(gaussian_params[i]['A2']))
             # print("sigma: " + str(gaussian_params[i]['sigma1']) + " " + str(gaussian_params[i]['sigma2']))
-
-        mean_mu = mean(mu)
+        median_mu = median([m for m in mu if m != 0])
         for i in range(slice_num):
-            scale_factor = mean_mu / mu[i]
+            if mu[i] > 0:
+                scale_factor = median_mu / mu[i]
+            else:
+                scale_factor = 1  # or some other default value
             mri_final[:, :, i, :] *= scale_factor
             wm_final[:, :, i, :] *= scale_factor
 
@@ -187,15 +197,13 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
         else:
             norm_wm.append(0)
 
-    data_mean1 = mean(norm_img)
-
     fig, ax = plt.subplots(figsize=(20, 6))
     ax.plot(range(slice_num), wm_mean, '-ok', label='original')
     if POLYFIT is True and GAUSSFIT is False:
         ax.plot(range(slice_num), norm_slices, ':ob', label='fit')
     if GAUSSFIT:
         ax.plot(range(slice_num), mu, 'o', label='mu', color='grey')
-        ax.plot(range(slice_num), np.ones(slice_num)*mean_mu, ':x', label='mean_mu', color='lightgreen')
+        ax.plot(range(slice_num), np.ones(slice_num)*median_mu, ':x', label='median_mu', color='lightgreen')
     ax.plot(range(slice_num), norm_wm, '--xg', label='corrected')
     ax.set_xlabel('Slice #')
     ax.set_ylabel('White Matter Mean')
@@ -235,9 +243,13 @@ for file in files_in_dir:
         mask_file = file1.split('desc-bfc_DCE', 1)[0]
         mask_file = mask_file + 'seg-WM_DCE.nii'
 
+        if Path(mask_file + ".gz").exists():
+            mask_file += ".gz"
+        elif not Path(mask_file).exists():
+            print(f"Mask file not found for {file1}")
+            continue
+
         try:
-            normalize(file1, mask_file + ".gz", str(dir))
-        except FileNotFoundError:
             normalize(file1, mask_file, str(dir))
         except Exception as e:
             print(e)

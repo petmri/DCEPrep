@@ -12,11 +12,12 @@ SKIP_IF_SUCCESS=0
 USE_FREESURFER=0
 PURGE_INTERMEDIATES=0
 GIGA_PURGE=0
+TARGET_FLAG=0
 SCRIPT_LOOP_DIR=dceprep/sub-*/ses-*
 shopt -s extglob
 
 # options
-while getopts ":d:C:fhl:sS:" options; do
+while getopts ":d:C:fhl:sST:" options; do
 	case "${options}" in
 		b)
 			EN_BIAS1=1
@@ -66,6 +67,10 @@ while getopts ":d:C:fhl:sS:" options; do
 			SKIP_IF_SUCCESS=1
 			;;
 		S)
+			EN_SMOOTHING=1
+			;;
+		T)
+			TARGET_FLAG=1
 			if [ $COMPARISON_MODE -eq 1 ]
 				then
 				SCRIPT_LOOP_DIR=dceprep-$OUTPUT_DIR/$OPTARG
@@ -129,12 +134,13 @@ function show_progress {
     	echo -ne "Estimated remaining time: $(($remaining_time / 60))m $(($remaining_time % 60))s                     \r"
 	fi
 }
-if [ $COMPARISON_MODE -eq 1 ] && [ -d dceprep-$OUTPUT_DIR ]
-	then
-	SCRIPT_LOOP_DIR=dceprep-$OUTPUT_DIR/sub-*/ses-*
-else
-	SCRIPT_LOOP_DIR=dceprep/sub-*/ses-*
-fi
+# if [ $COMPARISON_MODE -eq 1 ] && [ -d dceprep-$OUTPUT_DIR ] && [ $TARGET_FLAG -eq 0 ];
+# 	then
+# 	SCRIPT_LOOP_DIR=dceprep-$OUTPUT_DIR/sub-*/ses-*
+# elif [ $COMPARISON_MODE -eq 1 ] && [ -d dceprep-$OUTPUT_DIR ] && [ $TARGET_FLAG -eq 0 ];
+# 	then
+# 	SCRIPT_LOOP_DIR=dceprep/sub-*/ses-*
+# fi
 for der_dir in $SCRIPT_LOOP_DIR; do
 	((total++))
 done
@@ -199,6 +205,12 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 		cd $DERIV_DIR
 		fail=1
 		continue
+	fi
+
+	# iNESMA smooth DCE input (exclude AIF roi)
+	if [ $EN_SMOOTHING -eq 1 ]
+		then
+		python3 $SCRIPT_PATH/iNESMA_GPU.py $PREFIX dce/${PREFIX}_desc-bfcz_DCE.nii.gz dce/${PREFIX}_desc-AIF_T1map.nii.gz
 	fi
 	
 	# DCE

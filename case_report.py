@@ -270,7 +270,7 @@ aif_metric = quality_ultimate_new(aif_curve_ratio)
 
 # plot AIF
 plt.plot(aif_curve_ratio)
-plt.text(0.25, 0.95, 'Voxel Baseline Avg SI: ' + str(aif_curve[0]), transform=plt.gca().transAxes, fontsize=11, verticalalignment='top')
+plt.text(0.25, 0.95, 'Voxel Baseline Avg SI: ' + str(baseline), transform=plt.gca().transAxes, fontsize=11, verticalalignment='top')
 plt.text(0.25, 0.9, 'AIFitness: ' + str(aif_metric), transform=plt.gca().transAxes, fontsize=11, verticalalignment='top')
 plt.title('AIF Curve')
 plt.xlabel('Timepoint')

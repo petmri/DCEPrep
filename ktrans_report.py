@@ -39,7 +39,8 @@ aif_curve = mpimg.imread('figures/dceAIF_fitting.png')
 timecurves = mpimg.imread('figures/dce_timecurves.png')
 plots = []
 plots.append(mpimg.imread('figures/' + prefix + '_desc-zeros.png'))
-plots.append(mpimg.imread('figures/displacements.png'))
+if Path('figures/displacements.png').exists():
+    plots.append(mpimg.imread('figures/displacements.png'))
 try:
     json_file = open(f'{dir}/dce/{prefix}_DCE.json')
     json_dict = json.load(json_file)

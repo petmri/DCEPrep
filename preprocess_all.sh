@@ -10,9 +10,11 @@ EN_MOTION_CORR=0
 T1_ONLY=0
 USE_AUTO_AIF=0
 AIF_SUFFIX="desc-AIF_mask"
+AIF_TRAINING_SUFFIX="desc-trainingAIF_mask"
 SKIP_IF_SUCCESS=0
 SCRIPT_LOOP_DIRS=sub-*/ses-*
-AUTOAIF_WEIGHT_PATH="/media/network_mriphysics/USC-PPG/AI_training/weights/good_ones?/rg_10-13/model_weight.h5"
+AUTOAIF_WEIGHT_PATH="/media/network_mriphysics/USC-PPG/AI_training/weights/huber_real/model_weight_huber1.h5"
+AUTOAIF_MODEL="unet3d_huber"
 
 # internal vars (don't change)
 fail=0
@@ -26,13 +28,27 @@ prog=0
 successes=0
 
 # options
-while getopts ":d:bBa:AZfhcC:mstl:S:w" options; do
+while getopts ":d:bBa:A:ZfhcC:mMstl:S:w:" options; do
 	case "${options}" in
 		a)
 			AIF_SUFFIX=${OPTARG}
 			;;
 		A)
-			USE_AUTO_AIF=1
+			case "${OPTARG}" in
+				M)
+					USE_AUTO_AIF=0
+					;;
+				A)
+					USE_AUTO_AIF=1
+					;;
+				T)
+					USE_AUTO_AIF=2
+					;;
+				*)
+					echo "Invalid argument for -A. Use A, M, or T."
+					exit 1
+					;;
+			esac
 			;;
 		b)
 			EN_BIAS1=1
@@ -73,7 +89,7 @@ while getopts ":d:bBa:AZfhcC:mstl:S:w" options; do
 			echo "This script runs through all subject folders of a specified main data directory, preprocessing every folder ending in '_timepoint'."
 			echo "The output is the DCE input, which are the corrected dynamic images, brain mask, T1 maps."
 			echo "-a: specify AIF suffix (default is 'desc-AIF_mask'). .nii.gz will be appended to the suffix."
-			echo "-A: enable AutoAIF"
+			echo "-A: enable AutoAIF with argument A (All automatic), M (Manual if available), or T (Manual + Training if available)"
 			echo "-b: enable first round of bias field corrections"
 			echo "-B: enable second round of bias field corrections, post-Z-norm if enabled"
 			echo "-c: clean derivatives folder prior to processing, ensures \"fresh\" runs but cannot use skips"
@@ -93,6 +109,9 @@ while getopts ":d:bBa:AZfhcC:mstl:S:w" options; do
 			;;
 		m)
 			EN_MOTION_CORR=1
+			;;
+		M)
+			AUTOAIF_MODEL=${OPTARG}
 			;;
 		s)
 			SKIP_IF_SUCCESS=1
@@ -210,7 +229,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		# remove all files except for the AIF
 		rm -rf anat figures reports
 		cd dce
-		rm -f !(${PREFIX}_${AIF_SUFFIX}.nii.gz)
+		rm -f !(${PREFIX}_${AIF_SUFFIX}.nii.gz|${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz)
 		cd $SUBJECT_TP_PATH
     fi
 	mkdir anat &> /dev/null
@@ -438,7 +457,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		if [ ! -f "anat/${PREFIX}_${VFA_LIST[0]}_${REF_SPACE}_desc-bfcz_VFA.nii.gz" ]
 			then
 			#echo begin slice normalization
-			python3 $SCRIPT_PATH/VFA_norm.py $SUBJECT_TP_PATH/anat $PREFIX &> /dev/null
+			python3 $SCRIPT_PATH/VFA_norm.py $SUBJECT_TP_PATH/anat $PREFIX $EN_BIAS1 &> /dev/null
 			prog=$(echo "scale=2;  $prog + .33 / $count" | bc -l)
 			echo -ne "VFA MOTIONCORR [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
 		fi
@@ -452,7 +471,8 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	else
 		mkdir -p figures &> /dev/null
 	fi
-
+	
+	VFA_INPUT=""
 	if [ $EN_BIAS2 -eq 1 ]
 		then
 		# 2nd Bias correction VFA data
@@ -478,7 +498,6 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		#echo Concatenating Z-norm\'d images
 		# concatenates VFA images in one 4D VFA.nii.gz image
 		# fslmerge -t $source_dir/VFA_BFC_Z.nii.gz "${VFA_NUMS[@]/#/\/$source_dir\/}"_BFC_Z.nii.gz
-		VFA_INPUT=""
 		for VFA in "${VFA_DYN_LIST[@]}"; do
 			VFA_INPUT+="anat/${PREFIX}_${VFA}_${REF_SPACE}_desc-bfcz_VFA.nii.gz "
 		done
@@ -486,13 +505,19 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		VFA_INPUT="desc-bfczunified_VFA"
 	elif [ $EN_BIAS1 -eq 1 ]
 		then
-		echo Concatenating non Z\'d images
-		fslmerge -t $source_dir/VFA_BFC.nii $source_dir/${VFA_NUMS[@]/%/_bfc.nii} &> /dev/null
-		VFA_INPUT="VFA_BFC"
+		# echo Concatenating non Z\'d images
+		for VFA in "${VFA_DYN_LIST[@]}"; do
+			VFA_INPUT+="anat/${PREFIX}_${VFA}_${REF_SPACE}_desc-bfc_VFA.nii.gz "
+		done
+		fslmerge -t anat/${PREFIX}_${REF_SPACE}_desc-bfcunified_VFA.nii.gz $VFA_INPUT &> /dev/null
+		VFA_INPUT="desc-bfcunified_VFA"
 	else
 		echo Concatenating raw images
-		fslmerge -t $source_dir/VFA.nii $source_dir/${VFA_NUMS[@]/%/_masked.nii.gz} &> /dev/null
-		VFA_INPUT="VFA"
+		for VFA in "${VFA_DYN_LIST[@]}"; do
+			VFA_INPUT+="anat/${PREFIX}_${VFA}_${REF_SPACE}_desc-brain_VFA.nii.gz "
+		done
+		fslmerge -t anat/${PREFIX}_${REF_SPACE}_desc-unified_VFA.nii.gz $VFA_INPUT
+		VFA_INPUT="desc-unified_VFA"
 	fi
 	gunzip -f "anat/${PREFIX}_${REF_SPACE}_$VFA_INPUT.nii.gz"
 	
@@ -549,22 +574,47 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	echo -ne "FAST DCE REP 1 [========================>                         ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
 	mkdir -p figures &> /dev/null
-	if [ $USE_AUTO_AIF -eq 1 ] && [ ! -f "dce/${PREFIX}_${AIF_SUFFIX}.nii.gz" ]
+	if [ $USE_AUTO_AIF -eq 1 ] || [ ! -f "dce/${PREFIX}_${AIF_SUFFIX}.nii.gz" ]
 		then
 		# find AutoAIF path
-		AUTO_AIF_PATH=$(find $HOME -name '*main_vif.py' -printf '%h\n' -quit || find / -name '*main_vif.py' -printf '%h\n' -quit) &> /dev/null
+		AUTO_AIF_PATH=$(find $HOME -wholename '*main_vif.py' -printf '%h\n' -quit || find / -name '*main_vif.py' -printf '%h\n' -quit) &> /dev/null
 		# run AutoAIF
-		python3 $AUTO_AIF_PATH/main_vif.py --mode inference --input_path dce/${PREFIX}_desc-hmc_DCE.nii.gz --save_output_path $PWD/dce \
-			--model_weight_path $AUTOAIF_WEIGHT_PATH \
-			--save_image 1 &> /dev/null
-		# rename output
-		mv dce/${PREFIX}_desc-hmc_DCE_float_mask.nii dce/${PREFIX}_desc-AIFfloat_mask.nii
-		mv dce/${PREFIX}_desc-hmc_DCE_mask.nii dce/${PREFIX}_desc-AIFtopvoxels_mask.nii
-		mv dce/${PREFIX}_desc-hmc_DCE_curve.svg figures/${PREFIX}_desc-AIF_resampledcurve.svg
-		mv dce/${PREFIX}_desc-hmc_DCE_mask.svg figures/${PREFIX}_desc-AIF_mask.svg
-		# fslmaths aif_floats.nii -thr 0.95 aif_mask.nii
-		fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_desc-AIFtopvoxels_mask.nii dce/${PREFIX}_desc-AIF_T1map.nii
-		# gunzip -f aif.nii.gz
+		if [ $EN_MOTION_CORR -eq 1 ]
+			then
+			python3 $AUTO_AIF_PATH/main_vif.py --mode inference --input_path dce/${PREFIX}_desc-hmc_DCE.nii.gz --save_output_path $PWD/dce \
+				--model_weight_path $AUTOAIF_WEIGHT_PATH \
+				--model_name $AUTOAIF_MODEL \
+				--save_image 1 &> /dev/null
+			# rename output
+			mv dce/${PREFIX}_desc-hmc_DCE_float_mask.nii dce/${PREFIX}_desc-AIFfloat_mask.nii
+			mv dce/${PREFIX}_desc-hmc_DCE_mask.nii dce/${PREFIX}_desc-AIFtopvoxels_mask.nii
+			mv dce/${PREFIX}_desc-hmc_DCE_curve.svg figures/${PREFIX}_desc-AIF_resampledcurve.svg
+			mv dce/${PREFIX}_desc-hmc_DCE_mask.svg figures/${PREFIX}_desc-AIF_mask.svg
+			# fslmaths aif_floats.nii -thr 0.95 aif_mask.nii
+			fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_desc-AIFtopvoxels_mask.nii dce/${PREFIX}_desc-AIF_T1map.nii
+		else
+			python3 $AUTO_AIF_PATH/main_vif.py --mode inference --input_path $source_dir/dce/${PREFIX}_DCE.nii.gz --save_output_path $PWD/dce \
+				--model_weight_path $AUTOAIF_WEIGHT_PATH \
+				--model_name $AUTOAIF_MODEL \
+				--save_image 1 &> /dev/null
+			mv dce/${PREFIX}_DCE_float_mask.nii dce/${PREFIX}_AIFfloat_mask.nii
+			mv dce/${PREFIX}_DCE_mask.nii dce/${PREFIX}_AIFtopvoxels_mask.nii
+			mv dce/${PREFIX}_DCE_curve.svg figures/${PREFIX}_AIF_resampledcurve.svg
+			mv dce/${PREFIX}_DCE_mask.svg figures/${PREFIX}_AIF_mask.svg
+			fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_AIFtopvoxels_mask.nii dce/${PREFIX}_desc-AIF_T1map.nii
+		fi
+	elif [ $USE_AUTO_AIF -eq 2 ]
+		then
+		# use all available manual AIFs, including those reserved for training
+		if [ -f "dce/${PREFIX}_${AIF_SUFFIX}.nii.gz" ]
+			then
+			# use manual AIF
+			fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_${AIF_SUFFIX}.nii.gz dce/${PREFIX}_desc-AIF_T1map.nii.gz
+		elif [ -f "dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz" ]
+			then
+			# use training manual AIF
+			fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz dce/${PREFIX}_desc-AIF_T1map.nii.gz
+		fi
 	else
 		# use manual AIF
 		fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_${AIF_SUFFIX}.nii.gz dce/${PREFIX}_desc-AIF_T1map.nii.gz
@@ -576,7 +626,16 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	fslmaths dce/${PREFIX}_desc-AIFaligned_T1map.nii.gz -thr 0 dce/${PREFIX}_desc-AIFpos_T1map.nii &> /dev/null
 	rm dce/${PREFIX}_desc-AIFaligned_T1map.nii.gz
 	fslmaths anat/${PREFIX}_${REF_SPACE}_desc-brain_mask.nii.gz -add dce/${PREFIX}_desc-AIFpos_T1map.nii -thr 1 -bin anat/${PREFIX}_${REF_SPACE}_desc-brainAIF_mask.nii.gz &> /dev/null
-	fslmaths dce/${PREFIX}_desc-hmc_DCE.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_desc-brainAIF_mask.nii.gz dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz &> /dev/null
+	# apply AIF mask to all DCE images
+	if [ $EN_MOTION_CORR -eq 1 ]
+		then
+		fslmaths dce/${PREFIX}_desc-hmc_DCE.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_desc-brainAIF_mask.nii.gz dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz &> /dev/null
+	elif [ $EN_MOTION_CORR -eq 0 ] && [ $EN_BIAS1 -eq 1 ]
+		then
+		fslmaths dce/${PREFIX}_desc-bfc_DCE.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_desc-brainAIF_mask.nii.gz dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz &> /dev/null
+	else
+		fslmaths $source_dir/dce/${PREFIX}_DCE.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_desc-brainAIF_mask.nii.gz dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz &> /dev/null
+	fi
 		
 	if [ $EN_BIAS1 -eq 1 ]
 		then
@@ -654,14 +713,19 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	# antsApplyTransforms -i T1_wm_mask.nii.gz -r ref_rep.nii -t T1_dyn0GenericAffine.mat -o T1_wm_mask_dyn_pv.nii &> /dev/null
 	
 	# apply wm mask to all DCE images
-	fslmaths dce/${PREFIX}_desc-bfc_DCE.nii.gz -mas anat/${PREFIX}_${VFA}_${REF_SPACE}_seg-WM_VFA.nii.gz dce/${PREFIX}_seg-WM_DCE.nii.gz &> /dev/null
+	if [ $EN_BIAS1 -eq 1 ]
+		then
+		fslmaths dce/${PREFIX}_desc-bfc_DCE.nii.gz -mas anat/${PREFIX}_${VFA}_${REF_SPACE}_seg-WM_VFA.nii.gz dce/${PREFIX}_seg-WM_DCE.nii.gz &> /dev/null
+	else
+		fslmaths $source_dir/dce/${PREFIX}_DCE.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz dce/${PREFIX}_seg-WM_DCE.nii.gz &> /dev/null
+	fi
 
 	# normalize dynamic images
 	# ------------------------------
 	#echo Normalizing dynamic images...
 	if [ $EN_Z_NORM -eq 1 ]
 		then
-		python3 $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH/dce
+		python3 $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH/dce &> /dev/null
 	else
 		cp dce/${PREFIX}_desc-bfc_DCE.nii.gz dce/${PREFIX}_desc-bfcz_DCE.nii.gz
 	fi

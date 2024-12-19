@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import datetime
 import subprocess
+import scipy.stats as stats
 from sys import argv
 
 dir = argv[1]
@@ -811,7 +812,7 @@ import time
 # time
 # start = time.time()
 lock = threading.Lock()
-with ThreadPoolExecutor() as executor:
+with ThreadPoolExecutor(max_workers=4) as executor:
     futures = [executor.submit(get_case_stats, subject_id, timepoint) for subject_id in subjects for timepoint in os.listdir(os.path.join(dceprep_dir, subject_id))]
     for future in futures:
         try:

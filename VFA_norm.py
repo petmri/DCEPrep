@@ -62,10 +62,11 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     mri_final = mri_data
     wm_final = wm_data
 
-    gaussian_params = []
+    gaussian_params = [0 for i in range(slice_num)]
     if GAUSSFIT:
         startat = 0
-        endat = slice_num - 1
+        endat = slice_num
+        hadSuccess = False
         # get histogram of each wm slice
         for i in range(slice_num):
             # print("SLICE: " + str(i + 1))
@@ -88,7 +89,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
             amp_guess = 0
             params = 0
             # check if slice is empty
-            if area == 0:
+            if area == 0 or pstdev(wm_data[:,:,i][a]) == 0:
                 # just get from next slice
                 # if i == slice_num - 1:
                 #     a = np.where(wm_data[:,:,i-1] > 0)
@@ -101,19 +102,25 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
                 #     amp_guess = area / pstdev(wm_data[:,:,i+1][a]) * 0.3989 * bin_width
                 #     params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i+1], sigma1=pstdev(wm_data[:,:,i+1][a]), A2=amp_guess, mu2=median(wm_data[:,:,i+1][a]), sigma2=pstdev(wm_data[:,:,i+1][a]))
                 # omit slice if empty
-                if i == 0:
-                    startat = 1
-                elif i == slice_num - 1:
-                    endat = slice_num - 2
+                # if i == 0:
+                #     startat = 1
+                # elif i == slice_num - 1:
+                #     endat = slice_num - 2
+                # continue
+                if hadSuccess and i < endat:
+                    endat = i
+                elif not hadSuccess:
+                    startat = i + 1
                 continue
             else:
+                hadSuccess = True
                 amp_guess = area / pstdev(wm_data[:,:,i][a]) * 0.3989 * bin_width
                 params = model.make_params(A1=amp_guess*0.1, mu1=wm_mean[i], sigma1=pstdev(wm_data[:,:,i][a]), A2=amp_guess, mu2=median(wm_data[:,:,i][a]), sigma2=pstdev(wm_data[:,:,i][a]))
 
             result = model.fit(hist, params, x=bins[:-1])
             # print(result.fit_report())
             # print(result.best_values)
-            gaussian_params.append(result.best_values)
+            gaussian_params[i] = result.best_values
 
             # Plot the histogram
             plt.figure()
@@ -140,30 +147,32 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
         # apply normalizations
         print("Using Gaussian fitting to normalize FA " + str(num))
         mu = [0 for i in range(slice_num)]
+        # print(startat, endat)
+        # endat = len(gaussian_params)
         for i in range(startat, endat):
             # max(gaussian_params[i][0], gaussian_params[i][3])
             # if gaussian_params[i][0] > gaussian_params[i][3] and gaussian_params[i][1] > 0 and gaussian_params[i][1] < 1000:# and abs(gaussian_params[i][1] - wm_mean[i]) < abs(gaussian_params[i][4] - wm_mean[i]):
             #     mu.append(gaussian_params[i][1])
             # else:
             #     mu.append(gaussian_params[i][4])
-            
+            # print(i, slice_num)
             if gaussian_params[i]['A1'] > gaussian_params[i]['A2'] and gaussian_params[i]['mu1'] > 0 and gaussian_params[i]['mu1'] > gaussian_params[i]['mu2'] and gaussian_params[i]['mu1'] < 1500:
                 mu[i] = gaussian_params[i]['mu1']
             else:
                 mu[i] = gaussian_params[i]['mu2']
 
-            print("mu " + str(mu[i]))
-            print("SLICE: " + str(i + 1))
-            print("mu1 and mu2: " + str(gaussian_params[i]['mu1']) + " " + str(gaussian_params[i]['mu2']))
-            print("A: " + str(gaussian_params[i]['A1']) + " " + str(gaussian_params[i]['A2']))
-            print("sigma: " + str(gaussian_params[i]['sigma1']) + " " + str(gaussian_params[i]['sigma2']))
+            # print("mu " + str(mu[i]))
+            # print("SLICE: " + str(i + 1))
+            # print("mu1 and mu2: " + str(gaussian_params[i]['mu1']) + " " + str(gaussian_params[i]['mu2']))
+            # print("A: " + str(gaussian_params[i]['A1']) + " " + str(gaussian_params[i]['A2']))
+            # print("sigma: " + str(gaussian_params[i]['sigma1']) + " " + str(gaussian_params[i]['sigma2']))
 
-        mean_mu = mean(mu)
-        # print("mean_mu: " + str(mean_mu))
+        median_mu = median([m for m in mu if m != 0])
+        # print("median_mu: " + str(median_mu))
         for i in range(slice_num):
             if mu[i] == 0:
                 continue
-            scale_factor = mean_mu / mu[i]
+            scale_factor = median_mu / mu[i]
             mri_final[:, :, i] *= scale_factor
             wm_final[:, :, i] *= scale_factor
 
@@ -212,7 +221,6 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
             norm_wm.append(0)
 
     # data_mean1 = mean(norm_img)
-
     fig, ax = plt.subplots(figsize=(20, 6))
     ax.plot(range(slice_num), wm_mean, '-ok', label='original')
     if POLYFIT is True and GAUSSFIT is False:
@@ -220,7 +228,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
     ax.plot(range(slice_num), norm_wm, '--xg', label='corrected', mfc='none')
     if GAUSSFIT:
         ax.plot(range(slice_num), mu, 'o', label='mu', color='grey')
-        ax.plot(range(slice_num), np.ones(slice_num)*mean_mu, ':x', label='mean_mu', color='lightgreen')
+        ax.plot(range(slice_num), np.ones(slice_num)*median_mu, ':x', label='median_mu', color='lightgreen')
     ax.set_xlabel('Slice #')
     ax.set_ylabel('White Matter Mean')
     ax.set_title("VFA Slice Normalization")
@@ -258,6 +266,8 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
 if __name__ == "__main__":
     dir = Path(sys.argv[1])     # takes timepoint directory as argument
     prefix = sys.argv[2]
+    BFC = sys.argv[3]
+    file_pattern = r'.*flip-\d+_space-DCEref_desc-bfc_VFA.nii.*' if BFC else r'.*flip-\d+_space-DCEref_desc-brain_VFA.nii.*'
     files_in_dir = dir.iterdir()
     file_list = [file for file in files_in_dir if re.search(r'.*flip-\d+_space-DCEref_desc-brain_VFA.nii.*', str(file))]
     num_processes = len(file_list)
