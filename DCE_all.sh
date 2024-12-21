@@ -58,7 +58,8 @@ while getopts ":d:C:fhl:sST:" options; do
 			echo "-h: display this message"
 			# echo "-l: specify a list of subjects to process (filename only, place in code folder)"
 			echo "-s: skip subjects that have already been processed"
-			echo "-S [dir_path]: specify the subject(s)/session(s) to run (default is 'sub-*/ses-*/')"
+			echo "-S: enable smoothing of DCE input"
+			echo "-T [dir_path]: specify the subject(s)/session(s) to run (default is 'sub-*/ses-*/')"
 			exit 0
 			;;
 		l)
