@@ -14,7 +14,7 @@ AIF_TRAINING_SUFFIX="desc-trainingAIF_mask"
 SKIP_IF_SUCCESS=0
 SCRIPT_LOOP_DIRS=sub-*/ses-*
 AUTOAIF_WEIGHT_PATH="/media/network_mriphysics/USC-PPG/AI_training/weights/huber_real/model_weight_huber1.h5"
-AUTOAIF_MODEL="unet3d_huber"
+AUTOAIF_MODEL="best"
 
 # internal vars (don't change)
 fail=0
@@ -40,6 +40,7 @@ while getopts ":d:bBa:A:ZfhcC:mMstl:S:w:" options; do
 					;;
 				A)
 					USE_AUTO_AIF=1
+					AUTO_AIF_PATH=$(find $HOME -wholename '*main_vif.py' -printf '%h\n' -quit || find / -name '*main_vif.py' -printf '%h\n' -quit) &> /dev/null
 					;;
 				T)
 					USE_AUTO_AIF=2
@@ -574,10 +575,8 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	echo -ne "FAST DCE REP 1 [========================>                         ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
 	mkdir -p figures &> /dev/null
-	if [ $USE_AUTO_AIF -eq 1 ] || [ ! -f "dce/${PREFIX}_${AIF_SUFFIX}.nii.gz" ]
+	if [ $USE_AUTO_AIF -eq 1 ] || [ ! -f "dce/${PREFIX}_${AIF_SUFFIX}.nii.gz" ] && [ ! -f "dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz" ]
 		then
-		# find AutoAIF path
-		AUTO_AIF_PATH=$(find $HOME -wholename '*main_vif.py' -printf '%h\n' -quit || find / -name '*main_vif.py' -printf '%h\n' -quit) &> /dev/null
 		# run AutoAIF
 		if [ $EN_MOTION_CORR -eq 1 ]
 			then

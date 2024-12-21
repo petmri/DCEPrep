@@ -1840,10 +1840,10 @@ data = {
     'aif_mmol_std': round(aif_mmol_std, 4),
     'aif_mmol_5th_percentile': round(aif_mmol_5th_percentile, 4),
     'aif_mmol_95th_percentile': round(aif_mmol_95th_percentile, 4),
-    'AIFitness_histogram' : "../" + aifitness_histogram_path,
-    'aif_mmol_histogram': "../" + aif_mmol_histogram_path,
-    'aif_pop_avg_AIF': "../" + aif_pop_avg_path,
-    'aif_curves': "../" + aif_curves_path,
+    'AIFitness_histogram' : "../../" + aifitness_histogram_path,
+    'aif_mmol_histogram': "../../" + aif_mmol_histogram_path,
+    'aif_pop_avg_AIF': "../../" + aif_pop_avg_path,
+    'aif_curves': "../../" + aif_curves_path,
     'wm_mean': wm_mean,
     'wm_median': wm_median,
     'wm_std': wm_std,
@@ -1942,9 +1942,9 @@ data = {
     'whole_medial_temporal_cortex_std': round(whole_medial_temporal_cortex_std, 4),
     'ktrans_wm_outliers': wm_outliers,
     'ktrans_gm_outliers': gm_outliers,
-    'T1_blood_histogram': "../" + T1_blood_histogram_path,
-    'wm_histogram': "../" + ktrans_wm_histogram_path,
-    'gm_histogram': "../" + ktrans_gm_histogram_path,
+    'T1_blood_histogram': "../../" + T1_blood_histogram_path,
+    'wm_histogram': "../../" + ktrans_wm_histogram_path,
+    'gm_histogram': "../../" + ktrans_gm_histogram_path,
     # 'rPhG_L_outliers': rPhG_L_outliers,
     # 'rPhG_R_outliers': rPhG_R_outliers,
     # 'cPhG_L_outliers': cPhG_L_outliers,
@@ -1991,20 +1991,20 @@ data = {
     # 'rHipp_R_histogram': rHipp_R_histogram_path,
     # 'cHipp_L_histogram': cHipp_L_histogram_path,
     # 'cHipp_R_histogram': cHipp_R_histogram_path,
-    'whole_hippo_histogram': "../" + whole_hippo_histogram_path,
-    'whole_phg_histogram': "../" + whole_phg_histogram_path,
-    'whole_putamen_histogram': "../" + whole_putamen_histogram_path,
-    'whole_pallidum_histogram': "../" + whole_pallidum_histogram_path,
-    'whole_thalamus_histogram': "../" + whole_thalamus_histogram_path,
-    'whole_caudate_histogram': "../" + whole_caudate_histogram_path,
-    'whole_amygdala_histogram': "../" + whole_amygdala_histogram_path,
-    'whole_entorhinal_cortex_histogram': "../" + whole_entorhinal_cortex_histogram_path,
-    'whole_fusiform_gyrus_cortex_histogram': "../" + whole_fusiform_gyrus_cortex_histogram_path,
-    'whole_fusiform_gyrus_WM_histogram': "../" + whole_fusiform_gyrus_WM_histogram_path,
-    'whole_insula_WM_histogram': "../" + whole_insula_WM_histogram_path,
-    'whole_superior_temporal_cortex_histogram': "../" + whole_superior_temporal_cortex_histogram_path,
-    'whole_posterior_cingulate_cortex_histogram': "../" + whole_posterior_cingulate_cortex_histogram_path,
-    'whole_medial_temporal_cortex_histogram': "../" + whole_medial_temporal_cortex_histogram_path
+    'whole_hippo_histogram': "../../" + whole_hippo_histogram_path,
+    'whole_phg_histogram': "../../" + whole_phg_histogram_path,
+    'whole_putamen_histogram': "../../" + whole_putamen_histogram_path,
+    'whole_pallidum_histogram': "../../" + whole_pallidum_histogram_path,
+    'whole_thalamus_histogram': "../../" + whole_thalamus_histogram_path,
+    'whole_caudate_histogram': "../../" + whole_caudate_histogram_path,
+    'whole_amygdala_histogram': "../../" + whole_amygdala_histogram_path,
+    'whole_entorhinal_cortex_histogram': "../../" + whole_entorhinal_cortex_histogram_path,
+    'whole_fusiform_gyrus_cortex_histogram': "../../" + whole_fusiform_gyrus_cortex_histogram_path,
+    'whole_fusiform_gyrus_WM_histogram': "../../" + whole_fusiform_gyrus_WM_histogram_path,
+    'whole_insula_WM_histogram': "../../" + whole_insula_WM_histogram_path,
+    'whole_superior_temporal_cortex_histogram': "../../" + whole_superior_temporal_cortex_histogram_path,
+    'whole_posterior_cingulate_cortex_histogram': "../../" + whole_posterior_cingulate_cortex_histogram_path,
+    'whole_medial_temporal_cortex_histogram': "../../" + whole_medial_temporal_cortex_histogram_path
 }
 
 output = template.render(data)
@@ -2065,10 +2065,10 @@ data = {
     'aif_mmol_std': round(aif_mmol_std_exclude, 4),
     'aif_mmol_5th_percentile': round(aif_mmol_5th_percentile_exclude, 4),
     'aif_mmol_95th_percentile': round(aif_mmol_95th_percentile_exclude, 4),
-    'AIFitness_histogram' : "../" + aifitness_histogram_exclude_path,
-    'aif_mmol_histogram': "../" + aif_mmol_histogram_exclude_path,
-    'aif_pop_avg_AIF': "../" + aif_pop_avg_path,
-    'aif_curves': "../" + aif_curves_path,
+    'AIFitness_histogram' : "../../" + aifitness_histogram_exclude_path,
+    'aif_mmol_histogram': "../../" + aif_mmol_histogram_exclude_path,
+    'aif_pop_avg_AIF': "../../" + aif_pop_avg_path,
+    'aif_curves': "../../" + aif_curves_path,
     'wm_mean': wm_mean_exclude,
     'wm_median': wm_median_exclude,
     'wm_std': wm_std_exclude,
@@ -2119,9 +2119,9 @@ data = {
     'whole_medial_temporal_cortex_std': round(whole_medial_temporal_cortex_std_exclude, 4),
     'ktrans_wm_outliers': wm_outliers,
     'ktrans_gm_outliers': gm_outliers,
-    'T1_blood_histogram': "../" + T1_blood_histogram_exclude_path,
-    'wm_histogram': "../" + ktrans_wm_histogram_exclude_path,
-    'gm_histogram': "../" + ktrans_gm_histogram_exclude_path,
+    'T1_blood_histogram': "../../" + T1_blood_histogram_exclude_path,
+    'wm_histogram': "../../" + ktrans_wm_histogram_exclude_path,
+    'gm_histogram': "../../" + ktrans_gm_histogram_exclude_path,
     'whole_hippo_outliers': whole_hippo_outliers,
     'whole_phg_outliers': whole_phg_outliers,
     'whole_putamen_outliers': whole_putamen_outliers,
@@ -2136,20 +2136,20 @@ data = {
     'whole_superior_temporal_cortex_outliers': whole_superior_temporal_cortex_outliers,
     'whole_posterior_cingulate_cortex_outliers': whole_posterior_cingulate_cortex_outliers,
     'whole_medial_temporal_cortex_outliers': whole_medial_temporal_cortex_outliers,
-    'whole_hippo_histogram': "../" + whole_hippo_histogram_exclude_path,
-    'whole_phg_histogram': "../" + whole_phg_histogram_exclude_path,
-    'whole_putamen_histogram': "../" + whole_putamen_histogram_exclude_path,
-    'whole_pallidum_histogram': "../" + whole_pallidum_histogram_exclude_path,
-    'whole_thalamus_histogram': "../" + whole_thalamus_histogram_exclude_path,
-    'whole_caudate_histogram': "../" + whole_caudate_histogram_exclude_path,
-    'whole_amygdala_histogram': "../" + whole_amygdala_histogram_exclude_path,
-    'whole_entorhinal_cortex_histogram': "../" + whole_entorhinal_cortex_histogram_exclude_path,
-    'whole_fusiform_gyrus_cortex_histogram': "../" + whole_fusiform_gyrus_cortex_histogram_exclude_path,
-    'whole_fusiform_gyrus_WM_histogram': "../" + whole_fusiform_gyrus_WM_histogram_exclude_path,
-    'whole_insula_WM_histogram': "../" + whole_insula_WM_histogram_exclude_path,
-    'whole_superior_temporal_cortex_histogram': "../" + whole_superior_temporal_cortex_histogram_exclude_path,
-    'whole_posterior_cingulate_cortex_histogram': "../" + whole_posterior_cingulate_cortex_histogram_exclude_path,
-    'whole_medial_temporal_cortex_histogram': "../" + whole_medial_temporal_cortex_histogram_exclude_path
+    'whole_hippo_histogram': "../../" + whole_hippo_histogram_exclude_path,
+    'whole_phg_histogram': "../../" + whole_phg_histogram_exclude_path,
+    'whole_putamen_histogram': "../../" + whole_putamen_histogram_exclude_path,
+    'whole_pallidum_histogram': "../../" + whole_pallidum_histogram_exclude_path,
+    'whole_thalamus_histogram': "../../" + whole_thalamus_histogram_exclude_path,
+    'whole_caudate_histogram': "../../" + whole_caudate_histogram_exclude_path,
+    'whole_amygdala_histogram': "../../" + whole_amygdala_histogram_exclude_path,
+    'whole_entorhinal_cortex_histogram': "../../" + whole_entorhinal_cortex_histogram_exclude_path,
+    'whole_fusiform_gyrus_cortex_histogram': "../../" + whole_fusiform_gyrus_cortex_histogram_exclude_path,
+    'whole_fusiform_gyrus_WM_histogram': "../../" + whole_fusiform_gyrus_WM_histogram_exclude_path,
+    'whole_insula_WM_histogram': "../../" + whole_insula_WM_histogram_exclude_path,
+    'whole_superior_temporal_cortex_histogram': "../../" + whole_superior_temporal_cortex_histogram_exclude_path,
+    'whole_posterior_cingulate_cortex_histogram': "../../" + whole_posterior_cingulate_cortex_histogram_exclude_path,
+    'whole_medial_temporal_cortex_histogram': "../../" + whole_medial_temporal_cortex_histogram_exclude_path
 }
 
 output_exclude = template.render(data)
@@ -2158,15 +2158,20 @@ output_exclude = template.render(data)
 if not os.path.exists(dir + '/reports'):
     os.makedirs(dir + '/reports')
 
+run_folder = output_dir[1:]
+# make output_dir directory if it doesn't exist
+if not os.path.exists(dir + '/reports/' + run_folder):
+    os.makedirs(dir + '/reports/' + run_folder)
+
 # write html to file
-with open(dir + '/reports/population_report/' + output_dir + "_" + date_filename + '.html', 'w') as f:
+with open(dir + '/reports/' + run_folder + '/population_report' + output_dir + "_" + date_filename + '.html', 'w') as f:
     f.write(output)
 
-with open(dir + '/reports/population_report_exclude/' + output_dir + "_" + date_filename + '.html', 'w') as f:
+with open(dir + '/reports/' + run_folder + '/population_report_exclude' + output_dir + "_" + date_filename + '.html', 'w') as f:
     f.write(output_exclude)
 
-print('Report generated in ' + dir + '/reports/population_report/' + output_dir + "_" + date_filename + '.html')
-print('Excluded report generated in ' + dir + '/reports/population_report_exclude/' + output_dir + "_" + date_filename + '.html')
+print('Report generated in ' + dir + '/reports/' + run_folder + '/population_report' + output_dir + "_" + date_filename + '.html')
+print('Excluded report generated in ' + dir + '/reports/' + run_folder + '/population_report_exclude' + output_dir + "_" + date_filename + '.html')
 
 if os.path.exists('/media/network_mriphysics/USC-PPG/bids_test/dce_available_3524_ac.xlsx'):
     # add apoe and cdr fields to population_data
@@ -2458,8 +2463,8 @@ for subject_id in subjects:
                     report_content = f.read()
 
                 # replace placeholder with histogram path
-                report_content = report_content.replace("placeholder_wm", "../figures/placement_wm_histogram.png")
-                report_content = report_content.replace("placeholder_gm", "../figures/placement_gm_histogram.png")
+                report_content = report_content.replace("placeholder_wm", "../../figures/placement_wm_histogram.png")
+                report_content = report_content.replace("placeholder_gm", "../../figures/placement_gm_histogram.png")
                 # write html to file
                 with open(filename, 'w') as f:
                     f.write(report_content)

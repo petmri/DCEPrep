@@ -4,6 +4,7 @@
 # control variables
 COMPARISON_MODE=0
 EN_BIAS1=0
+EN_SMOOTHING=0
 fail=0
 count=0
 total=0
@@ -217,13 +218,13 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	# ------------------------------
 	echo Begin DCE processing...
 	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; run_dce_cli('$DATA_DIR/$SUBJECT/$SESSION/', '$SUBJECT_TP_PATH/'); exit;"
-	mv dce/dce_patlak_fit_Ktrans.nii dce/${PREFIX}_Ktrans.nii
-	mv dce/dce_patlak_fit_ktrans_ci_low.nii dce/${PREFIX}_Ktrans_ci_low.nii
-	mv dce/dce_patlak_fit_ktrans_ci_high.nii dce/${PREFIX}_Ktrans_ci_high.nii
-	mv dce/dce_patlak_fit_vp.nii dce/${PREFIX}_vp.nii
-	mv dce/dce_patlak_fit_vp_ci_low.nii dce/${PREFIX}_vp_ci_low.nii
-	mv dce/dce_patlak_fit_vp_ci_high.nii dce/${PREFIX}_vp_ci_high.nii
-	mv dce/dce_patlak_fit_sse.nii dce/${PREFIX}_sse.nii
+	mv dce/dce_*_fit_Ktrans.nii dce/${PREFIX}_Ktrans.nii
+	mv dce/dce_*_fit_ktrans_ci_low.nii dce/${PREFIX}_Ktrans_ci_low.nii
+	mv dce/dce_*_fit_ktrans_ci_high.nii dce/${PREFIX}_Ktrans_ci_high.nii
+	mv dce/dce_*_fit_vp.nii dce/${PREFIX}_vp.nii
+	mv dce/dce_*_fit_vp_ci_low.nii dce/${PREFIX}_vp_ci_low.nii
+	mv dce/dce_*_fit_vp_ci_high.nii dce/${PREFIX}_vp_ci_high.nii
+	mv dce/dce_*_fit_sse.nii dce/${PREFIX}_sse.nii
 	# move images into figures folder
 	mv dce/dce*.png figures/
 	rm -f dce/*.fig
