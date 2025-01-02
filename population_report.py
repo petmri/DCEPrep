@@ -2173,9 +2173,9 @@ with open(dir + '/reports/' + run_folder + '/population_report_exclude' + output
 print('Report generated in ' + dir + '/reports/' + run_folder + '/population_report' + output_dir + "_" + date_filename + '.html')
 print('Excluded report generated in ' + dir + '/reports/' + run_folder + '/population_report_exclude' + output_dir + "_" + date_filename + '.html')
 
-if os.path.exists('/media/network_mriphysics/USC-PPG/bids_test/dce_available_3524_ac.xlsx'):
+if os.path.exists(os.path.join(dir, '../dce_available_3524_ac.xlsx')):
     # add apoe and cdr fields to population_data
-    df = pd.read_excel('/media/network_mriphysics/USC-PPG/bids_test/dce_available_3524_ac.xlsx', sheet_name="main")
+    df = pd.read_excel(os.path.join(dir, '../dce_available_3524_ac.xlsx'), sheet_name="main")
 
     # get apoe and cdr values for each subject
     for subject in population_data.keys():
@@ -2279,7 +2279,7 @@ if os.path.exists('/media/network_mriphysics/USC-PPG/bids_test/dce_available_352
         population_data_failed[subject]["BMI"] = bmi
 
     # read EXCLUDED sheet from dce_available_3524_ac.xlsx and move subjects to population_data_exclude
-    df = pd.read_excel('/media/network_mriphysics/USC-PPG/bids_test/dce_available_3524_ac.xlsx', sheet_name="EXCLUDED")
+    df = pd.read_excel(os.path.join(dir, '../dce_available_3524_ac.xlsx'), sheet_name="EXCLUDED")
     # get subject ID and timepoint (first and second columns)
     subjects_excluded = df['Subject_ID']
     timepoints_excluded = df['Timepoint']
