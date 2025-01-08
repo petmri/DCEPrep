@@ -181,6 +181,12 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/figures $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/figures
 		fi
 		cd $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION || echo "ERROR: $OUTPUT_DIR does not exist. Preprocess first or check the name and try again." >> $LOG_FILE
+		if [ ! -f dce/${PREFIX}_desc-hmc_DCEref.nii.gz ]
+			then
+			# probably a no motion correction run, get 2nd t-slice of DCE
+			# cp dce/${PREFIX}_desc-bfc_DCE.nii.gz dce/${PREFIX}_desc-hmc_DCE.nii.gz
+			fslmerge -n 1 dce/${PREFIX}_desc-hmc_DCEref.nii.gz dce/${PREFIX}_desc-bfc_DCE.nii.gz
+		fi
 	fi
 	SUBJECT_TP_PATH=$(pwd)
 

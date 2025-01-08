@@ -13,6 +13,7 @@ from nilearn import plotting
 from matplotlib import colors as mcolors
 
 from aif_metric import *
+import glob
 
 source_dir = sys.argv[1]
 # source_dir = sys.argv[2]
@@ -453,7 +454,11 @@ else:
 try:
     # get GPU info
     GPU = False
-    with open('dce/dce_patlak_fit.log', 'r') as f:
+    latest_log_file = max(glob.glob('dce/dce_*_fit.log'), key=os.path.getctime)
+    latest_log_file_name = os.path.basename(latest_log_file)
+    print(f"Latest log file: {latest_log_file_name}")
+    dce_model = latest_log_file_name.replace('dce_', '').replace('_fit.log', '')
+    with open(latest_log_file, 'r') as f:
         for line in f:
             if "Gpufit detected" in line:
                 GPU = True
@@ -463,10 +468,11 @@ try:
         GPU_DCE = 'CPU was used'
     RUND_log = True
 except Exception as e:
-    print("Error getting DCE GPU info from dce_patlak_fit.log")
+    print("Error getting DCE GPU info from latest dce_*_fit.log")
     print(e)
     RUND_log = False
     GPU_DCE = 'Failed to load GPU info'
+    dce_model = 'Failed to load DCE model'
 
 if RUND_log:
     # get RUN D time elapsed
@@ -477,7 +483,7 @@ if RUND_log:
             return match.group(1)
         return None
 
-    with open('dce/dce_patlak_fit.log', 'r') as file:
+    with open(latest_log_file, 'r') as file:
         log_text = file.read()
 
     dce_elapsed_time = extract_elapsed_time(log_text)
@@ -580,7 +586,7 @@ data = {
     'B_last_line' : str(B_last_line),
     'DCE_AIF_fit' : '../figures/dceAIF_fitting.png',
     'DCE_AIF_timecurve' : '../figures/dce_timecurves.png',
-    'DCE_model' : 'Model: Patlak',
+    'DCE_model' : 'Model: ' + dce_model,
     'GPU_DCE' : str(GPU_DCE),
     'DCE_elapsed_time' : 'Elapsed time: ' + str(dce_elapsed_time) + 's',
     'ktrans_zeros' : f'../figures/{prefix}_desc-zeros.png',

@@ -143,42 +143,108 @@ if [ -z "$DATA_DIR" ]
 fi
 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_cli.m' -printf '%h\n' -quit || find / -name '*run_dce_cli.m' -printf '%h\n' -quit) # &> /dev/null
+	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_cli.m' -printf '%h\n' -quit || find / -name '*run_dce_cli.m' -printf '%h\n' -quit) &> /dev/null
 	SCRIPT_PATH=$(dirname "$(realpath $0)")
-	GPUFIT_PATH=$(find $HOME -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit || find / -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit) # &> /dev/null
+	GPUFIT_PATH=$(find $HOME -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit || find / -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit) &> /dev/null
 	GPUFIT_M_PATH=$(find $HOME -name 'ModelID.m' -printf '%h\n' -quit || find / -name 'ModelID.m' -printf '%h\n' -quit)
 else
 	ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 	SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
 	GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
 fi
-echo "SCRIPT_PATH: $SCRIPT_PATH"
 cd $DATA_DIR || exit 1
+
 # count timepoints
 for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	((count++))
 done
+# Function to calculate and display progress and estimated remaining time
+function show_progress {
+    local current_iteration=$1
+    local start_time=$2
+    local total_iterations=$3
+	local runtime=$4
+
+    # Calculate elapsed time
+    current_time=$(date +%s)
+    elapsed_time=$((current_time - start_time))
+
+    # Calculate estimated total time
+    estimated_total_time=$((runtime * total_iterations))
+
+    # Calculate remaining time
+    remaining_time=$((estimated_total_time - elapsed_time))
+
+    # Display progress and estimated remaining time
+    echo -ne "Progress: $((elapsed_time * 100 / estimated_total_time))% - "
+    echo -ne "Elapsed time: $(($elapsed_time / 60))m $(($elapsed_time % 60))s - "
+	if [ $remaining_time -lt 0 ]
+		then
+		echo -ne "Estimated remaining time: calculating...\r"
+	else
+		echo -ne "Estimated remaining time: $(($remaining_time / 60))m $(($remaining_time % 60))s\r"
+	fi
+}
 # Run bias correction on VFA data
 # ------------------------------
 for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
+	start_time=$(date +%s)
 	if [ ${source_dir::-1} == "/" ]; then
 		source_dir=$DATA_DIR/${source_dir::-1}
 	fi
 	date >> $LOG_FILE
 	echo "Preprocessing ${source_dir}..."
 	((current++))
+
 	# get subject ID and session
-	SUBJECT=$(echo $source_dir | grep -o 'sub-[0-9]*')
+	SUBJECT=$(echo $source_dir | grep -o 'sub-[^/]*')
 	SESSION=$(echo $source_dir | grep -o 'ses-[0-9]*')
 	PREFIX=${SUBJECT}_${SESSION}
 
-	# gzip -f $source_dir/DCE.nii # &> /dev/null
 	if [ $COMPARISON_MODE -eq 1 ]
 		then
 		if [ ! -d "$DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION" ]
 			then
 			echo "Comparison mode enabled. Creating output directory $OUTPUT_DIR..." >> $LOG_FILE
-			mkdir -p $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION
+			mkdir -p $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
+		fi
+		if [ ! $USE_AUTO_AIF -eq 1 ]
+			then
+			mask_copied=0
+			cp $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/*$AIF_SUFFIX* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/ && mask_copied=1
+			cp $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/*$AIF_TRAINING_SUFFIX* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/ && mask_copied=1
+			# Extract the session number from the session string
+			session_num=$(echo $SESSION | grep -o '[0-9]\+')
+			# turn sub-* into *
+			pat=${SUBJECT#sub-}
+			# Map the session number to the corresponding session string
+			case $session_num in
+				01) session_str="1st" ;;
+				02) session_str="2nd" ;;
+				03) session_str="3rd" ;;
+				*) session_str="" ;;
+			esac
+			# If the session string is not empty, copy the masks
+			if [ $mask_copied -eq 0 ] && [[ -n $session_str ]]; then
+				echo "Copying masks for $SUBJECT $SESSION..." >> $LOG_FILE
+				cp /media/network_mriphysics/USC-PPG/AI_training/loos_model/test/masks/sub-${pat}_ses-${session_num}_desc-AIF_mask.nii.gz $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/${SUBJECT}_${SESSION}_${AIF_TRAINING_SUFFIX}.nii.gz && mask_copied=1
+				cp /media/network_mriphysics/USC-PPG/AI_training/loos_model/test/masks/${pat}_${session_str}_timepoint.nii.gz $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/${SUBJECT}_${SESSION}_${AIF_TRAINING_SUFFIX}.nii.gz && mask_copied=1
+				cp /media/network_mriphysics/USC-PPG/AI_training/loos_model/train/masks/sub-${pat}_ses-${session_num}_desc-AIF_mask.nii.gz $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/${SUBJECT}_${SESSION}_${AIF_TRAINING_SUFFIX}.nii.gz && mask_copied=1
+				cp /media/network_mriphysics/USC-PPG/AI_training/loos_model/train/masks/${pat}_${session_str}_timepoint.nii.gz $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/${SUBJECT}_${SESSION}_${AIF_TRAINING_SUFFIX}.nii.gz && mask_copied=1
+				cp /media/network_mriphysics/USC-PPG/AI_training/loos_model/val/masks/sub-${pat}_ses-${session_num}_desc-AIF_mask.nii.gz $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/${SUBJECT}_${SESSION}_${AIF_TRAINING_SUFFIX}.nii.gz && mask_copied=1
+				cp /media/network_mriphysics/USC-PPG/AI_training/loos_model/val/masks/${pat}_${session_str}_timepoint.nii.gz $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/${SUBJECT}_${SESSION}_${AIF_TRAINING_SUFFIX}.nii.gz && mask_copied=1
+			fi
+			if [ $mask_copied -eq 0 ] && [ ! -f $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_SUFFIX}.nii.gz ] && [ ! -f $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz ] && [ $USE_AUTO_AIF -eq 2 ]
+				then
+				echo "No AIF file found for $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/. Skipping timepoint..." >> $LOG_FILE
+				rm -rf $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION
+				if [ -z "$(ls -A $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT)" ]
+					then
+					rm -rf $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT
+				fi
+				cd $DATA_DIR
+				continue
+			fi
 		fi
 		cd $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION || exit 1
 	else
@@ -447,7 +513,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		# apply MP-RAGE wm mask
 		for VFA in "${VFA_LIST[@]}"; do
 			# VFA_NUM=$(echo $VFA | grep -o '[0-9]*')
-			fslmaths anat/${PREFIX}_${VFA}_desc-brain_VFA.nii.gz -mas anat/${PREFIX}_label-WM_mask.nii.gz anat/${PREFIX}_${VFA}_seg-WM_VFA.nii.gz &> /dev/null
+			fslmaths anat/${PREFIX}_${VFA}_${REF_SPACE}_desc-brain_VFA.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz anat/${PREFIX}_${VFA}_${REF_SPACE}_seg-WM_VFA.nii.gz &> /dev/null
 		done
 	fi
 
