@@ -249,12 +249,13 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	# ------------------------------
 	
 	# Align then re-binarize gm mask
-	antsApplyTransforms -i anat/${PREFIX}_label-GM_mask.nii.gz -r dce/${PREFIX}_desc-hmc_DCEref.nii.gz -t anat/${PREFIX}_from-T1w_to-DCEref.mat -o anat/${PREFIX}_space-DCEref_label-GM_mask_pv.nii.gz &> /dev/null
+	DCEREF_FILE=$(ls dce/${PREFIX}*DCEref.nii.gz | head -n 1)
+	antsApplyTransforms -i anat/${PREFIX}_label-GM_mask.nii.gz -r $DCEREF_FILE -t anat/${PREFIX}_from-T1w_to-DCEref.mat -o anat/${PREFIX}_space-DCEref_label-GM_mask_pv.nii.gz &> /dev/null
 	fslmaths anat/${PREFIX}_space-DCEref_label-GM_mask_pv.nii.gz -thr 0.9 -bin anat/${PREFIX}_space-DCEref_label-GM_mask.nii.gz
 	rm anat/${PREFIX}_space-DCEref_label-GM_mask_pv.nii.gz
 	
 	# Align CSF mask
-	antsApplyTransforms -i anat/${PREFIX}_label-CSF_mask.nii.gz -r dce/${PREFIX}_desc-hmc_DCEref.nii.gz -t anat/${PREFIX}_from-T1w_to-DCEref.mat -o anat/${PREFIX}_space-DCEref_label-CSF_mask_pv.nii.gz &> /dev/null
+	antsApplyTransforms -i anat/${PREFIX}_label-CSF_mask.nii.gz -r $DCEREF_FILE -t anat/${PREFIX}_from-T1w_to-DCEref.mat -o anat/${PREFIX}_space-DCEref_label-CSF_mask_pv.nii.gz &> /dev/null
 	fslmaths anat/${PREFIX}_space-DCEref_label-CSF_mask_pv.nii.gz -thr 0.9 -bin anat/${PREFIX}_space-DCEref_label-CSF_mask.nii.gz
 	rm anat/${PREFIX}_space-DCEref_label-CSF_mask_pv.nii.gz
 	
@@ -273,12 +274,12 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	
 	fslmaths anat/${PREFIX}_space-DCEref_label-WM_mask.nii.gz -add 2000 huh.nii
 	fslmaths huh.nii.gz -thr 2001 huh.nii
-	fslmaths dce/${PREFIX}_desc-hmc_DCEref.nii.gz -sub huh.nii.gz bozo.nii
+	fslmaths $DCEREF_FILE -sub huh.nii.gz bozo.nii
 	fslmaths bozo.nii -thr 0 anat/${PREFIX}_space-DCEref_label-WMQC.nii.gz
 	
 	fslmaths anat/${PREFIX}_space-DCEref_label-GM_mask.nii.gz -add 2000 huh2.nii
 	fslmaths huh2.nii.gz -thr 2001 huh2.nii
-	fslmaths dce/${PREFIX}_desc-hmc_DCEref.nii.gz -sub huh2.nii.gz bozo2.nii
+	fslmaths $DCEREF_FILE -sub huh2.nii.gz bozo2.nii
 	fslmaths bozo2.nii -thr 0 anat/${PREFIX}_space-DCEref_label-GMQC.nii.gz
 	rm huh.nii.gz huh2.nii.gz bozo.nii.gz bozo2.nii.gz
 		
@@ -301,7 +302,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 			--o $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc-in-rawavg.mgz \
 			--regheader $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc.mgz
         mri_convert $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc-in-rawavg.mgz wmparc.nii.gz
-        antsApplyTransforms -i wmparc.nii.gz -r dce/${PREFIX}_desc-hmc_DCEref.nii.gz -t anat/${PREFIX}_from-t1w_to-DCEref.mat -n NearestNeighbor -o anat/${PREFIX}_space-DCEref_desc-wmparc.nii
+        antsApplyTransforms -i wmparc.nii.gz -r $DCEREF_FILE -t anat/${PREFIX}_from-t1w_to-DCEref.mat -n NearestNeighbor -o anat/${PREFIX}_space-DCEref_desc-wmparc.nii
         gzip -f anat/${PREFIX}_space-DCEref_desc-wmparc.nii
 		rm wmparc.nii.gz
 	else

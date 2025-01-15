@@ -26,7 +26,7 @@ files_to_reorient = [f'anat/{prefix}_flip-01_space-DCEref_VFA.nii.gz', f'dce/{pr
                      f'anat/{prefix}_space-DCEref_T1w.nii.gz', f'anat/{prefix}_space-DCEref_label-WM_mask.nii.gz',
                      f'anat/{prefix}_space-DCEref_T1map.nii', f'anat/{prefix}_space-DCEref_desc-brain_mask.nii.gz',
                      f'anat/{prefix}_space-DCEref_label-GM_mask.nii.gz', f'anat/{prefix}_space-DCEref_desc-wmparc.nii.gz',
-                     f'dce/{prefix}_desc-hmc_DCEref.nii.gz']
+                     f'dce/{prefix}_desc-hmc_DCEref.nii.gz', f'dce/{prefix}_DCEref.nii.gz']
 # if c3d exists, reorient files to RAS
 dimensions = 0
 voxel_size = 0
@@ -251,8 +251,12 @@ except Exception as e:
 aif = nib.load(f'dce/{prefix}_desc-AIFpos_T1map.nii.gz')
 aif_data = aif.get_fdata()
 # img = nib.load(str(tp_dir) + '/DCE_mc.nii.gz')
-img = nib.load(f'dce/{prefix}_desc-hmc_DCE.nii.gz')
-img_data = img.get_fdata()
+try:
+    img = nib.load(f'dce/{prefix}_desc-hmc_DCE.nii.gz')
+    img_data = img.get_fdata()
+except FileNotFoundError:
+    img = nib.load(f'{source_dir}/dce/{prefix}_DCE.nii.gz')
+    img_data = img.get_fdata()
 # binarize AIF
 aif_data[aif_data > 0] = 1
 aif_data[aif_data < 0] = 0
@@ -310,7 +314,10 @@ if freesurfer:
     wmparc_flipped = np.flip(wmparc_data, axis=1)
     wmparc_flipped = nib.Nifti1Image(wmparc_flipped, wmparc.affine, wmparc.header)
 
-    dce = nib.load(f'dce/{prefix}_desc-hmc_DCEref_RAS.nii.gz')
+    try:
+        dce = nib.load(f'dce/{prefix}_desc-hmc_DCEref_RAS.nii.gz')
+    except FileNotFoundError:
+        dce = nib.load(f'dce/{prefix}_DCEref_RAS.nii.gz')
     dce_data = dce.get_fdata()
     dce_flipped = np.flip(dce_data, axis=1)
     dce_flipped = nib.Nifti1Image(dce_flipped, dce.affine, dce.header)

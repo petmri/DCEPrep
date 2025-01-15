@@ -3,7 +3,7 @@ from pathlib import Path
 from statistics import mean, median, pstdev, stdev
 import numpy as np
 import matplotlib
-from numpy.lib.function_base import average
+# from numpy.lib.function_base import average
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
@@ -306,8 +306,8 @@ def analyze(tp_dir):
     for i in range(slice_num):
         Ktrans_wm_slicevoxels.append(len(Ktrans_wm_data[:, :, i][wm_data[:, :, i] > 0]))
         Ktrans_gm_slicevoxels.append(len(Ktrans_gm_data[:, :, i][gm_data[:, :, i] > 0]))
-    Ktrans_wm_zero_avg = average(Ktrans_wm_zeros, weights=Ktrans_wm_slicevoxels)
-    Ktrans_gm_zero_avg = average(Ktrans_gm_zeros, weights=Ktrans_gm_slicevoxels)
+    Ktrans_wm_zero_avg = np.average(Ktrans_wm_zeros, weights=Ktrans_wm_slicevoxels)
+    Ktrans_gm_zero_avg = np.average(Ktrans_gm_zeros, weights=Ktrans_gm_slicevoxels)
     min_ylim, max_ylim = ax5.get_ylim()
     min_xlim, max_xlim = ax5.get_xlim()
     ax5.hlines(Ktrans_wm_zero_avg, min_xlim, max_xlim, color='pink', linestyle='dashed')
