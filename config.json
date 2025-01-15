@@ -9,35 +9,49 @@
     "descriptions": [
         {
             "datatype": "anat",
-            "suffix": "T1",
-            "modalityLabel": "T1w",
+            "suffix": "T1w",
             "criteria": {
-                "SeriesDescription": "*MPRAGE*"
+                "SeriesDescription": "*MPRAGE*SEL."
             },
             "sidecarChanges": {
-                "ProtocolName": "T1"
+                "ProtocolName": "T1w"
             }
         },
         {
             "datatype": "anat",
-            "suffix": "T1",
-            "modalityLabel": "T1w",
+            "suffix": "T1w",
             "criteria": {
                 "SeriesDescription": "*FSPGR*"
             },
             "sidecarChanges": {
-                "ProtocolName": "T1"
+                "ProtocolName": "T1w"
             }
         },
         {
             "datatype": "anat",
-            "suffix": "T1",
-            "modalityLabel": "T1w",
+            "suffix": "T1w",
             "criteria": {
                 "SeriesDescription": "*mprage*"
             },
             "sidecarChanges": {
-                "ProtocolName": "T1"
+                "ProtocolName": "T1w"
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "T1w",
+            "criteria": {
+                "SeriesDescription": "Accelerated Sagittal MPRAGE"
+            },
+            "sidecarChanges": {
+                "ProtocolName": "T1w"
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "FLAIR",
+            "criteria": {
+                "SeriesDescription": "*FLAIR*"
             }
         },
         {
@@ -62,7 +76,7 @@
             "datatype": "dce",
             "suffix": "DCE",
             "criteria": {
-                "SeriesDescription": "*dynamic_waterext"
+                "SeriesDescription": "*dynamic_waterext*"
             },
             "sidecarChanges": {
             }
@@ -250,6 +264,46 @@
             "criteria": {
                 "SeriesDescription": "*FA25*",
                 "FlipAngle": "25"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-01",
+            "criteria": {
+                "SeriesDescription": "*FLIP1"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-02",
+            "criteria": {
+                "SeriesDescription": "*FLIP2"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-03",
+            "criteria": {
+                "SeriesDescription": "*FLIP3"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-04",
+            "criteria": {
+                "SeriesDescription": "*FLIP4"
             },
             "sidecarChanges": {
             }
