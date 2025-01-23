@@ -451,7 +451,7 @@ def get_case_stats(subject_id, timepoint):
             except Exception as e:
                 print("Error reading freesurfer stats for", subject_id, timepoint)
                 print(e)
-                error = e
+                error = "no recon-all"
                 hippo_vol = -1
                 phg_vol = -1
                 putamen_vol = -1
@@ -812,14 +812,13 @@ import time
 # time
 # start = time.time()
 lock = threading.Lock()
-with ThreadPoolExecutor(max_workers=4) as executor:
+with ThreadPoolExecutor() as executor:
     futures = [executor.submit(get_case_stats, subject_id, timepoint) for subject_id in subjects for timepoint in os.listdir(os.path.join(dceprep_dir, subject_id))]
     for future in futures:
         try:
             future.result()
         except Exception as e:
             print(f"Error in future: {future}, {e}")
-
 # end = time.time()
 # get flagged cases
 flagged_cases = []
@@ -832,6 +831,7 @@ for entry in successful_timepoints:
     session = entry.split('/')[1]
     save_name = f"{entry}/reports/{subject}_{session}_desc-casereport.html"
     flag = False
+    entry = subject + "_" + session
     if entry in population_data.keys() and population_data[entry]['max_disp'] > MOTION_THRESHOLD:
         flag = True
         flag_str += "motion"
