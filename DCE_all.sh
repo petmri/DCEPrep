@@ -143,9 +143,9 @@ function show_progress {
 # 	then
 # 	SCRIPT_LOOP_DIR=dceprep/sub-*/ses-*
 # fi
-# if [ -z "$(ls -A $SCRIPT_LOOP_DIR 2>/dev/null)" ]; then
+if [ -z "$(ls -A $SCRIPT_LOOP_DIR 2>/dev/null)" ]; then
 		SCRIPT_LOOP_DIR=dceprep-autoAIF_huber_final/sub-*/ses-*
-# fi
+fi
 for der_dir in $SCRIPT_LOOP_DIR; do
 	((total++))
 done
