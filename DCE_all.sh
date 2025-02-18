@@ -309,9 +309,9 @@ for der_dir in $SCRIPT_LOOP_DIR; do
         antsApplyTransforms -i wmparc.nii.gz -r dce/${PREFIX}_desc-hmc_DCEref.nii.gz -t anat/${PREFIX}_from-t1w_to-DCEref.mat -n NearestNeighbor -o anat/${PREFIX}_space-DCEref_desc-wmparc.nii &> /dev/null
         gzip -f anat/${PREFIX}_space-DCEref_desc-wmparc.nii &> /dev/null
 		rm wmparc.nii.gz
-	else
-		echo
-				# flirt -in DCE_mc.nii.gz -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -omat DCE2MNI.mat -out DCE_MNI_FSL.nii.gz
+	elif [ ! -f dce/${PREFIX}_space-MNI_Ktrans.nii.gz ]
+		then
+		# flirt -in DCE_mc.nii.gz -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -omat DCE2MNI.mat -out DCE_MNI_FSL.nii.gz
 		# flirt -in $dir/T1.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out t1w_MNI.nii.gz
 		# antsRegistration --verbose 0 --dimensionality 3 --float 0 --collapse-output-transforms 1 \
 		# 	--output [ DCE_MPRAGE,DCE_MPRAGE.nii.gz ] --interpolation Linear --use-histogram-matching 0 \
