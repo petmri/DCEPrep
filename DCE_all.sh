@@ -143,6 +143,9 @@ function show_progress {
 # 	then
 # 	SCRIPT_LOOP_DIR=dceprep/sub-*/ses-*
 # fi
+# if [ -z "$(ls -A $SCRIPT_LOOP_DIR 2>/dev/null)" ]; then
+		SCRIPT_LOOP_DIR=dceprep-autoAIF_huber_final/sub-*/ses-*
+# fi
 for der_dir in $SCRIPT_LOOP_DIR; do
 	((total++))
 done
@@ -159,7 +162,6 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	SUBJECT=$(echo $der_dir | grep -o 'sub-[^/]*')
 	SESSION=$(echo $der_dir | grep -o 'ses-[0-9]*')
 	PREFIX=${SUBJECT}_${SESSION}
-	cd $der_dir || exit 1
 	if [ $COMPARISON_MODE -eq 1 ]
 		then
 		echo "Comparison mode enabled. Processing in $OUTPUT_DIR..." >> $LOG_FILE
@@ -168,17 +170,17 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 			mkdir -p $DERIV_DIR/dceprep-"$OUTPUT_DIR"/$SUBJECT/$SESSION
 			mkdir -p $DERIV_DIR/dceprep-"$OUTPUT_DIR"/$SUBJECT/$SESSION/dce
 			mkdir -p $DERIV_DIR/dceprep-"$OUTPUT_DIR"/$SUBJECT/$SESSION/anat
-			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/*bfcz* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
-			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/*desc-AIF*_T1map* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
-			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/*hmc* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
-			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/*.txt $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
-			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/anat/*_T1map* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
-			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/anat/*mask* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
-			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/anat/*.mat $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
-			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/anat/*wmparc* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
-			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/anat/*DCEref_VFA* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
-			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/anat/*DCEref_T1w* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
-			cp -r $DERIV_DIR/dceprep/$SUBJECT/$SESSION/figures $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/figures
+			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/dce/*bfcz* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
+			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/dce/*desc-AIF*_T1map* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
+			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/dce/*hmc* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
+			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/dce/*.txt $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
+			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/anat/*_T1map* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/anat/*mask* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/anat/*.mat $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/anat/*wmparc* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/anat/*DCEref_VFA* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/anat/*DCEref_T1w* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/figures $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/figures
 		fi
 		cd $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION || echo "ERROR: $OUTPUT_DIR does not exist. Preprocess first or check the name and try again." >> $LOG_FILE
 		if [ ! -f dce/${PREFIX}_desc-hmc_DCEref.nii.gz ]
@@ -187,6 +189,8 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 			# cp dce/${PREFIX}_desc-bfc_DCE.nii.gz dce/${PREFIX}_desc-hmc_DCE.nii.gz
 			fslmerge -n 1 dce/${PREFIX}_desc-hmc_DCEref.nii.gz dce/${PREFIX}_desc-bfc_DCE.nii.gz
 		fi
+	else
+		cd $der_dir || echo "ERROR: $der_dir does not exist. Preprocess first or check the name and try again." >> $LOG_FILE
 	fi
 	SUBJECT_TP_PATH=$(pwd)
 
@@ -300,10 +304,10 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 		mri_label2vol --seg $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc.mgz \
 			--temp $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/rawavg.mgz \
 			--o $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc-in-rawavg.mgz \
-			--regheader $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc.mgz
-        mri_convert $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc-in-rawavg.mgz wmparc.nii.gz
-        antsApplyTransforms -i wmparc.nii.gz -r $DCEREF_FILE -t anat/${PREFIX}_from-t1w_to-DCEref.mat -n NearestNeighbor -o anat/${PREFIX}_space-DCEref_desc-wmparc.nii
-        gzip -f anat/${PREFIX}_space-DCEref_desc-wmparc.nii
+			--regheader $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc.mgz &> /dev/null
+        mri_convert $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc-in-rawavg.mgz wmparc.nii.gz &> /dev/null
+        antsApplyTransforms -i wmparc.nii.gz -r dce/${PREFIX}_desc-hmc_DCEref.nii.gz -t anat/${PREFIX}_from-t1w_to-DCEref.mat -n NearestNeighbor -o anat/${PREFIX}_space-DCEref_desc-wmparc.nii &> /dev/null
+        gzip -f anat/${PREFIX}_space-DCEref_desc-wmparc.nii &> /dev/null
 		rm wmparc.nii.gz
 	else
 		echo
@@ -314,18 +318,21 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 		# 	--winsorize-image-intensities [ 0.005,0.995 ] --transform Affine[ 0.1 ] \
 		# 	--metric MI[ T1_bet.nii.gz,DCE_mc.nii.gz,1,32,Regular,0.25 ] \
 		# 	--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
-		# antsRegistrationSyNQuick.sh -d 3 -f T1.nii -m DCE_mc.nii.gz -o DCE_MNI -n 8
-		# antsRegistrationSyNQuick.sh -d 3 -f $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -m T1_bet.nii.gz -o t1w_MNI -n 8
-		# antsApplyTransforms -i ref_rep.nii -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t t1w_MNI1Warp.nii.gz -t t1w_MNI0GenericAffine.mat -t [T1_dyn0GenericAffine.mat, 1] -o DCE_mc_MNI.nii.gz
-		# antsRegistration --verbose 0 --dimensionality 3 --float 0 --collapse-output-transforms 1 \
-		# 	--output [ t1w_MNI,t1w_MNI.nii.gz ] --interpolation Linear --use-histogram-matching 0 \
+		# antsRegistrationSyNQuick.sh -d 3 -f anat/${PREFIX}_desc-brain_T1w.nii.gz -m dce/${PREFIX}_desc-hmc_DCEref.nii.gz -o dce/${PREFIX}_space-MNI_DCEref -n 8
+		antsRegistrationSyNQuick.sh -d 3 -f $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -m anat/${PREFIX}_desc-brain_T1w.nii.gz -o anat/${PREFIX}_space-MNI_T1w -n 8
+		# antsApplyTransforms -i dce/${PREFIX}_desc-hmc_DCEref.nii.gz -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t dce/${PREFIX}_space-MNI_DCEref1Warp.nii.gz -t anat/${PREFIX}_space-MNI_T1w0GenericAffine.mat -t [ anat/${PREFIX}_from-T1w_to-DCEref.mat, 1] -o DCE_mc_MNI.nii.gz
+		antsApplyTransforms -i dce/${PREFIX}_desc-hmc_DCEref.nii.gz -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t anat/${PREFIX}_space-MNI_T1w0GenericAffine.mat -t [ anat/${PREFIX}_from-T1w_to-DCEref.mat, 1] -o dce/${PREFIX}_space-MNI_DCEref.nii.gz
+		# antsRegistration --verbose 1 --dimensionality 3 --float 0 --collapse-output-transforms 1 \
+		# 	--output [ anat/${PREFIX}_space-MNI,anat/${PREFIX}_space-MNI_T1w.nii.gz ] --interpolation Linear --use-histogram-matching 0 \
 		# 	--winsorize-image-intensities [ 0.005,0.995 ] --transform SyN[ 0.1 ] \
-		# 	--metric MI[ $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz,T1_bet.nii.gz,1,32,Regular,0.25 ] \
+		# 	--metric MI[ $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz,anat/${PREFIX}_space-DCEref_T1w.nii.gz,1,32,Regular,0.25 ] \
 		# 	--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
-		# antsApplyTransforms -i dce_patlak_fit_Ktrans.nii -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t t1w_MNI1Warp.nii.gz -t t1w_MNI0GenericAffine.mat -t [T1_dyn0GenericAffine.mat, 1] -o Ktrans_MNI.nii.gz
+		# antsApplyTransforms -i dce/${PREFIX}_Ktrans.nii -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t ${PREFIX}_space-MNI_T1w0Warp.nii.gz -t t1w_MNI0GenericAffine.mat -t [T1_dyn0GenericAffine.mat, 1] -o Ktrans_MNI.nii.gz
+		antsApplyTransforms -i dce/${PREFIX}_Ktrans.nii -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t anat/${PREFIX}_space-MNI_T1w0GenericAffine.mat -t [ anat/${PREFIX}_from-T1w_to-DCEref.mat, 1] -o dce/${PREFIX}_space-MNI_Ktrans.nii.gz
 		# antsApplyTransforms -i dce_patlak_fit_vp.nii -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t t1w_MNI1Warp.nii.gz -t t1w_MNI0GenericAffine.mat -t [T1_dyn0GenericAffine.mat, 1] -o vp_MNI.nii.gz
-
 		# flirt -in dce_patlak_fit_Ktrans.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out ktrans_2_MNI.nii.gz -init DCE2MNI.mat -applyxfm
+	else
+		echo SKIP
 	fi
 	mkdir reports &> /dev/null
 	python3 $SCRIPT_PATH/case_report.py $DATA_DIR/$SUBJECT/$SESSION $PREFIX $USE_FREESURFER

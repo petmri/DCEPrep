@@ -34,13 +34,13 @@ while getopts ":d:bBa:A:ZfhcC:mMstl:S:w:" options; do
 			AIF_SUFFIX=${OPTARG}
 			;;
 		A)
+			AUTO_AIF_PATH=$(find $HOME -wholename '*main_vif.py' -printf '%h\n' -quit || find / -name '*main_vif.py' -printf '%h\n' -quit) &> /dev/null
 			case "${OPTARG}" in
 				M)
 					USE_AUTO_AIF=0
 					;;
 				A)
 					USE_AUTO_AIF=1
-					AUTO_AIF_PATH=$(find $HOME -wholename '*main_vif.py' -printf '%h\n' -quit || find / -name '*main_vif.py' -printf '%h\n' -quit) &> /dev/null
 					;;
 				T)
 					USE_AUTO_AIF=2
@@ -211,8 +211,8 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		if [ ! $USE_AUTO_AIF -eq 1 ]
 			then
 			mask_copied=0
-			cp $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/*$AIF_SUFFIX* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/ && mask_copied=1
-			cp $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/*$AIF_TRAINING_SUFFIX* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/ && mask_copied=1
+			cp $DERIV_DIR/dceprep-manualAIF_refresh/$SUBJECT/$SESSION/dce/*$AIF_SUFFIX* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/ && mask_copied=1
+			# cp $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/*$AIF_TRAINING_SUFFIX* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/ && mask_copied=1
 			# Extract the session number from the session string
 			session_num=$(echo $SESSION | grep -o '[0-9]\+')
 			# turn sub-* into *
@@ -253,10 +253,17 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	fi
 	SUBJECT_TP_PATH=$(pwd)
 
+	if [ ! -f $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_SUFFIX}.nii.gz ] && [ ! -f $DERIV_DIR/dceprep-manualAIF/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz ] && [ $USE_AUTO_AIF -eq 2 ]
+		then
+		echo "No ${PREFIX}_$AIF_SUFFIX file found for $DERIV_DIR/dceprep/$SUBJECT/$SESSION/. Skipping timepoint..." >> $LOG_FILE
+		cd $DATA_DIR
+		continue
+	fi
+
 	if [ $SKIP_IF_SUCCESS -eq 1 ]
 		then
 		if [ -f "dce/${PREFIX}_desc-bfcz_DCE.nii.gz" ] && [ -f "anat/${PREFIX}_space-DCEref_desc-brain_mask.nii.gz" ] && \
-			[ -f "dce/${PREFIX}_desc-AIF_T1map.nii.gz" ] && [ -f "anat/${PREFIX}_space-DCEref_T1map.nii" ] # || [ -f "$DERIV_DIR/reports/$SUBJECT/$SESSION/case_report.html" ]
+			[ -f "dce/${PREFIX}_desc-AIF_T1map.nii.gz" ] && [ -f "anat/${PREFIX}_space-DCEref_T1map.nii" ] #&& [ -f "reports/${PREFIX}_desc-casereport.html" ]
 			then
 			echo "Skipping ${source_dir} because it has already been processed." >> $LOG_FILE
 			let successes++
@@ -469,7 +476,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	done
 	# gzip -f *_masked.nii
 
-	if [ $EN_BIAS1 -eq 1 ]
+	if [ $EN_BIAS1 -eq 1 ] && [ ! -f "anat/${PREFIX}_${VFA_LIST[0]}_${REF_SPACE}_desc-bfc_VFA.nii.gz" ]
 		then
 			VFA_FAST () {
 				local VFA=$1

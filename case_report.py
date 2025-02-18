@@ -503,15 +503,19 @@ else:
 KTRANS_MIN_THRESHOLD = 0.00001
 ktrans_wm = nib.load(f'dce/{prefix}_seg-WM_Ktrans.nii.gz')
 ktrans_wm_data = ktrans_wm.get_fdata()
+ktrans_wm_mask = nib.load(f'anat/{prefix}_space-DCEref_label-WM_mask.nii.gz')
+ktrans_wm_mask_data = ktrans_wm_mask.get_fdata()
 # mean_wm = np.mean(ktrans_wm_data[ktrans_wm_data > 0])*1000
-ktrans_median_wm = np.median(ktrans_wm_data[ktrans_wm_data > KTRANS_MIN_THRESHOLD])*1000
-ktrans_std_wm = np.std(ktrans_wm_data[ktrans_wm_data > KTRANS_MIN_THRESHOLD])*1000
+ktrans_median_wm = np.median(ktrans_wm_data[np.logical_and(ktrans_wm_mask_data > 0, ktrans_wm_data > KTRANS_MIN_THRESHOLD)])*1000
+ktrans_std_wm = np.std(ktrans_wm_data[np.logical_and(ktrans_wm_mask_data > 0, ktrans_wm_data > KTRANS_MIN_THRESHOLD)])*1000
 
 ktrans_gm = nib.load(f'dce/{prefix}_seg-GM_Ktrans.nii.gz')
 ktrans_gm_data = ktrans_gm.get_fdata()
+ktrans_gm_mask = nib.load(f'anat/{prefix}_space-DCEref_label-GM_mask.nii.gz')
+ktrans_gm_mask_data = ktrans_gm_mask.get_fdata()
 # mean_gm = np.mean(ktrans_gm_data[ktrans_gm_data > 0])*1000
-ktrans_median_gm = np.median(ktrans_gm_data[ktrans_gm_data > KTRANS_MIN_THRESHOLD])*1000
-ktrans_std_gm = np.std(ktrans_gm_data[ktrans_gm_data > KTRANS_MIN_THRESHOLD])*1000
+ktrans_median_gm = np.median(ktrans_gm_data[np.logical_and(ktrans_gm_mask_data > 0, ktrans_gm_data > KTRANS_MIN_THRESHOLD)])*1000
+ktrans_std_gm = np.std(ktrans_gm_data[np.logical_and(ktrans_gm_mask_data > 0, ktrans_gm_data > KTRANS_MIN_THRESHOLD)])*1000
 
 # get T1 map median wm and gm
 T1_wm = nib.load(f'anat/{prefix}_space-DCEref_label-WM_T1map.nii.gz')

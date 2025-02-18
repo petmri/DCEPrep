@@ -8,7 +8,7 @@ import nibabel as nib
 from pathlib import Path
 import sys
 import cairosvg
-import imageio
+import imageio.v2 as imageio
 
 
 dir = Path(sys.argv[1])
@@ -120,7 +120,8 @@ subplots_adjust(top=0.99, bottom=0.0, left=-0.0, right=1.0, hspace=0, wspace=-.0
 cax = fig.add_axes([1,0.5,.01,.246])
 colorbar = fig.colorbar(x, cax=cax, orientation='vertical', label='Ktrans (/min)', pad=.02)
 colorbar.set_label('Ktrans (10^-3/min)', labelpad=-15, fontsize = 'xx-small', color = 'white')
-colorbar.ax.set_yticklabels(range(0,10), fontsize = 'xx-small')
+colorbar.ax.yaxis.set_ticks(np.arange(0, 10, 1))
+colorbar.ax.set_yticklabels(np.arange(0, 10, 1), fontsize='xx-small')
 
 plt.savefig('reports/' + prefix + '_desc-report.png', bbox_inches='tight')
 

@@ -222,11 +222,11 @@
     <h2 id="MNI">recon-all Ktrans (10^-3/min, >10^-5)</h2>
     <h3 id="PHG">Parahippocampal Gyrus</h3>
     <ul>
-        <li>Whole PHG mean median: {{ whole_phg_mean }}</li>
-        <li>Whole PHG median median: {{ whole_phg_median }}</li>
-        <li>Whole PHG stdev median: {{ whole_phg_std }}</li>
+        <li>Whole PHG mean median: {{ whole_phg_Ktrans_mean }}</li>
+        <li>Whole PHG median median: {{ whole_phg_Ktrans_median }}</li>
+        <li>Whole PHG stdev median: {{ whole_phg_Ktrans_std }}</li>
         <li>outliers (> 5): {{ whole_phg_outliers }}</li>
-        <img src="{{ whole_phg_histogram }}" alt="missing whole PHG histogram"/>
+        <img src="{{ Ktrans_whole_phg_histogram }}" alt="missing whole PHG histogram"/>
         <!-- <li>Left rostral PHG mean median: {{ rPhG_L_mean }}</li>
         <li>Left rostral PHG median median: {{ rPhG_L_median }}</li>
         <li>Left rostral PHG stdev median: {{ rPhG_L_std }}</li>
@@ -290,11 +290,11 @@
     </ul>
     <h3 id="Hippo">Hippocampus</h3>
     <ul>
-        <li>Whole hippocampus mean median: {{ whole_hippo_mean }}</li>
-        <li>Whole hippocampus median median: {{ whole_hippo_median }}</li>
-        <li>Whole hippocampus stdev median: {{ whole_hippo_std }}</li>
+        <li>Whole hippocampus mean median: {{ whole_hippo_Ktrans_mean }}</li>
+        <li>Whole hippocampus median median: {{ whole_hippo_Ktrans_median }}</li>
+        <li>Whole hippocampus stdev median: {{ whole_hippo_Ktrans_std }}</li>
         <li>outliers (> 5): {{ whole_hippo_outliers }}</li>
-        <img src="{{ whole_hippo_histogram }}" alt="missing whole hippocampus histogram"/>
+        <img src="{{ Ktrans_whole_hippo_histogram }}" alt="missing whole hippocampus histogram"/>
         <!-- <li>Left rostral hippocampus mean median: {{ rHipp_L_mean }}</li>
         <li>Left rostral hippocampus median median: {{ rHipp_L_median }}</li>
         <li>Left rostral hippocampus stdev median: {{ rHipp_L_std }}</li>
@@ -318,105 +318,105 @@
     </ul>
     <h3 id="Putamen">Putamen</h3>
     <ul>
-        <li>Whole putamen mean median: {{ whole_putamen_mean }}</li>
-        <li>Whole putamen median median: {{ whole_putamen_median }}</li>
-        <li>Whole putamen stdev median: {{ whole_putamen_std }}</li>
+        <li>Whole putamen mean median: {{ whole_putamen_Ktrans_mean }}</li>
+        <li>Whole putamen median median: {{ whole_putamen_Ktrans_median }}</li>
+        <li>Whole putamen stdev median: {{ whole_putamen_Ktrans_std }}</li>
         <li>outliers (> 5): {{ whole_putamen_outliers }}</li>
-        <img src="{{ whole_putamen_histogram }}" alt="missing whole putamen histogram"/>
+        <img src="{{ Ktrans_whole_putamen_histogram }}" alt="missing whole putamen histogram"/>
     </ul>
     <h3 id="Pallidum">Pallidum</h3>
     <ul>
-        <li>Whole pallidum mean median: {{ whole_pallidum_mean }}</li>
-        <li>Whole pallidum median median: {{ whole_pallidum_median }}</li>
-        <li>Whole pallidum stdev median: {{ whole_pallidum_std }}</li>
+        <li>Whole pallidum mean median: {{ whole_pallidum_Ktrans_mean }}</li>
+        <li>Whole pallidum median median: {{ whole_pallidum_Ktrans_median }}</li>
+        <li>Whole pallidum stdev median: {{ whole_pallidum_Ktrans_std }}</li>
         <li>outliers (> 5): {{ whole_pallidum_outliers }}</li>
-        <img src="{{ whole_pallidum_histogram }}" alt="missing whole pallidum histogram"/>
+        <img src="{{ Ktrans_whole_pallidum_histogram }}" alt="missing whole pallidum histogram"/>
     </ul>
     <h3 id="Thalamus">Thalamus</h3>
     <ul>
-        <li>Whole thalamus mean median: {{ whole_thalamus_mean }}</li>
-        <li>Whole thalamus median median: {{ whole_thalamus_median }}</li>
-        <li>Whole thalamus stdev median: {{ whole_thalamus_std }}</li>
+        <li>Whole thalamus mean median: {{ whole_thalamus_Ktrans_mean }}</li>
+        <li>Whole thalamus median median: {{ whole_thalamus_Ktrans_median }}</li>
+        <li>Whole thalamus stdev median: {{ whole_thalamus_Ktrans_std }}</li>
         <li>outliers (> 5): {{ whole_thalamus_outliers }}</li>
-        <img src="{{ whole_thalamus_histogram }}" alt="missing whole thalamus histogram"/>
+        <img src="{{ Ktrans_whole_thalamus_histogram }}" alt="missing whole thalamus histogram"/>
     </ul>
     <h3 id="Caudate">Caudate</h3>
     <ul>
-        <li>Whole caudate mean median: {{ whole_caudate_mean }}</li>
-        <li>Whole caudate median median: {{ whole_caudate_median }}</li>
-        <li>Whole caudate stdev median: {{ whole_caudate_std }}</li>
+        <li>Whole caudate mean median: {{ whole_caudate_Ktrans_mean }}</li>
+        <li>Whole caudate median median: {{ whole_caudate_Ktrans_median }}</li>
+        <li>Whole caudate stdev median: {{ whole_caudate_Ktrans_std }}</li>
         <li>outliers (> 5): {{ whole_caudate_outliers }}</li>
-        <img src="{{ whole_caudate_histogram }}" alt="missing whole caudate histogram"/>
+        <img src="{{ Ktrans_whole_caudate_histogram }}" alt="missing whole caudate histogram"/>
     </ul>
     <h3 id="Amygdala">Amygdala</h3>
     <ul>
-        <li>Whole amygdala mean median: {{ whole_amygdala_mean }}</li>
-        <li>Whole amygdala median median: {{ whole_amygdala_median }}</li>
-        <li>Whole amygdala stdev median: {{ whole_amygdala_std }}</li>
+        <li>Whole amygdala mean median: {{ whole_amygdala_Ktrans_mean }}</li>
+        <li>Whole amygdala median median: {{ whole_amygdala_Ktrans_median }}</li>
+        <li>Whole amygdala stdev median: {{ whole_amygdala_Ktrans_std }}</li>
         <li>outliers (> 5): {{ whole_amygdala_outliers }}</li>
-        <img src="{{ whole_amygdala_histogram }}" alt="missing whole amygdala histogram"/>
+        <img src="{{ Ktrans_whole_amygdala_histogram }}" alt="missing whole amygdala histogram"/>
     </ul>
 
     <h3 id="Entorhinal">Entorhinal Cortex</h3>
     <ul>
-        <li>Whole entorhinal cortex mean median: {{ whole_entorhinal_cortex_mean }}</li>
-        <li>Whole entorhinal cortex median median: {{ whole_entorhinal_cortex_median }}</li>
-        <li>Whole entorhinal cortex stdev median: {{ whole_entorhinal_cortex_std }}</li>
+        <li>Whole entorhinal cortex mean median: {{ whole_entorhinal_cortex_Ktrans_mean }}</li>
+        <li>Whole entorhinal cortex median median: {{ whole_entorhinal_cortex_Ktrans_median }}</li>
+        <li>Whole entorhinal cortex stdev median: {{ whole_entorhinal_cortex_Ktrans_std }}</li>
         <li>outliers (> 5): {{ whole_entorhinal_cortex_outliers }}</li>
-        <img src="{{ whole_entorhinal_cortex_histogram }}" alt="missing whole entorhinal cortex histogram"/>
+        <img src="{{ Ktrans_whole_entorhinal_cortex_histogram }}" alt="missing whole entorhinal cortex histogram"/>
     </ul>
     
     <h3 id="Fusiform">Fusiform Gyrus</h3>
     <h4 id="Fusiform_c">Fusiform Gyrus Cortex</h3>
     <ul>
-        <li>Whole fusiform gyrus cortex mean median: {{ whole_fusiform_gyrus_cortex_mean }}</li>
-        <li>Whole fusiform gyrus cortex median median: {{ whole_fusiform_gyrus_cortex_median }}</li>
-        <li>Whole fusiform gyrus cortex stdev median: {{ whole_fusiform_gyrus_cortex_std }}</li>
+        <li>Whole fusiform gyrus cortex mean median: {{ whole_fusiform_gyrus_cortex_Ktrans_mean }}</li>
+        <li>Whole fusiform gyrus cortex median median: {{ whole_fusiform_gyrus_cortex_Ktrans_median }}</li>
+        <li>Whole fusiform gyrus cortex stdev median: {{ whole_fusiform_gyrus_cortex_Ktrans_std }}</li>
         <li>outliers (> 5): {{ whole_fusiform_gyrus_cortex_outliers }}</li>
-        <img src="{{ whole_fusiform_gyrus_cortex_histogram }}" alt="missing whole fusiform gyrus cortex histogram"/>
+        <img src="{{ Ktrans_whole_fusiform_gyrus_cortex_histogram }}" alt="missing whole fusiform gyrus cortex histogram"/>
     </ul>
 
     <h4 id="Fusiform_wm">Fusiform Gyrus White Matter</h3>
     <ul>
-        <li>Whole fusiform gyrus white matter mean median: {{ whole_fusiform_gyrus_WM_mean }}</li>
-        <li>Whole fusiform gyrus white matter median median: {{ whole_fusiform_gyrus_WM_median }}</li>
-        <li>Whole fusiform gyrus white matter stdev median: {{ whole_fusiform_gyrus_WM_std }}</li>
+        <li>Whole fusiform gyrus white matter mean median: {{ whole_fusiform_gyrus_WM_Ktrans_mean }}</li>
+        <li>Whole fusiform gyrus white matter median median: {{ whole_fusiform_gyrus_WM_Ktrans_median }}</li>
+        <li>Whole fusiform gyrus white matter stdev median: {{ whole_fusiform_gyrus_WM_Ktrans_std }}</li>
         <li>outliers (> 5): {{ whole_fusiform_gyrus_WM_outliers }}</li>
-        <img src="{{ whole_fusiform_gyrus_WM_histogram }}" alt="missing whole fusiform gyrus white matter histogram"/>
+        <img src="{{ Ktrans_whole_fusiform_gyrus_WM_histogram }}" alt="missing whole fusiform gyrus white matter histogram"/>
     </ul>
 
     <h3 id="Insula_wm">Insula White Matter</h3>
     <ul>
-        <li>Whole insula white matter mean median: {{ whole_insula_WM_mean }}</li>
-        <li>Whole insula white matter median median: {{ whole_insula_WM_median }}</li>
-        <li>Whole insula white matter stdev median: {{ whole_insula_WM_std }}</li>
+        <li>Whole insula white matter mean median: {{ whole_insula_WM_Ktrans_mean }}</li>
+        <li>Whole insula white matter median median: {{ whole_insula_WM_Ktrans_median }}</li>
+        <li>Whole insula white matter stdev median: {{ whole_insula_WM_Ktrans_std }}</li>
         <li>outliers (> 5): {{ whole_insula_WM_outliers }}</li>
-        <img src="{{ whole_insula_WM_histogram }}" alt="missing whole insula white matter histogram"/>
+        <img src="{{ Ktrans_whole_insula_WM_histogram }}" alt="missing whole insula white matter histogram"/>
     </ul>
 
     <h3 id="Sup_temp_c">Superior Temporal Cortex</h3>
     <ul>
-        <li>Whole superior temporal cortex mean median: {{ whole_superior_temporal_cortex_mean }}</li>
-        <li>Whole superior temporal cortex median median: {{ whole_superior_temporal_cortex_median }}</li>
-        <li>Whole superior temporal cortex stdev median: {{ whole_superior_temporal_cortex_std }}</li>
+        <li>Whole superior temporal cortex mean median: {{ whole_superior_temporal_cortex_Ktrans_mean }}</li>
+        <li>Whole superior temporal cortex median median: {{ whole_superior_temporal_cortex_Ktrans_median }}</li>
+        <li>Whole superior temporal cortex stdev median: {{ whole_superior_temporal_cortex_Ktrans_std }}</li>
         <li>outliers (> 5): {{ whole_superior_temporal_cortex_outliers }}</li>
-        <img src="{{ whole_superior_temporal_cortex_histogram }}" alt="missing whole superior temporal cortex histogram"/>
+        <img src="{{ Ktrans_whole_superior_temporal_cortex_histogram }}" alt="missing whole superior temporal cortex histogram"/>
     </ul>
     <h3 id="Post_cing_c">Posterior Cingulate Cortex</h3>
     <ul>
-        <li>Whole posterior cingulate cortex mean median: {{ whole_posterior_cingulate_cortex_mean }}</li>
-        <li>Whole posterior cingulate cortex median median: {{ whole_posterior_cingulate_cortex_median }}</li>
-        <li>Whole posterior cingulate cortex stdev median: {{ whole_posterior_cingulate_cortex_std }}</li>
+        <li>Whole posterior cingulate cortex mean median: {{ whole_posterior_cingulate_cortex_Ktrans_mean }}</li>
+        <li>Whole posterior cingulate cortex median median: {{ whole_posterior_cingulate_cortex_Ktrans_median }}</li>
+        <li>Whole posterior cingulate cortex stdev median: {{ whole_posterior_cingulate_cortex_Ktrans_std }}</li>
         <li>outliers (> 5): {{ whole_posterior_cingulate_cortex_outliers }}</li>
-        <img src="{{ whole_posterior_cingulate_cortex_histogram }}" alt="missing whole posterior cingulate cortex histogram"/>
+        <img src="{{ Ktrans_whole_posterior_cingulate_cortex_histogram }}" alt="missing whole posterior cingulate cortex histogram"/>
     </ul>
     <h3 id="Med_temp_c">Medial Temporal Cortex</h3>
     <ul>
-        <li>Whole medial temporal cortex mean median: {{ whole_medial_temporal_cortex_mean }}</li>
-        <li>Whole medial temporal cortex median median: {{ whole_medial_temporal_cortex_median }}</li>
-        <li>Whole medial temporal cortex stdev median: {{ whole_medial_temporal_cortex_std }}</li>
+        <li>Whole medial temporal cortex mean median: {{ whole_medial_temporal_cortex_Ktrans_mean }}</li>
+        <li>Whole medial temporal cortex median median: {{ whole_medial_temporal_cortex_Ktrans_median }}</li>
+        <li>Whole medial temporal cortex stdev median: {{ whole_medial_temporal_cortex_Ktrans_std }}</li>
         <li>outliers (> 5): {{ whole_medial_temporal_cortex_outliers }}</li>
-        <img src="{{ whole_medial_temporal_cortex_histogram }}" alt="missing whole medial temporal cortex histogram"/>
+        <img src="{{ Ktrans_whole_medial_temporal_cortex_histogram }}" alt="missing whole medial temporal cortex histogram"/>
     </ul>
     <h2 id="Flagged">Flagged Cases (motion > {{ Motion_threshold }}mm, AIFitness < {{ AIFitness_threshold }})</h4>
     <li>
