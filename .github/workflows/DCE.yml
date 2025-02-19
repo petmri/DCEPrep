@@ -92,14 +92,14 @@ jobs:
     
     - name: Extract branch name
       shell: bash
-      run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+      run: echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >> $GITHUB_ENV
       id: extract_branch
     
     - name: Build Dockerfile
       id: docker_build
       run: |
         docker image prune -f
-        docker build --build-arg MATLAB_RELEASE=${{ matrix.release }} . -t lsaca05/dce:${{ matrix.release }}-${{ steps.extract_branch.outputs.branch }}
+        docker build --build-arg MATLAB_RELEASE=${{ matrix.release }} . -t lsaca05/dce:${{ matrix.release }}-$branch
 
     # - name: Run Docker
     #   if: ${{ matrix.release }} == "R2020a"
@@ -110,4 +110,4 @@ jobs:
     # - name: Push to Docker Hub
     #   if: steps.docker_build.outcome == 'success'
     #   run: |
-    #     docker push lsaca05/dce:${{ matrix.release }}-${{ steps.extract_branch.outputs.branch }}
+    #     docker push lsaca05/dce:${{ matrix.release }}-$branch
