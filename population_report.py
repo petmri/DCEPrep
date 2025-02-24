@@ -429,8 +429,29 @@ def get_case_stats(subject_id, timepoint):
                     Vp_Caudate_median = Vp_Amygdala_median = Vp_Entorhinal_cortex_median = Vp_Fusiform_gyrus_cortex_median = -1
                     Vp_Fusiform_gyrus_WM_median = Vp_Insula_WM_median = Vp_Superior_temporal_cortex_median = -1
                     Vp_Posterior_cingulate_cortex_median = Vp_Medial_temporal_cortex_median = -1
+                    bankssts_thickness_avg = bankssts_thickness_std = caudalanteriorcingulate_thickness_avg = caudalanteriorcingulate_thickness_std = -1
+                    caudalmiddlefrontal_thickness_avg = caudalmiddlefrontal_thickness_std = cuneus_thickness_avg = cuneus_thickness_std = -1
+                    entorhinal_thickness_avg = entorhinal_thickness_std = fusiform_thickness_avg = fusiform_thickness_std = -1
+                    inferiorparietal_thickness_avg = inferiorparietal_thickness_std = inferiortemporal_thickness_avg = inferiortemporal_thickness_std = -1
+                    insula_thickness_avg = insula_thickness_std = isthmuscingulate_thickness_avg = isthmuscingulate_thickness_std = -1
+                    isthmuscingulate_thickness_avg = isthmuscingulate_thickness_std = lateraloccipital_thickness_avg = lateraloccipital_thickness_std = -1
+                    lateralorbitofrontal_thickness_avg = lateralorbitofrontal_thickness_std = lingual_thickness_avg = lingual_thickness_std = -1
+                    medialorbitofrontal_thickness_avg = medialorbitofrontal_thickness_std = middletemporal_thickness_avg = middletemporal_thickness_std = -1
+                    parahippocampal_thickness_avg = parahippocampal_thickness_std = paracentral_thickness_avg = paracentral_thickness_std = -1
+                    parsopercularis_thickness_avg = parsopercularis_thickness_std = parsorbitalis_thickness_avg = parsorbitalis_thickness_std = -1
+                    parstriangularis_thickness_avg = parstriangularis_thickness_std = -1
+                    pericalcarine_thickness_avg = pericalcarine_thickness_std = postcentral_thickness_avg = postcentral_thickness_std = -1
+                    posteriorcingulate_thickness_avg = posteriorcingulate_thickness_std = precentral_thickness_avg = precentral_thickness_std = -1
+                    precuneus_thickness_avg = precuneus_thickness_std = rostralanteriorcingulate_thickness_avg = rostralanteriorcingulate_thickness_std = -1
+                    rostralmiddlefrontal_thickness_avg = rostralmiddlefrontal_thickness_std = superiorfrontal_thickness_avg = superiorfrontal_thickness_std = -1
+                    superiorparietal_thickness_avg = superiorparietal_thickness_std = superiortemporal_thickness_avg = superiortemporal_thickness_std = -1
+                    frontalpole_thickness_avg = frontalpole_thickness_std = -1
+                    supramarginal_thickness_avg = supramarginal_thickness_std = temporalpole_thickness_avg = temporalpole_thickness_std = -1
+                    transversetemporal_thickness_avg = transversetemporal_thickness_std = -1
+                    inferiorparietal_thickness_avg = inferiorparietal_thickness_std = inferiorparietal_thickness_avg = inferiorparietal_thickness_std = -1
+                    insula_thickness_avg = insula_thickness_std = lateraloccipital_thickness_avg = lateraloccipital_thickness_std = -1
                     stats_failed = True
-                # read wmparc stats from tsv
+                # read stats from tsv
                 freesurfer_path = os.path.join(dir, 'freesurfer', subject_id, timepoint, "stats")
                 if os.path.isfile(os.path.join(freesurfer_path, "wmparc.stats")):
                     wmparc_stats = os.path.join(freesurfer_path, "wmparc.stats")
@@ -453,6 +474,27 @@ def get_case_stats(subject_id, timepoint):
                 Vp_Caudate_median = Vp_Amygdala_median = Vp_Entorhinal_cortex_median = Vp_Fusiform_gyrus_cortex_median = -1
                 Vp_Fusiform_gyrus_WM_median = Vp_Insula_WM_median = Vp_Superior_temporal_cortex_median = -1
                 Vp_Posterior_cingulate_cortex_median = Vp_Medial_temporal_cortex_median = SNR = -1
+                bankssts_thickness_avg = bankssts_thickness_std = caudalanteriorcingulate_thickness_avg = caudalanteriorcingulate_thickness_std = -1
+                caudalmiddlefrontal_thickness_avg = caudalmiddlefrontal_thickness_std = cuneus_thickness_avg = cuneus_thickness_std = -1
+                entorhinal_thickness_avg = entorhinal_thickness_std = fusiform_thickness_avg = fusiform_thickness_std = -1
+                inferiorparietal_thickness_avg = inferiorparietal_thickness_std = inferiortemporal_thickness_avg = inferiortemporal_thickness_std = -1
+                insula_thickness_avg = insula_thickness_std = isthmuscingulate_thickness_avg = isthmuscingulate_thickness_std = -1
+                isthmuscingulate_thickness_avg = isthmuscingulate_thickness_std = lateraloccipital_thickness_avg = lateraloccipital_thickness_std = -1
+                lateralorbitofrontal_thickness_avg = lateralorbitofrontal_thickness_std = lingual_thickness_avg = lingual_thickness_std = -1
+                medialorbitofrontal_thickness_avg = medialorbitofrontal_thickness_std = middletemporal_thickness_avg = middletemporal_thickness_std = -1
+                parahippocampal_thickness_avg = parahippocampal_thickness_std = paracentral_thickness_avg = paracentral_thickness_std = -1
+                parsopercularis_thickness_avg = parsopercularis_thickness_std = parsorbitalis_thickness_avg = parsorbitalis_thickness_std = -1
+                parstriangularis_thickness_avg = parstriangularis_thickness_std = -1
+                pericalcarine_thickness_avg = pericalcarine_thickness_std = postcentral_thickness_avg = postcentral_thickness_std = -1
+                posteriorcingulate_thickness_avg = posteriorcingulate_thickness_std = precentral_thickness_avg = precentral_thickness_std = -1
+                precuneus_thickness_avg = precuneus_thickness_std = rostralanteriorcingulate_thickness_avg = rostralanteriorcingulate_thickness_std = -1
+                rostralmiddlefrontal_thickness_avg = rostralmiddlefrontal_thickness_std = superiorfrontal_thickness_avg = superiorfrontal_thickness_std = -1
+                superiorparietal_thickness_avg = superiorparietal_thickness_std = superiortemporal_thickness_avg = superiortemporal_thickness_std = -1
+                frontalpole_thickness_avg = frontalpole_thickness_std = -1
+                supramarginal_thickness_avg = supramarginal_thickness_std = temporalpole_thickness_avg = temporalpole_thickness_std = -1
+                transversetemporal_thickness_avg = transversetemporal_thickness_std = -1
+                inferiorparietal_thickness_avg = inferiorparietal_thickness_std = inferiorparietal_thickness_avg = inferiorparietal_thickness_std = -1
+                insula_thickness_avg = insula_thickness_std = lateraloccipital_thickness_avg = lateraloccipital_thickness_std = -1
                 stats_failed = True
             if not stats_failed:
                 with open(wmparc_stats, 'r') as f:
@@ -562,7 +604,91 @@ def get_case_stats(subject_id, timepoint):
                 superior_temporal_cortex_vol = float(df_lh_aparc.loc[df_lh_aparc['StructName'] == 'superiortemporal', 'GrayVol'].values[0]) + float(df_rh_aparc.loc[df_rh_aparc['StructName'] == 'superiortemporal', 'GrayVol'].values[0])
                 posterior_cingulate_cortex_vol = float(df_lh_aparc.loc[df_lh_aparc['StructName'] == 'posteriorcingulate', 'GrayVol'].values[0]) + float(df_rh_aparc.loc[df_rh_aparc['StructName'] == 'posteriorcingulate', 'GrayVol'].values[0])
                 medial_temporal_cortex_vol = hippo_vol + phg_vol + entorhinal_cortex_vol
-            
+                # get all cortical thickness values from left and right aparc
+                cortical_thickness_lh = df_lh_aparc[['StructName', 'NumVert', 'ThickAvg', 'ThickStd']].values.tolist()
+                cortical_thickness_rh = df_rh_aparc[['StructName', 'NumVert', 'ThickAvg', 'ThickStd']].values.tolist()
+                # for each region, get whole-brain mean cortical thickness, weighted by number of vertices in region
+                cortical_thickness = {}
+                for lh, rh in zip(cortical_thickness_lh, cortical_thickness_rh):
+                    # print(lh, rh)
+                    if lh[0] == rh[0] and lh[0] not in cortical_thickness:
+                        region = lh[0]
+                        num_vert = int(lh[1]) + int(rh[1])
+                        thickness = (float(lh[1])*float(lh[2]) + float(rh[1])*float(rh[2])) / num_vert
+                        thickness_std = np.sqrt((float(lh[1]) * float(lh[3])**2 + float(rh[1]) * float(rh[3])**2) / num_vert)
+                        cortical_thickness[region] = {
+                            "thickness": thickness,
+                            "thickness_std": thickness_std,
+                        }
+                bankssts_thickness_avg = cortical_thickness.get('bankssts', {}).get('thickness', -1)
+                bankssts_thickness_std = cortical_thickness.get('bankssts', {}).get('thickness_std', -1)
+                caudalanteriorcingulate_thickness_avg = cortical_thickness.get('caudalanteriorcingulate', {}).get('thickness', -1)
+                caudalanteriorcingulate_thickness_std = cortical_thickness.get('caudalanteriorcingulate', {}).get('thickness_std', -1)
+                caudalmiddlefrontal_thickness_avg = cortical_thickness.get('caudalmiddlefrontal', {}).get('thickness', -1)
+                caudalmiddlefrontal_thickness_std = cortical_thickness.get('caudalmiddlefrontal', {}).get('thickness_std', -1)
+                cuneus_thickness_avg = cortical_thickness.get('cuneus', {}).get('thickness', -1)
+                cuneus_thickness_std = cortical_thickness.get('cuneus', {}).get('thickness_std', -1)
+                entorhinal_thickness_avg = cortical_thickness.get('entorhinal', {}).get('thickness', -1)
+                entorhinal_thickness_std = cortical_thickness.get('entorhinal', {}).get('thickness_std', -1)
+                fusiform_thickness_avg = cortical_thickness.get('fusiform', {}).get('thickness', -1)
+                fusiform_thickness_std = cortical_thickness.get('fusiform', {}).get('thickness_std', -1)
+                inferiorparietal_thickness_avg = cortical_thickness.get('inferiorparietal', {}).get('thickness', -1)
+                inferiorparietal_thickness_std = cortical_thickness.get('inferiorparietal', {}).get('thickness_std', -1)
+                inferiortemporal_thickness_avg = cortical_thickness.get('inferiortemporal', {}).get('thickness', -1)
+                inferiortemporal_thickness_std = cortical_thickness.get('inferiortemporal', {}).get('thickness_std', -1)
+                isthmuscingulate_thickness_avg = cortical_thickness.get('isthmuscingulate', {}).get('thickness', -1)
+                isthmuscingulate_thickness_std = cortical_thickness.get('isthmuscingulate', {}).get('thickness_std', -1)
+                lateraloccipital_thickness_avg = cortical_thickness.get('lateraloccipital', {}).get('thickness', -1)
+                lateraloccipital_thickness_std = cortical_thickness.get('lateraloccipital', {}).get('thickness_std', -1)
+                lateralorbitofrontal_thickness_avg = cortical_thickness.get('lateralorbitofrontal', {}).get('thickness', -1)
+                lateralorbitofrontal_thickness_std = cortical_thickness.get('lateralorbitofrontal', {}).get('thickness_std', -1)
+                lingual_thickness_avg = cortical_thickness.get('lingual', {}).get('thickness', -1)
+                lingual_thickness_std = cortical_thickness.get('lingual', {}).get('thickness_std', -1)
+                medialorbitofrontal_thickness_avg = cortical_thickness.get('medialorbitofrontal', {}).get('thickness', -1)
+                medialorbitofrontal_thickness_std = cortical_thickness.get('medialorbitofrontal', {}).get('thickness_std', -1)
+                middletemporal_thickness_avg = cortical_thickness.get('middletemporal', {}).get('thickness', -1)
+                middletemporal_thickness_std = cortical_thickness.get('middletemporal', {}).get('thickness_std', -1)
+                parahippocampal_thickness_avg = cortical_thickness.get('parahippocampal', {}).get('thickness', -1)
+                parahippocampal_thickness_std = cortical_thickness.get('parahippocampal', {}).get('thickness_std', -1)
+                paracentral_thickness_avg = cortical_thickness.get('paracentral', {}).get('thickness', -1)
+                paracentral_thickness_std = cortical_thickness.get('paracentral', {}).get('thickness_std', -1)
+                parsopercularis_thickness_avg = cortical_thickness.get('parsopercularis', {}).get('thickness', -1)
+                parsopercularis_thickness_std = cortical_thickness.get('parsopercularis', {}).get('thickness_std', -1)
+                parsorbitalis_thickness_avg = cortical_thickness.get('parsorbitalis', {}).get('thickness', -1)
+                parsorbitalis_thickness_std = cortical_thickness.get('parsorbitalis', {}).get('thickness_std', -1)
+                parstriangularis_thickness_avg = cortical_thickness.get('parstriangularis', {}).get('thickness', -1)
+                parstriangularis_thickness_std = cortical_thickness.get('parstriangularis', {}).get('thickness_std', -1)
+                pericalcarine_thickness_avg = cortical_thickness.get('pericalcarine', {}).get('thickness', -1)
+                pericalcarine_thickness_std = cortical_thickness.get('pericalcarine', {}).get('thickness_std', -1)
+                postcentral_thickness_avg = cortical_thickness.get('postcentral', {}).get('thickness', -1)
+                postcentral_thickness_std = cortical_thickness.get('postcentral', {}).get('thickness_std', -1)
+                posteriorcingulate_thickness_avg = cortical_thickness.get('posteriorcingulate', {}).get('thickness', -1)
+                posteriorcingulate_thickness_std = cortical_thickness.get('posteriorcingulate', {}).get('thickness_std', -1)
+                precentral_thickness_avg = cortical_thickness.get('precentral', {}).get('thickness', -1)
+                precentral_thickness_std = cortical_thickness.get('precentral', {}).get('thickness_std', -1)
+                precuneus_thickness_avg = cortical_thickness.get('precuneus', {}).get('thickness', -1)
+                precuneus_thickness_std = cortical_thickness.get('precuneus', {}).get('thickness_std', -1)
+                rostralanteriorcingulate_thickness_avg = cortical_thickness.get('rostralanteriorcingulate', {}).get('thickness', -1)
+                rostralanteriorcingulate_thickness_std = cortical_thickness.get('rostralanteriorcingulate', {}).get('thickness_std', -1)
+                rostralmiddlefrontal_thickness_avg = cortical_thickness.get('rostralmiddlefrontal', {}).get('thickness', -1)
+                rostralmiddlefrontal_thickness_std = cortical_thickness.get('rostralmiddlefrontal', {}).get('thickness_std', -1)
+                superiorfrontal_thickness_avg = cortical_thickness.get('superiorfrontal', {}).get('thickness', -1)
+                superiorfrontal_thickness_std = cortical_thickness.get('superiorfrontal', {}).get('thickness_std', -1)
+                superiorparietal_thickness_avg = cortical_thickness.get('superiorparietal', {}).get('thickness', -1)
+                superiorparietal_thickness_std = cortical_thickness.get('superiorparietal', {}).get('thickness_std', -1)
+                superiortemporal_thickness_avg = cortical_thickness.get('superiortemporal', {}).get('thickness', -1)
+                superiortemporal_thickness_std = cortical_thickness.get('superiortemporal', {}).get('thickness_std', -1)
+                supramarginal_thickness_avg = cortical_thickness.get('supramarginal', {}).get('thickness', -1)
+                supramarginal_thickness_std = cortical_thickness.get('supramarginal', {}).get('thickness_std', -1)
+                frontalpole_thickness_avg = cortical_thickness.get('frontalpole', {}).get('thickness', -1)
+                frontalpole_thickness_std = cortical_thickness.get('frontalpole', {}).get('thickness_std', -1)
+                temporalpole_thickness_avg = cortical_thickness.get('temporalpole', {}).get('thickness', -1)
+                temporalpole_thickness_std = cortical_thickness.get('temporalpole', {}).get('thickness_std', -1)
+                transversetemporal_thickness_avg = cortical_thickness.get('transversetemporal', {}).get('thickness', -1)
+                transversetemporal_thickness_std = cortical_thickness.get('transversetemporal', {}).get('thickness_std', -1)
+                insula_thickness_avg = cortical_thickness.get('insula', {}).get('thickness', -1)
+                insula_thickness_std = cortical_thickness.get('insula', {}).get('thickness_std', -1)
+
                 HIPPO_INDICES = np.where((wmparc == regions["HIPPO"][0]) | (wmparc == regions["HIPPO"][1]) & (ktrans_map > KTRANS_MIN_THRESHOLD))
                 PHG_INDICES = np.where((wmparc == regions["PHG"][0]) | (wmparc == regions["PHG"][1]) & (ktrans_map > KTRANS_MIN_THRESHOLD))
                 PUTAMEN_INDICES = np.where((wmparc == regions["PUTAMEN"][0]) | (wmparc == regions["PUTAMEN"][1]) & (ktrans_map > KTRANS_MIN_THRESHOLD))
@@ -679,37 +805,23 @@ def get_case_stats(subject_id, timepoint):
                     if subject_id + "_" + timepoint not in whole_medial_temporal_cortex_outliers:
                         whole_medial_temporal_cortex_outliers.append(subject_id + "_" + timepoint)
 
-                # Calculate SNR from medial T1w wm tract and air signal intensity means and stdevs
-                # THALAMUS, I CHOOSE YOU
-                DCE_img = os.path.join(dir, "../rawdata", subject_id, timepoint, f"dce/{subject_id}_{timepoint}_DCE.nii.gz")
+            # Calculate SNR from getting mean SI in DCE thalamus then stdev of the difference between the last 2 DCE measures
+            DCE_img = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-bfcz_DCE.nii.gz")
+            try:
                 DCE_img = nib.load(DCE_img)
                 DCE_img = DCE_img.get_fdata()
                 SI_Thalamus_DCE = DCE_img[THALAMUS_INDICES]
-                if machine == "Signa HDxt":
-                    SI_air_DCE = DCE_img[35:55, 230:250, int(np.median(THALAMUS_INDICES[2]))]
-                # Now get air values, 20x20x(thalamus slices) box in bottom left (centered on Thalamus middle slice)
-                elif machine == "DISCOVERY MR750":
-                    # gotta use thalamus instead because of wack rounded cropping
-                    SI_air_DCE = SI_Thalamus_DCE
-                else:
-                    SI_air_DCE = DCE_img[0:20, -20:, int(np.median(THALAMUS_INDICES[2]))]
-                SI_air_DCE = SI_air_DCE[SI_air_DCE < 3 * np.mean(SI_air_DCE)]
-                if len(SI_air_DCE) < 0.9 * np.prod(SI_air_DCE.shape):
-                    SI_air_DCE = -1
 
                 SI_Thalamus_DCE_mean = np.mean(SI_Thalamus_DCE)
-                # SI_Thalamus_DCE_std = np.std(SI_Thalamus_DCE)
-                SI_air_DCE_mean = np.mean(SI_air_DCE)
-                SI_air_DCE_std = np.std(SI_air_DCE)
-                if SI_air_DCE_mean == 0:
-                    SNR = -2
-                elif SI_air_DCE_std == 0:
-                    SNR = -3
-                elif np.isnan(SI_air_DCE_mean) or np.isnan(SI_air_DCE_std):
-                    SNR = -4
-                else:
-                    SNR = 0.655 * SI_Thalamus_DCE_mean / SI_air_DCE_std
-                    SNR = round(SNR, 2)
+                SI_Thalamus_DCE_last = SI_Thalamus_DCE[:,-1]
+                SI_Thalamus_DCE_penultimate = SI_Thalamus_DCE[:,-2]
+                SI_Thalamus_DCE_last2_difference = SI_Thalamus_DCE_last - SI_Thalamus_DCE_penultimate
+                SI_Thalamus_DCE_noise_stdev = np.std(SI_Thalamus_DCE_last2_difference)
+                # calculate SNR
+                SNR = SI_Thalamus_DCE_mean / SI_Thalamus_DCE_noise_stdev
+            except:
+                SNR = -1
+                print(f"Could not calculate SNR for {subject_id} {timepoint}")
             
             entry = subject_id + "_" + timepoint
             if stats_failed is False:
@@ -789,6 +901,74 @@ def get_case_stats(subject_id, timepoint):
                     "posterior_cingulate_cortex_vol": posterior_cingulate_cortex_vol,
                     "medial_temporal_cortex_vol": medial_temporal_cortex_vol,
                     "manual_aif_status": manual_aif_status,
+                    "bankssts_thickness_avg": bankssts_thickness_avg,
+                    "bankssts_thickness_std": bankssts_thickness_std,
+                    "caudalanteriorcingulate_thickness_avg": caudalanteriorcingulate_thickness_avg,
+                    "caudalanteriorcingulate_thickness_std": caudalanteriorcingulate_thickness_std,
+                    "caudalmiddlefrontal_thickness_avg": caudalmiddlefrontal_thickness_avg,
+                    "caudalmiddlefrontal_thickness_std": caudalmiddlefrontal_thickness_std,
+                    "cuneus_thickness_avg": cuneus_thickness_avg,
+                    "cuneus_thickness_std": cuneus_thickness_std,
+                    "entorhinal_thickness_avg": entorhinal_thickness_avg,
+                    "entorhinal_thickness_std": entorhinal_thickness_std,
+                    "fusiform_thickness_avg": fusiform_thickness_avg,
+                    "fusiform_thickness_std": fusiform_thickness_std,
+                    "inferiorparietal_thickness_avg": inferiorparietal_thickness_avg,
+                    "inferiorparietal_thickness_std": inferiorparietal_thickness_std,
+                    "inferiortemporal_thickness_avg": inferiortemporal_thickness_avg,
+                    "inferiortemporal_thickness_std": inferiortemporal_thickness_std,
+                    "isthmuscingulate_thickness_avg": isthmuscingulate_thickness_avg,
+                    "isthmuscingulate_thickness_std": isthmuscingulate_thickness_std,
+                    "lateraloccipital_thickness_avg": lateraloccipital_thickness_avg,
+                    "lateraloccipital_thickness_std": lateraloccipital_thickness_std,
+                    "lateralorbitofrontal_thickness_avg": lateralorbitofrontal_thickness_avg,
+                    "lateralorbitofrontal_thickness_std": lateralorbitofrontal_thickness_std,
+                    "lingual_thickness_avg": lingual_thickness_avg,
+                    "lingual_thickness_std": lingual_thickness_std,
+                    "medialorbitofrontal_thickness_avg": medialorbitofrontal_thickness_avg,
+                    "medialorbitofrontal_thickness_std": medialorbitofrontal_thickness_std,
+                    "middletemporal_thickness_avg": middletemporal_thickness_avg,
+                    "middletemporal_thickness_std": middletemporal_thickness_std,
+                    "parahippocampal_thickness_avg": parahippocampal_thickness_avg,
+                    "parahippocampal_thickness_std": parahippocampal_thickness_std,
+                    "paracentral_thickness_avg": paracentral_thickness_avg,
+                    "paracentral_thickness_std": paracentral_thickness_std,
+                    "parsopercularis_thickness_avg": parsopercularis_thickness_avg,
+                    "parsopercularis_thickness_std": parsopercularis_thickness_std,
+                    "parsorbitalis_thickness_avg": parsorbitalis_thickness_avg,
+                    "parsorbitalis_thickness_std": parsorbitalis_thickness_std,
+                    "parstriangularis_thickness_avg": parstriangularis_thickness_avg,
+                    "parstriangularis_thickness_std": parstriangularis_thickness_std,
+                    "pericalcarine_thickness_avg": pericalcarine_thickness_avg,
+                    "pericalcarine_thickness_std": pericalcarine_thickness_std,
+                    "postcentral_thickness_avg": postcentral_thickness_avg,
+                    "postcentral_thickness_std": postcentral_thickness_std,
+                    "posteriorcingulate_thickness_avg": posteriorcingulate_thickness_avg,
+                    "posteriorcingulate_thickness_std": posteriorcingulate_thickness_std,
+                    "precentral_thickness_avg": precentral_thickness_avg,
+                    "precentral_thickness_std": precentral_thickness_std,
+                    "precuneus_thickness_avg": precuneus_thickness_avg,
+                    "precuneus_thickness_std": precuneus_thickness_std,
+                    "rostralanteriorcingulate_thickness_avg": rostralanteriorcingulate_thickness_avg,
+                    "rostralanteriorcingulate_thickness_std": rostralanteriorcingulate_thickness_std,
+                    "rostralmiddlefrontal_thickness_avg": rostralmiddlefrontal_thickness_avg,
+                    "rostralmiddlefrontal_thickness_std": rostralmiddlefrontal_thickness_std,
+                    "superiorfrontal_thickness_avg": superiorfrontal_thickness_avg,
+                    "superiorfrontal_thickness_std": superiorfrontal_thickness_std,
+                    "superiorparietal_thickness_avg": superiorparietal_thickness_avg,
+                    "superiorparietal_thickness_std": superiorparietal_thickness_std,
+                    "superiortemporal_thickness_avg": superiortemporal_thickness_avg,
+                    "superiortemporal_thickness_std": superiortemporal_thickness_std,
+                    "supramarginal_thickness_avg": supramarginal_thickness_avg,
+                    "supramarginal_thickness_std": supramarginal_thickness_std,
+                    "frontalpole_thickness_avg": frontalpole_thickness_avg,
+                    "frontalpole_thickness_std": frontalpole_thickness_std,
+                    "temporalpole_thickness_avg": temporalpole_thickness_avg,
+                    "temporalpole_thickness_std": temporalpole_thickness_std,
+                    "transversetemporal_thickness_avg": transversetemporal_thickness_avg,
+                    "transversetemporal_thickness_std": transversetemporal_thickness_std,
+                    "insula_thickness_avg": insula_thickness_avg,
+                    "insula_thickness_std": insula_thickness_std
                 }
             else:
                 # with lock:
@@ -867,6 +1047,74 @@ def get_case_stats(subject_id, timepoint):
                     "posterior_cingulate_cortex_vol": posterior_cingulate_cortex_vol,
                     "medial_temporal_cortex_vol": medial_temporal_cortex_vol,
                     "manual_aif_status": manual_aif_status,
+                    "bankssts_thickness_avg": bankssts_thickness_avg,
+                    "bankssts_thickness_std": bankssts_thickness_std,
+                    "caudalanteriorcingulate_thickness_avg": caudalanteriorcingulate_thickness_avg,
+                    "caudalanteriorcingulate_thickness_std": caudalanteriorcingulate_thickness_std,
+                    "caudalmiddlefrontal_thickness_avg": caudalmiddlefrontal_thickness_avg,
+                    "caudalmiddlefrontal_thickness_std": caudalmiddlefrontal_thickness_std,
+                    "cuneus_thickness_avg": cuneus_thickness_avg,
+                    "cuneus_thickness_std": cuneus_thickness_std,
+                    "entorhinal_thickness_avg": entorhinal_thickness_avg,
+                    "entorhinal_thickness_std": entorhinal_thickness_std,
+                    "fusiform_thickness_avg": fusiform_thickness_avg,
+                    "fusiform_thickness_std": fusiform_thickness_std,
+                    "inferiorparietal_thickness_avg": inferiorparietal_thickness_avg,
+                    "inferiorparietal_thickness_std": inferiorparietal_thickness_std,
+                    "inferiortemporal_thickness_avg": inferiortemporal_thickness_avg,
+                    "inferiortemporal_thickness_std": inferiortemporal_thickness_std,
+                    "isthmuscingulate_thickness_avg": isthmuscingulate_thickness_avg,
+                    "isthmuscingulate_thickness_std": isthmuscingulate_thickness_std,
+                    "lateraloccipital_thickness_avg": lateraloccipital_thickness_avg,
+                    "lateraloccipital_thickness_std": lateraloccipital_thickness_std,
+                    "lateralorbitofrontal_thickness_avg": lateralorbitofrontal_thickness_avg,
+                    "lateralorbitofrontal_thickness_std": lateralorbitofrontal_thickness_std,
+                    "lingual_thickness_avg": lingual_thickness_avg,
+                    "lingual_thickness_std": lingual_thickness_std,
+                    "medialorbitofrontal_thickness_avg": medialorbitofrontal_thickness_avg,
+                    "medialorbitofrontal_thickness_std": medialorbitofrontal_thickness_std,
+                    "middletemporal_thickness_avg": middletemporal_thickness_avg,
+                    "middletemporal_thickness_std": middletemporal_thickness_std,
+                    "parahippocampal_thickness_avg": parahippocampal_thickness_avg,
+                    "parahippocampal_thickness_std": parahippocampal_thickness_std,
+                    "paracentral_thickness_avg": paracentral_thickness_avg,
+                    "paracentral_thickness_std": paracentral_thickness_std,
+                    "parsopercularis_thickness_avg": parsopercularis_thickness_avg,
+                    "parsopercularis_thickness_std": parsopercularis_thickness_std,
+                    "parsorbitalis_thickness_avg": parsorbitalis_thickness_avg,
+                    "parsorbitalis_thickness_std": parsorbitalis_thickness_std,
+                    "parstriangularis_thickness_avg": parstriangularis_thickness_avg,
+                    "parstriangularis_thickness_std": parstriangularis_thickness_std,
+                    "pericalcarine_thickness_avg": pericalcarine_thickness_avg,
+                    "pericalcarine_thickness_std": pericalcarine_thickness_std,
+                    "postcentral_thickness_avg": postcentral_thickness_avg,
+                    "postcentral_thickness_std": postcentral_thickness_std,
+                    "posteriorcingulate_thickness_avg": posteriorcingulate_thickness_avg,
+                    "posteriorcingulate_thickness_std": posteriorcingulate_thickness_std,
+                    "precentral_thickness_avg": precentral_thickness_avg,
+                    "precentral_thickness_std": precentral_thickness_std,
+                    "precuneus_thickness_avg": precuneus_thickness_avg,
+                    "precuneus_thickness_std": precuneus_thickness_std,
+                    "rostralanteriorcingulate_thickness_avg": rostralanteriorcingulate_thickness_avg,
+                    "rostralanteriorcingulate_thickness_std": rostralanteriorcingulate_thickness_std,
+                    "rostralmiddlefrontal_thickness_avg": rostralmiddlefrontal_thickness_avg,
+                    "rostralmiddlefrontal_thickness_std": rostralmiddlefrontal_thickness_std,
+                    "superiorfrontal_thickness_avg": superiorfrontal_thickness_avg,
+                    "superiorfrontal_thickness_std": superiorfrontal_thickness_std,
+                    "superiorparietal_thickness_avg": superiorparietal_thickness_avg,
+                    "superiorparietal_thickness_std": superiorparietal_thickness_std,
+                    "superiortemporal_thickness_avg": superiortemporal_thickness_avg,
+                    "superiortemporal_thickness_std": superiortemporal_thickness_std,
+                    "supramarginal_thickness_avg": supramarginal_thickness_avg,
+                    "supramarginal_thickness_std": supramarginal_thickness_std,
+                    "frontalpole_thickness_avg": frontalpole_thickness_avg,
+                    "frontalpole_thickness_std": frontalpole_thickness_std,
+                    "temporalpole_thickness_avg": temporalpole_thickness_avg,
+                    "temporalpole_thickness_std": temporalpole_thickness_std,
+                    "transversetemporal_thickness_avg": transversetemporal_thickness_avg,
+                    "transversetemporal_thickness_std": transversetemporal_thickness_std,
+                    "insula_thickness_avg": insula_thickness_avg,
+                    "insula_thickness_std": insula_thickness_std
                 }
 
 # time
@@ -2425,7 +2673,25 @@ order = ["Date", "APOE", "CDR", "BMI", "Sex", "Age", "Machine", "Institution", "
          "Vp_Posterior_cingulate_cortex_median", "Vp_Medial_temporal_cortex_median",
          "hippo_vol", "phg_vol", "putamen_vol", "pallidum_vol", "thalamus_vol", "caudate_vol", "amygdala_vol",
          "entorhinal_cortex_vol", "fusiform_gyrus_cortex_vol", "fusiform_gyrus_wm_vol", "insula_wm_vol",
-         "superior_temporal_cortex_vol", "posterior_cingulate_cortex_vol", "medial_temporal_cortex_vol"]
+         "superior_temporal_cortex_vol", "posterior_cingulate_cortex_vol", "medial_temporal_cortex_vol",
+         "bankssts_thickness_avg", "bankssts_thickness_std", "caudalanteriorcingulate_thickness_avg", "caudalanteriorcingulate_thickness_std",
+         "caudalmiddlefrontal_thickness_avg", "caudalmiddlefrontal_thickness_std", "cuneus_thickness_avg", "cuneus_thickness_std",
+         "entorhinal_thickness_avg", "entorhinal_thickness_std", "fusiform_thickness_avg", "fusiform_thickness_std",
+         "inferiorparietal_thickness_avg", "inferiorparietal_thickness_std", "inferiortemporal_thickness_avg", "inferiortemporal_thickness_std",
+         "isthmuscingulate_thickness_avg", "isthmuscingulate_thickness_std", "lateraloccipital_thickness_avg", "lateraloccipital_thickness_std",
+         "lateralorbitofrontal_thickness_avg", "lateralorbitofrontal_thickness_std", "lingual_thickness_avg", "lingual_thickness_std",
+         "medialorbitofrontal_thickness_avg", "medialorbitofrontal_thickness_std", "middletemporal_thickness_avg", "middletemporal_thickness_std",
+         "parahippocampal_thickness_avg", "parahippocampal_thickness_std", "paracentral_thickness_avg", "paracentral_thickness_std",
+         "parsopercularis_thickness_avg", "parsopercularis_thickness_std", "parsorbitalis_thickness_avg", "parsorbitalis_thickness_std",
+         "parstriangularis_thickness_avg", "parstriangularis_thickness_std", "pericalcarine_thickness_avg", "pericalcarine_thickness_std",
+         "postcentral_thickness_avg", "postcentral_thickness_std", "posteriorcingulate_thickness_avg", "posteriorcingulate_thickness_std",
+         "precentral_thickness_avg", "precentral_thickness_std", "precuneus_thickness_avg", "precuneus_thickness_std",
+         "rostralanteriorcingulate_thickness_avg", "rostralanteriorcingulate_thickness_std", "rostralmiddlefrontal_thickness_avg",
+         "rostralmiddlefrontal_thickness_std", "superiorfrontal_thickness_avg", "superiorfrontal_thickness_std",
+         "superiorparietal_thickness_avg", "superiorparietal_thickness_std", "superiortemporal_thickness_avg", "superiortemporal_thickness_std",
+         "supramarginal_thickness_avg", "supramarginal_thickness_std", "frontalpole_thickness_avg", "frontalpole_thickness_std",
+         "temporalpole_thickness_avg", "temporalpole_thickness_std", "transversetemporal_thickness_avg", "transversetemporal_thickness_std",
+         "insula_thickness_avg", "insula_thickness_std"]
 
 df_success = df_success.T
 df_success = df_success[order]

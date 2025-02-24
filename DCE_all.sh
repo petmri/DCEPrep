@@ -1,6 +1,7 @@
 #!/bin/bash
 # FSL, Matlab, ROCKETSHIP + parametric_scripts, ANTS, and Python are required
 # Within ROCKETSHIP/parametric_scripts should be a custom scripts folder with T1mapping_fit.m
+shopt -s extglob
 # control variables
 COMPARISON_MODE=0
 EN_BIAS1=0
@@ -15,7 +16,6 @@ PURGE_INTERMEDIATES=0
 GIGA_PURGE=0
 TARGET_FLAG=0
 SCRIPT_LOOP_DIR=dceprep/sub-*/ses-*
-shopt -s extglob
 
 # options
 while getopts ":d:C:fhl:sST:" options; do

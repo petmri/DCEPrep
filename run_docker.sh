@@ -10,9 +10,9 @@ MAC=${MAC%%:*}
 MAC=${MAC:0:2}:${MAC:2:2}:${MAC:4:2}:${MAC:6:2}:${MAC:8:2}:${MAC:10:2}
 # echo $MAC
 
-MATLAB_PATH=/usr/local/MATLAB/$(ls /usr/local/MATLAB/)
+MATLAB_PATH=/usr/local/MATLAB/$(ls /usr/local/MATLAB/ | sort -V | tail -n 1)
 # echo $MATLAB_PATH
-MATLAB_VERSION=$(ls /usr/local/MATLAB/)-dev
+MATLAB_VERSION=$(ls /usr/local/MATLAB/ | sort -V | tail -n 1)-dev
 
 LICENSE=$(ls $MATLAB_PATH/licenses)
 # echo $LICENSE

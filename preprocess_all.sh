@@ -28,7 +28,7 @@ prog=0
 successes=0
 
 # options
-while getopts ":d:bBa:A:ZfhcC:mMstl:S:w:" options; do
+while getopts ":d:bBa:A:ZfhcC:mMstl:T:w:" options; do
 	case "${options}" in
 		a)
 			AIF_SUFFIX=${OPTARG}
@@ -93,13 +93,13 @@ while getopts ":d:bBa:A:ZfhcC:mMstl:S:w:" options; do
 			echo "-A: enable AutoAIF with argument A (All automatic), M (Manual if available), or T (Manual + Training if available)"
 			echo "-b: enable first round of bias field corrections"
 			echo "-B: enable second round of bias field corrections, post-Z-norm if enabled"
-			echo "-c: clean derivatives folder prior to processing, ensures \"fresh\" runs but cannot use skips"
+			echo "-c: clean case's derivative folder prior to processing, ensures \"fresh\" runs but cannot use skips"
 			echo "-C [name]: enable comparison mode, which will output all files to the specified directory within each timepoint"
 			echo "-d [dir_path]: specify BIDS compliant data directory containing all subject folders (sub-*/ses-*/anat|dce/*.nii|*.json)"
 			echo "-h: display this message"
 			echo "-m: enable motion correction"
 			echo "-s: skip preprocessing if DCE input file already exists"
-			echo "-S [dir_path]: specify the subject(s)/session(s) to run (default is 'sub-*/ses-*/')"
+			echo "-T [dir_path]: target the subject(s)/session(s) to run (default is 'sub-*/ses-*/')"
 			echo "-t: only run up to T1 mapping"
 			echo "-w [path]: specify the path to the AutoAIF weights file"
 			echo "-Z: enable Z-slice normalization"
