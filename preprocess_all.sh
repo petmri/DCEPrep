@@ -312,7 +312,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	SECONDS=0
 	echo -ne "HD-BET MP-RAGE [                                                  ] $prog% ($current/$count) Calculating runtime...   \r"
 
-	if [ ! -f "anat/${PREFIX}_desc-brain_mask.nii.gz" ]
+	if [ ! -f "anat/${PREFIX}_desc-brain_mask.nii.gz" ] && [ -f "$source_dir/anat/${PREFIX}_T1w.nii.gz" ]
 		then
 		if [ nvidia-smi ]
 			then
@@ -323,6 +323,11 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 			mETA=$(echo "scale=0;  $SECONDS * 2 * ($count - $current + 1) / 60" | bc -l)
 		fi
 		mv anat/${PREFIX}_desc-brain.nii.gz anat/${PREFIX}_desc-brain_T1w.nii.gz
+	elif [ -f "$source_dir/anat/${PREFIX}_T2w.nii.gz" ]
+		then
+		# assume mouse
+		# we gotta do some orientation shenanigans
+		echo
 	fi
 	prog=$(echo "scale=2;  $prog + 3.33 / $count" | bc -l)
 
