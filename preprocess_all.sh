@@ -337,7 +337,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		then
 		if [ ! -f "dce/${PREFIX}_desc-hmc_DCE.nii.gz" ]
 			then
-			mcflirt -in $source_dir/dce/${PREFIX}_DCE.nii.gz -refvol '${source_dir}/dce/${PREFIX}_DCE.nii.gz[1]' -cost mutualinfo -report -plots -o dce/${PREFIX}_desc-hmc_DCE.nii &> /dev/null
+			mcflirt -in $source_dir/dce/${PREFIX}_DCE.nii.gz -refvol 1 -cost mutualinfo -report -plots -o dce/${PREFIX}_desc-hmc_DCE.nii &> /dev/null
 			if [ ! -f "dce/${PREFIX}_desc-hmc_DCE.nii.gz" ]
 				then
 				echo $SUBJECT_TP_PATH/dce "Missing motion corrected DCE file." >> $LOG_FILE

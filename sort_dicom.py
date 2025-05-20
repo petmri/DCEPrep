@@ -10,8 +10,8 @@ import os
 import shutil
 import sys
 
-sort_dir = "/media/network_mriphysics/USC-PPG/bids_test/sourcedata/dicom"
-output_dir = "/media/network_mriphysics/USC-PPG/bids_test/derivatives"
+sort_dir = "/media/network_mriphysics/USC-PPG/bids_ppg/sourcedata/dicom"
+output_dir = "/media/network_mriphysics/USC-PPG/bids_ppg/derivatives"
 
 print(sort_dir)
 directory = os.fsencode(sort_dir)

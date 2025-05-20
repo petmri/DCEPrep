@@ -90,6 +90,7 @@ whole_fusiform_gyrus_cortex_outliers = []
 whole_fusiform_gyrus_WM_outliers = []
 whole_insula_WM_outliers = []
 whole_superior_temporal_cortex_outliers = []
+whole_inferior_temporal_cortex_outliers = []
 whole_posterior_cingulate_cortex_outliers = []
 whole_medial_temporal_cortex_outliers = []
 wm_outliers_exclude = []
@@ -106,6 +107,7 @@ whole_fusiform_gyrus_cortex_outliers_exclude = []
 whole_fusiform_gyrus_WM_outliers_exclude = []
 whole_insula_WM_outliers_exclude = []
 whole_superior_temporal_cortex_outliers_exclude = []
+whole_inferior_temporal_cortex_outliers_exclude = []
 whole_posterior_cingulate_cortex_outliers_exclude = []
 whole_medial_temporal_cortex_outliers_exclude = []
 total_timepoints = []
@@ -397,6 +399,7 @@ def get_case_stats(subject_id, timepoint):
                 "FUSIFORM_GYRUS_WM": (3007, 4007),
                 "INSULA_WM": (3035, 4035),
                 "SUPERIOR_TEMPORAL_CORTEX": (1030, 2030),
+                "INFERIOR_TEMPORAL_CORTEX": (1009, 2009),
                 "POSTERIOR_CINGULATE_CORTEX": (1023, 2023)
             }
 
@@ -445,7 +448,7 @@ def get_case_stats(subject_id, timepoint):
                     precuneus_thickness_avg = precuneus_thickness_std = rostralanteriorcingulate_thickness_avg = rostralanteriorcingulate_thickness_std = -1
                     rostralmiddlefrontal_thickness_avg = rostralmiddlefrontal_thickness_std = superiorfrontal_thickness_avg = superiorfrontal_thickness_std = -1
                     superiorparietal_thickness_avg = superiorparietal_thickness_std = superiortemporal_thickness_avg = superiortemporal_thickness_std = -1
-                    frontalpole_thickness_avg = frontalpole_thickness_std = -1
+                    inferiortemporal_thickness_avg = inferiortemporal_thickness_std = frontalpole_thickness_avg = frontalpole_thickness_std = -1
                     supramarginal_thickness_avg = supramarginal_thickness_std = temporalpole_thickness_avg = temporalpole_thickness_std = -1
                     transversetemporal_thickness_avg = transversetemporal_thickness_std = -1
                     inferiorparietal_thickness_avg = inferiorparietal_thickness_std = inferiorparietal_thickness_avg = inferiorparietal_thickness_std = -1
@@ -490,7 +493,7 @@ def get_case_stats(subject_id, timepoint):
                 precuneus_thickness_avg = precuneus_thickness_std = rostralanteriorcingulate_thickness_avg = rostralanteriorcingulate_thickness_std = -1
                 rostralmiddlefrontal_thickness_avg = rostralmiddlefrontal_thickness_std = superiorfrontal_thickness_avg = superiorfrontal_thickness_std = -1
                 superiorparietal_thickness_avg = superiorparietal_thickness_std = superiortemporal_thickness_avg = superiortemporal_thickness_std = -1
-                frontalpole_thickness_avg = frontalpole_thickness_std = -1
+                inferiortemporal_thickness_avg = inferiortemporal_thickness_std = frontalpole_thickness_avg = frontalpole_thickness_std = -1
                 supramarginal_thickness_avg = supramarginal_thickness_std = temporalpole_thickness_avg = temporalpole_thickness_std = -1
                 transversetemporal_thickness_avg = transversetemporal_thickness_std = -1
                 inferiorparietal_thickness_avg = inferiorparietal_thickness_std = inferiorparietal_thickness_avg = inferiorparietal_thickness_std = -1
@@ -602,6 +605,7 @@ def get_case_stats(subject_id, timepoint):
                 fusiform_gyrus_wm_vol = float(df_wmparc.loc[df_wmparc['StructName'] == 'wm-lh-fusiform', 'Volume_mm3'].values[0]) + float(df_wmparc.loc[df_wmparc['StructName'] == 'wm-rh-fusiform', 'Volume_mm3'].values[0])
                 insula_wm_vol = float(df_wmparc.loc[df_wmparc['StructName'] == 'wm-lh-insula', 'Volume_mm3'].values[0]) + float(df_wmparc.loc[df_wmparc['StructName'] == 'wm-rh-insula', 'Volume_mm3'].values[0])
                 superior_temporal_cortex_vol = float(df_lh_aparc.loc[df_lh_aparc['StructName'] == 'superiortemporal', 'GrayVol'].values[0]) + float(df_rh_aparc.loc[df_rh_aparc['StructName'] == 'superiortemporal', 'GrayVol'].values[0])
+                inferior_temporal_cortex_vol = float(df_lh_aparc.loc[df_lh_aparc['StructName'] == 'inferiortemporal', 'GrayVol'].values[0]) + float(df_rh_aparc.loc[df_rh_aparc['StructName'] == 'inferiortemporal', 'GrayVol'].values[0])
                 posterior_cingulate_cortex_vol = float(df_lh_aparc.loc[df_lh_aparc['StructName'] == 'posteriorcingulate', 'GrayVol'].values[0]) + float(df_rh_aparc.loc[df_rh_aparc['StructName'] == 'posteriorcingulate', 'GrayVol'].values[0])
                 medial_temporal_cortex_vol = hippo_vol + phg_vol + entorhinal_cortex_vol
                 # get all cortical thickness values from left and right aparc
@@ -678,6 +682,8 @@ def get_case_stats(subject_id, timepoint):
                 superiorparietal_thickness_std = cortical_thickness.get('superiorparietal', {}).get('thickness_std', -1)
                 superiortemporal_thickness_avg = cortical_thickness.get('superiortemporal', {}).get('thickness', -1)
                 superiortemporal_thickness_std = cortical_thickness.get('superiortemporal', {}).get('thickness_std', -1)
+                inferiortemporal_thickness_avg = cortical_thickness.get('inferiortemporal', {}).get('thickness', -1)
+                inferiortemporal_thickness_std = cortical_thickness.get('inferiortemporal', {}).get('thickness_std', -1)
                 supramarginal_thickness_avg = cortical_thickness.get('supramarginal', {}).get('thickness', -1)
                 supramarginal_thickness_std = cortical_thickness.get('supramarginal', {}).get('thickness_std', -1)
                 frontalpole_thickness_avg = cortical_thickness.get('frontalpole', {}).get('thickness', -1)
@@ -701,6 +707,7 @@ def get_case_stats(subject_id, timepoint):
                 FUSIFORM_GYRUS_WM_INDICES = np.where((wmparc == regions["FUSIFORM_GYRUS_WM"][0]) | (wmparc == regions["FUSIFORM_GYRUS_WM"][1]) & (ktrans_map > KTRANS_MIN_THRESHOLD))
                 INSULA_WM_INDICES = np.where((wmparc == regions["INSULA_WM"][0]) | (wmparc == regions["INSULA_WM"][1]) & (ktrans_map > KTRANS_MIN_THRESHOLD))
                 SUPERIOR_TEMPORAL_CORTEX_INDICES = np.where((wmparc == regions["SUPERIOR_TEMPORAL_CORTEX"][0]) | (wmparc == regions["SUPERIOR_TEMPORAL_CORTEX"][1]) & (ktrans_map > KTRANS_MIN_THRESHOLD))
+                INFERIOR_TEMPORAL_CORTEX_INDICES = np.where((wmparc == regions["INFERIOR_TEMPORAL_CORTEX"][0]) | (wmparc == regions["INFERIOR_TEMPORAL_CORTEX"][1]) & (ktrans_map > KTRANS_MIN_THRESHOLD))
                 POSTERIOR_CINGULATE_CORTEX_INDICES = np.where((wmparc == regions["POSTERIOR_CINGULATE_CORTEX"][0]) | (wmparc == regions["POSTERIOR_CINGULATE_CORTEX"][1]) & (ktrans_map > KTRANS_MIN_THRESHOLD))
                 MEDIAL_TEMPORAL_CORTEX_INDICES = np.where((wmparc == regions["HIPPO"][0]) | (wmparc == regions["HIPPO"][1]) | (wmparc == regions["PHG"][0]) | (wmparc == regions["PHG"][1]) | (wmparc == regions["ENTORHINAL_CORTEX"][0]) | (wmparc == regions["ENTORHINAL_CORTEX"][1]) & (ktrans_map > KTRANS_MIN_THRESHOLD))
             
@@ -716,6 +723,7 @@ def get_case_stats(subject_id, timepoint):
                 Ktrans_Fusiform_gyrus_WM = ktrans_map[FUSIFORM_GYRUS_WM_INDICES]*1000
                 Ktrans_Insula_WM = ktrans_map[INSULA_WM_INDICES]*1000
                 Ktrans_Superior_temporal_cortex = ktrans_map[SUPERIOR_TEMPORAL_CORTEX_INDICES]*1000
+                Ktrans_Inferior_temporal_cortex = ktrans_map[INFERIOR_TEMPORAL_CORTEX_INDICES]*1000
                 Ktrans_Posterior_cingulate_cortex = ktrans_map[POSTERIOR_CINGULATE_CORTEX_INDICES]*1000
                 Ktrans_Medial_temporal_cortex = ktrans_map[MEDIAL_TEMPORAL_CORTEX_INDICES]*1000
                 Vp_Hippo = Vp_map[HIPPO_INDICES]
@@ -730,6 +738,7 @@ def get_case_stats(subject_id, timepoint):
                 Vp_Fusiform_gyrus_WM = Vp_map[FUSIFORM_GYRUS_WM_INDICES]
                 Vp_Insula_WM = Vp_map[INSULA_WM_INDICES]
                 Vp_Superior_temporal_cortex = Vp_map[SUPERIOR_TEMPORAL_CORTEX_INDICES]
+                Vp_Inferior_temporal_cortex = Vp_map[INFERIOR_TEMPORAL_CORTEX_INDICES]
                 Vp_Posterior_cingulate_cortex = Vp_map[POSTERIOR_CINGULATE_CORTEX_INDICES]
                 Vp_Medial_temporal_cortex = Vp_map[MEDIAL_TEMPORAL_CORTEX_INDICES]
             
@@ -745,6 +754,7 @@ def get_case_stats(subject_id, timepoint):
                 Ktrans_Fusiform_gyrus_WM_median = np.median(Ktrans_Fusiform_gyrus_WM)
                 Ktrans_Insula_WM_median = np.median(Ktrans_Insula_WM)
                 Ktrans_Superior_temporal_cortex_median = np.median(Ktrans_Superior_temporal_cortex)
+                Ktrans_Inferior_temporal_cortex_median = np.median(Ktrans_Inferior_temporal_cortex)
                 Ktrans_Posterior_cingulate_cortex_median = np.median(Ktrans_Posterior_cingulate_cortex)
                 Ktrans_Medial_temporal_cortex_median = np.median(Ktrans_Medial_temporal_cortex)
                 Vp_Hippo_median = np.median(Vp_Hippo)
@@ -759,6 +769,7 @@ def get_case_stats(subject_id, timepoint):
                 Vp_Fusiform_gyrus_WM_median = np.median(Vp_Fusiform_gyrus_WM)
                 Vp_Insula_WM_median = np.median(Vp_Insula_WM)
                 Vp_Superior_temporal_cortex_median = np.median(Vp_Superior_temporal_cortex)
+                Vp_Inferior_temporal_cortex_median = np.median(Vp_Inferior_temporal_cortex)
                 Vp_Posterior_cingulate_cortex_median = np.median(Vp_Posterior_cingulate_cortex)
                 Vp_Medial_temporal_cortex_median = np.median(Vp_Medial_temporal_cortex)
             
@@ -798,6 +809,9 @@ def get_case_stats(subject_id, timepoint):
                 if Ktrans_Superior_temporal_cortex_median > 5:
                     if subject_id + "_" + timepoint not in whole_superior_temporal_cortex_outliers:
                         whole_superior_temporal_cortex_outliers.append(subject_id + "_" + timepoint)
+                if Ktrans_Inferior_temporal_cortex_median > 5:
+                    if subject_id + "_" + timepoint not in whole_inferior_temporal_cortex_outliers:
+                        whole_inferior_temporal_cortex_outliers.append(subject_id + "_" + timepoint)
                 if Ktrans_Posterior_cingulate_cortex_median > 5:
                     if subject_id + "_" + timepoint not in whole_posterior_cingulate_cortex_outliers:
                         whole_posterior_cingulate_cortex_outliers.append(subject_id + "_" + timepoint)
@@ -870,6 +884,7 @@ def get_case_stats(subject_id, timepoint):
                     "Ktrans_Fusiform_gyrus_WM_median": Ktrans_Fusiform_gyrus_WM_median,
                     "Ktrans_Insula_WM_median": Ktrans_Insula_WM_median,
                     "Ktrans_Superior_temporal_cortex_median": Ktrans_Superior_temporal_cortex_median,
+                    "Ktrans_Inferior_temporal_cortex_median": Ktrans_Inferior_temporal_cortex_median,
                     "Ktrans_Posterior_cingulate_cortex_median": Ktrans_Posterior_cingulate_cortex_median,
                     "Ktrans_Medial_temporal_cortex_median": Ktrans_Medial_temporal_cortex_median,
                     "Vp_Hippo_median": Vp_Hippo_median,
@@ -898,6 +913,7 @@ def get_case_stats(subject_id, timepoint):
                     "fusiform_gyrus_wm_vol": fusiform_gyrus_wm_vol,
                     "insula_wm_vol": insula_wm_vol,
                     "superior_temporal_cortex_vol": superior_temporal_cortex_vol,
+                    "inferior_temporal_cortex_vol": inferior_temporal_cortex_vol,
                     "posterior_cingulate_cortex_vol": posterior_cingulate_cortex_vol,
                     "medial_temporal_cortex_vol": medial_temporal_cortex_vol,
                     "manual_aif_status": manual_aif_status,
@@ -1016,6 +1032,7 @@ def get_case_stats(subject_id, timepoint):
                     "Ktrans_Fusiform_gyrus_WM_median": Ktrans_Fusiform_gyrus_WM_median,
                     "Ktrans_Insula_WM_median": Ktrans_Insula_WM_median,
                     "Ktrans_Superior_temporal_cortex_median": Ktrans_Superior_temporal_cortex_median,
+                    "Ktrans_Inferior_temporal_cortex_median": Ktrans_Inferior_temporal_cortex_median,
                     "Ktrans_Posterior_cingulate_cortex_median": Ktrans_Posterior_cingulate_cortex_median,
                     "Ktrans_Medial_temporal_cortex_median": Ktrans_Medial_temporal_cortex_median,
                     "Vp_Hippo_median": Vp_Hippo_median,
@@ -1030,6 +1047,7 @@ def get_case_stats(subject_id, timepoint):
                     "Vp_Fusiform_gyrus_WM_median": Vp_Fusiform_gyrus_WM_median,
                     "Vp_Insula_WM_median": Vp_Insula_WM_median,
                     "Vp_Superior_temporal_cortex_median": Vp_Superior_temporal_cortex_median,
+                    "Vp_Inferior_temporal_cortex_median": Vp_Inferior_temporal_cortex_median,
                     "Vp_Posterior_cingulate_cortex_median": Vp_Posterior_cingulate_cortex_median,
                     "Vp_Medial_temporal_cortex_median": Vp_Medial_temporal_cortex_median,
                     "hippo_vol": hippo_vol,
@@ -1044,6 +1062,7 @@ def get_case_stats(subject_id, timepoint):
                     "fusiform_gyrus_wm_vol": fusiform_gyrus_wm_vol,
                     "insula_wm_vol": insula_wm_vol,
                     "superior_temporal_cortex_vol": superior_temporal_cortex_vol,
+                    "inferior_temporal_cortex_vol": inferior_temporal_cortex_vol,
                     "posterior_cingulate_cortex_vol": posterior_cingulate_cortex_vol,
                     "medial_temporal_cortex_vol": medial_temporal_cortex_vol,
                     "manual_aif_status": manual_aif_status,
@@ -1188,6 +1207,8 @@ for entry in successful_timepoints:
             whole_insula_WM_outliers_exclude.append(whole_insula_WM_outliers.pop(whole_insula_WM_outliers.index(entry)))
         if entry in whole_superior_temporal_cortex_outliers:
             whole_superior_temporal_cortex_outliers_exclude.append(whole_superior_temporal_cortex_outliers.pop(whole_superior_temporal_cortex_outliers.index(entry)))
+        if entry in whole_inferior_temporal_cortex_outliers:
+            whole_inferior_temporal_cortex_outliers_exclude.append(whole_inferior_temporal_cortex_outliers.pop(whole_inferior_temporal_cortex_outliers.index(entry)))
         if entry in whole_posterior_cingulate_cortex_outliers:
             whole_posterior_cingulate_cortex_outliers_exclude.append(whole_posterior_cingulate_cortex_outliers.pop(whole_posterior_cingulate_cortex_outliers.index(entry)))
         if entry in whole_medial_temporal_cortex_outliers:
@@ -1472,6 +1493,14 @@ whole_superior_temporal_cortex_Ktrans_mean_exclude = np.mean([population_data_ex
 whole_superior_temporal_cortex_Ktrans_median_exclude = np.median([population_data_exclude[entry]["Ktrans_Superior_temporal_cortex_median"] for entry in population_data_exclude])
 whole_superior_temporal_cortex_Ktrans_std_exclude = np.std([population_data_exclude[entry]["Ktrans_Superior_temporal_cortex_median"] for entry in population_data_exclude])
 
+whole_inferior_temporal_cortex_Ktrans_mean = np.mean([population_data[entry]["Ktrans_Inferior_temporal_cortex_median"] for entry in population_data])
+whole_inferior_temporal_cortex_Ktrans_median = np.median([population_data[entry]["Ktrans_Inferior_temporal_cortex_median"] for entry in population_data])
+whole_inferior_temporal_cortex_Ktrans_std = np.std([population_data[entry]["Ktrans_Inferior_temporal_cortex_median"] for entry in population_data])
+
+whole_inferior_temporal_cortex_Ktrans_mean_exclude = np.mean([population_data_exclude[entry]["Ktrans_Inferior_temporal_cortex_median"] for entry in population_data_exclude])
+whole_inferior_temporal_cortex_Ktrans_median_exclude = np.median([population_data_exclude[entry]["Ktrans_Inferior_temporal_cortex_median"] for entry in population_data_exclude])
+whole_inferior_temporal_cortex_Ktrans_std_exclude = np.std([population_data_exclude[entry]["Ktrans_Inferior_temporal_cortex_median"] for entry in population_data_exclude])
+
 whole_posterior_cingulate_cortex_Ktrans_mean = np.mean([population_data[entry]["Ktrans_Posterior_cingulate_cortex_median"] for entry in population_data])
 whole_posterior_cingulate_cortex_Ktrans_median = np.median([population_data[entry]["Ktrans_Posterior_cingulate_cortex_median"] for entry in population_data])
 whole_posterior_cingulate_cortex_Ktrans_std = np.std([population_data[entry]["Ktrans_Posterior_cingulate_cortex_median"] for entry in population_data])
@@ -1681,6 +1710,7 @@ Ktrans_histograms = {
     "whole_fusiform_gyrus_WM": [],
     "whole_insula_WM": [],
     "whole_superior_temporal_cortex": [],
+    "whole_inferior_temporal_cortex": [],
     "whole_posterior_cingulate_cortex": [],
     "whole_medial_temporal_cortex": []
 }
@@ -1698,6 +1728,7 @@ Vp_histograms = {
     "whole_fusiform_gyrus_WM": [],
     "whole_insula_WM": [],
     "whole_superior_temporal_cortex": [],
+    "whole_inferior_temporal_cortex": [],
     "whole_posterior_cingulate_cortex": [],
     "whole_medial_temporal_cortex": []
 }
@@ -1714,6 +1745,7 @@ for entry in population_data.keys():
     Ktrans_histograms["whole_fusiform_gyrus_WM"].append(population_data[entry]["Ktrans_Fusiform_gyrus_WM_median"])
     Ktrans_histograms["whole_insula_WM"].append(population_data[entry]["Ktrans_Insula_WM_median"])
     Ktrans_histograms["whole_superior_temporal_cortex"].append(population_data[entry]["Ktrans_Superior_temporal_cortex_median"])
+    Ktrans_histograms["whole_inferior_temporal_cortex"].append(population_data[entry]["Ktrans_Inferior_temporal_cortex_median"])
     Ktrans_histograms["whole_posterior_cingulate_cortex"].append(population_data[entry]["Ktrans_Posterior_cingulate_cortex_median"])
     Ktrans_histograms["whole_medial_temporal_cortex"].append(population_data[entry]["Ktrans_Medial_temporal_cortex_median"])
     Vp_histograms["whole_hippo"].append(population_data[entry]["Vp_Hippo_median"])
@@ -1728,6 +1760,7 @@ for entry in population_data.keys():
     Vp_histograms["whole_fusiform_gyrus_WM"].append(population_data[entry]["Vp_Fusiform_gyrus_WM_median"])
     Vp_histograms["whole_insula_WM"].append(population_data[entry]["Vp_Insula_WM_median"])
     Vp_histograms["whole_superior_temporal_cortex"].append(population_data[entry]["Vp_Superior_temporal_cortex_median"])
+    Vp_histograms["whole_inferior_temporal_cortex"].append(population_data[entry]["Vp_Inferior_temporal_cortex_median"])
     Vp_histograms["whole_posterior_cingulate_cortex"].append(population_data[entry]["Vp_Posterior_cingulate_cortex_median"])
     Vp_histograms["whole_medial_temporal_cortex"].append(population_data[entry]["Vp_Medial_temporal_cortex_median"])
 
@@ -1743,6 +1776,7 @@ whole_fusiform_gyrus_cortex_histogram_exclude = []
 whole_fusiform_gyrus_WM_histogram_exclude = []
 whole_insula_WM_histogram_exclude = []
 whole_superior_temporal_cortex_histogram_exclude = []
+whole_inferior_temporal_cortex_histogram_exclude = []
 whole_posterior_cingulate_cortex_histogram_exclude = []
 whole_medial_temporal_cortex_histogram_exclude = []
 for entry in population_data_exclude.keys():
@@ -1758,6 +1792,7 @@ for entry in population_data_exclude.keys():
     whole_fusiform_gyrus_WM_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Fusiform_gyrus_WM_median"])
     whole_insula_WM_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Insula_WM_median"])
     whole_superior_temporal_cortex_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Superior_temporal_cortex_median"])
+    whole_inferior_temporal_cortex_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Inferior_temporal_cortex_median"])
     whole_posterior_cingulate_cortex_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Posterior_cingulate_cortex_median"])
     whole_medial_temporal_cortex_histogram_exclude.append(population_data_exclude[entry]["Ktrans_Medial_temporal_cortex_median"])
 
@@ -1843,6 +1878,13 @@ plt.title("Whole Superior Temporal Cortex Median Ktrans")
 plt.xlabel("Ktrans (10^-3/min)")
 Ktrans_whole_superior_temporal_cortex_histogram_path = os.path.join("figures/", "Ktrans_whole_superior_temporal_cortex_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(Ktrans_whole_superior_temporal_cortex_histogram_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(Ktrans_histograms["whole_inferior_temporal_cortex"], bins=50, range=(0, 5))
+plt.title("Whole Inferior Temporal Cortex Median Ktrans")
+plt.xlabel("Ktrans (10^-3/min)")
+Ktrans_whole_inferior_temporal_cortex_histogram_path = os.path.join("figures/", "Ktrans_whole_inferior_temporal_cortex_histogram" + output_dir + "_" + date_filename + ".png")
+plt.savefig(Ktrans_whole_inferior_temporal_cortex_histogram_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(Ktrans_histograms["whole_posterior_cingulate_cortex"], bins=50, range=(0, 5))
@@ -1953,6 +1995,14 @@ plt.xlabel("Ktrans (10^-3/min)")
 # whole_superior_temporal_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_superior_temporal_cortex_histogram_exclude.png")
 whole_superior_temporal_cortex_histogram_exclude_path = os.path.join("figures/", "whole_superior_temporal_cortex_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_superior_temporal_cortex_histogram_exclude_path, bbox_inches='tight')
+plt.close()
+
+plt.hist(whole_inferior_temporal_cortex_histogram_exclude, bins=50, range=(0, 5))
+plt.title("Whole Inferior Temporal Cortex Median Ktrans (Exclude)")
+plt.xlabel("Ktrans (10^-3/min)")
+# whole_inferior_temporal_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_inferior_temporal_cortex_histogram_exclude.png")
+whole_inferior_temporal_cortex_histogram_exclude_path = os.path.join("figures/", "whole_inferior_temporal_cortex_histogram_exclude" + output_dir + "_" + date_filename + ".png")
+plt.savefig(whole_inferior_temporal_cortex_histogram_exclude_path, bbox_inches='tight')
 plt.close()
 
 plt.hist(whole_posterior_cingulate_cortex_histogram_exclude, bins=50, range=(0, 5))
@@ -2264,6 +2314,9 @@ data = {
     'whole_superior_temporal_cortex_mean': round(whole_superior_temporal_cortex_Ktrans_mean, 4),
     'whole_superior_temporal_cortex_median': round(whole_superior_temporal_cortex_Ktrans_median, 4),
     'whole_superior_temporal_cortex_std': round(whole_superior_temporal_cortex_Ktrans_std, 4),
+    'whole_inferior_temporal_cortex_mean': round(whole_inferior_temporal_cortex_Ktrans_mean, 4),
+    'whole_inferior_temporal_cortex_median': round(whole_inferior_temporal_cortex_Ktrans_median, 4),
+    'whole_inferior_temporal_cortex_std': round(whole_inferior_temporal_cortex_Ktrans_std, 4),
     'whole_posterior_cingulate_cortex_mean': round(whole_posterior_cingulate_cortex_Ktrans_mean, 4),
     'whole_posterior_cingulate_cortex_median': round(whole_posterior_cingulate_cortex_Ktrans_median, 4),
     'whole_posterior_cingulate_cortex_std': round(whole_posterior_cingulate_cortex_Ktrans_std, 4),
@@ -2303,6 +2356,7 @@ data = {
     'whole_fusiform_gyrus_WM_outliers': whole_fusiform_gyrus_WM_outliers,
     'whole_insula_WM_outliers': whole_insula_WM_outliers,
     'whole_superior_temporal_cortex_outliers': whole_superior_temporal_cortex_outliers,
+    'whole_inferior_temporal_cortex_outliers': whole_inferior_temporal_cortex_outliers,
     'whole_posterior_cingulate_cortex_outliers': whole_posterior_cingulate_cortex_outliers,
     'whole_medial_temporal_cortex_outliers': whole_medial_temporal_cortex_outliers,
     # 'rPhG_L_histogram': rPhG_L_histogram_path,
@@ -2333,6 +2387,7 @@ data = {
     'Ktrans_whole_fusiform_gyrus_WM_histogram': "../../" + Ktrans_whole_fusiform_gyrus_WM_histogram_path,
     'Ktrans_whole_insula_WM_histogram': "../../" + Ktrans_whole_insula_WM_histogram_path,
     'Ktrans_whole_superior_temporal_cortex_histogram': "../../" + Ktrans_whole_superior_temporal_cortex_histogram_path,
+    'Ktrans_whole_inferior_temporal_cortex_histogram': "../../" + Ktrans_whole_inferior_temporal_cortex_histogram_path,
     'Ktrans_whole_posterior_cingulate_cortex_histogram': "../../" + Ktrans_whole_posterior_cingulate_cortex_histogram_path,
     'Ktrans_whole_medial_temporal_cortex_histogram': "../../" + Ktrans_whole_medial_temporal_cortex_histogram_path
 }
@@ -2441,6 +2496,9 @@ data = {
     'whole_superior_temporal_cortex_mean': round(whole_superior_temporal_cortex_Ktrans_mean_exclude, 4),
     'whole_superior_temporal_cortex_median': round(whole_superior_temporal_cortex_Ktrans_median_exclude, 4),
     'whole_superior_temporal_cortex_std': round(whole_superior_temporal_cortex_Ktrans_std_exclude, 4),
+    'whole_inferior_temporal_cortex_mean': round(whole_inferior_temporal_cortex_Ktrans_mean_exclude, 4),
+    'whole_inferior_temporal_cortex_median': round(whole_inferior_temporal_cortex_Ktrans_median_exclude, 4),
+    'whole_inferior_temporal_cortex_std': round(whole_inferior_temporal_cortex_Ktrans_std_exclude, 4),
     'whole_posterior_cingulate_cortex_mean': round(whole_posterior_cingulate_cortex_Ktrans_mean_exclude, 4),
     'whole_posterior_cingulate_cortex_median': round(whole_posterior_cingulate_cortex_Ktrans_median_exclude, 4),
     'whole_posterior_cingulate_cortex_std': round(whole_posterior_cingulate_cortex_Ktrans_std_exclude, 4),
@@ -2464,6 +2522,7 @@ data = {
     'whole_fusiform_gyrus_WM_outliers': whole_fusiform_gyrus_WM_outliers,
     'whole_insula_WM_outliers': whole_insula_WM_outliers,
     'whole_superior_temporal_cortex_outliers': whole_superior_temporal_cortex_outliers,
+    'whole_inferior_temporal_cortex_outliers': whole_inferior_temporal_cortex_outliers,
     'whole_posterior_cingulate_cortex_outliers': whole_posterior_cingulate_cortex_outliers,
     'whole_medial_temporal_cortex_outliers': whole_medial_temporal_cortex_outliers,
     'whole_hippo_histogram': "../../" + whole_hippo_histogram_exclude_path,
@@ -2478,6 +2537,7 @@ data = {
     'whole_fusiform_gyrus_WM_histogram': "../../" + whole_fusiform_gyrus_WM_histogram_exclude_path,
     'whole_insula_WM_histogram': "../../" + whole_insula_WM_histogram_exclude_path,
     'whole_superior_temporal_cortex_histogram': "../../" + whole_superior_temporal_cortex_histogram_exclude_path,
+    'whole_inferior_temporal_cortex_histogram': "../../" + whole_inferior_temporal_cortex_histogram_exclude_path,
     'whole_posterior_cingulate_cortex_histogram': "../../" + whole_posterior_cingulate_cortex_histogram_exclude_path,
     'whole_medial_temporal_cortex_histogram': "../../" + whole_medial_temporal_cortex_histogram_exclude_path
 }
@@ -2666,14 +2726,14 @@ order = ["Date", "APOE", "CDR", "BMI", "Sex", "Age", "Machine", "Institution", "
          "wm_median", "gm_median", "Ktrans_Hippo_median", "Ktrans_PhG_median", "Ktrans_Putamen_median", "Ktrans_Pallidum_median",
          "Ktrans_Thalamus_median", "Ktrans_Caudate_median", "Ktrans_Amygdala_median", "Ktrans_Entorhinal_cortex_median",
          "Ktrans_Fusiform_gyrus_cortex_median", "Ktrans_Fusiform_gyrus_WM_median", "Ktrans_Insula_WM_median",
-         "Ktrans_Superior_temporal_cortex_median", "Ktrans_Posterior_cingulate_cortex_median", "Ktrans_Medial_temporal_cortex_median",
+         "Ktrans_Superior_temporal_cortex_median", "Ktrans_Inferior_temporal_cortex_median", "Ktrans_Posterior_cingulate_cortex_median", "Ktrans_Medial_temporal_cortex_median",
          "Vp_Hippo_median", "Vp_PhG_median", "Vp_Putamen_median", "Vp_Pallidum_median", "Vp_Thalamus_median",
          "Vp_Caudate_median", "Vp_Amygdala_median", "Vp_Entorhinal_cortex_median", "Vp_Fusiform_gyrus_cortex_median",
          "Vp_Fusiform_gyrus_WM_median", "Vp_Insula_WM_median", "Vp_Superior_temporal_cortex_median",
          "Vp_Posterior_cingulate_cortex_median", "Vp_Medial_temporal_cortex_median",
          "hippo_vol", "phg_vol", "putamen_vol", "pallidum_vol", "thalamus_vol", "caudate_vol", "amygdala_vol",
          "entorhinal_cortex_vol", "fusiform_gyrus_cortex_vol", "fusiform_gyrus_wm_vol", "insula_wm_vol",
-         "superior_temporal_cortex_vol", "posterior_cingulate_cortex_vol", "medial_temporal_cortex_vol",
+         "superior_temporal_cortex_vol", "inferior_temporal_cortex_vol", "posterior_cingulate_cortex_vol", "medial_temporal_cortex_vol",
          "bankssts_thickness_avg", "bankssts_thickness_std", "caudalanteriorcingulate_thickness_avg", "caudalanteriorcingulate_thickness_std",
          "caudalmiddlefrontal_thickness_avg", "caudalmiddlefrontal_thickness_std", "cuneus_thickness_avg", "cuneus_thickness_std",
          "entorhinal_thickness_avg", "entorhinal_thickness_std", "fusiform_thickness_avg", "fusiform_thickness_std",

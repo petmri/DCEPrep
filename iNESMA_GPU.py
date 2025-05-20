@@ -110,7 +110,7 @@ def inesma_smoothing(data, num_iterations=2, local_neighborhood_x=5,local_neighb
                      similarity_threshold=0.3, h=0.01):
     # num_iterations defines the number of iterations for smoothing
 
-    # local_neighborhood defines radius in voxels of neightborhood for smoothing
+    # local_neighborhood defines radius in voxels of neighborhood for smoothing
     # TODO: this should be defined in mm, not in voxels
 
     # similarity_threshold defines the threshold to accept a voxel for smoothing
