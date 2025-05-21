@@ -6,7 +6,14 @@ Used FSL 6.0, ANTS, freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.0-2beb96c (w
 ## Installation
 ### Cloning
 In your intended destination directory:
-`git clone https://github.com/petmri/DCEprep.git`
+`git clone https://github.com/petmri/in-house_toolbox.git`
+`conda` or `venv` are recommended for ease of environment setup.
+For example, using `venv`:
+```
+python3 -m venv tf
+source tf/bin/activate
+pip install -r venv_requirements.txt
+```
 ### Docker (easy, consistent, ~18 GB)
 The easiest way to run the docker is to use a simple script included with this repo: `run_docker.sh`. It will automatically pull the Docker image and run it.
 
