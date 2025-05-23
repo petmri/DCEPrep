@@ -253,6 +253,25 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	fi
 	SUBJECT_TP_PATH=$(pwd)
 
+	# --- LOCKING FOR MULTI-MACHINE PROCESSING ---
+	LOCKFILE="preprocessing_lock.txt"
+	LOCKDIR=$(pwd)
+	LOCKPATH="$LOCKDIR/$LOCKFILE"
+	LOCKHOST=$(hostname)
+	LOCKPID=$$
+	LOCKLIST="$DERIV_DIR/locks_${LOCKHOST}.txt"
+	echo "Attempting to lock $LOCKPATH on $LOCKHOST with PID $LOCKPID"
+
+	# Try to create lock file atomically
+	if ( set -o noclobber; echo "$LOCKHOST:$LOCKPID" > "$LOCKPATH" ) 2> /dev/null; then
+		echo "$LOCKPATH" >> "$LOCKLIST"
+		trap 'for f in $(cat "$LOCKLIST" 2>/dev/null); do rm -f "$f"; done; rm -f "$LOCKLIST"; exit $?' INT TERM EXIT
+	else
+		echo "Skipping $dir because it is currently being processed by $(cat $LOCKPATH)." >> $LOG_FILE
+		cd $DERIV_DIR
+		continue
+	fi
+
 	if [ ! -f $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_SUFFIX}.nii.gz ] && [ ! -f $DERIV_DIR/dceprep-manualAIF/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz ] && [ $USE_AUTO_AIF -eq 2 ]
 		then
 		echo "No ${PREFIX}_$AIF_SUFFIX file found for $DERIV_DIR/dceprep/$SUBJECT/$SESSION/. Skipping timepoint..." >> $LOG_FILE
