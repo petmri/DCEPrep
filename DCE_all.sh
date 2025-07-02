@@ -193,7 +193,28 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 		cd $der_dir || echo "ERROR: $der_dir does not exist. Preprocess first or check the name and try again." >> $LOG_FILE
 	fi
 	SUBJECT_TP_PATH=$(pwd)
+	if [ ! -f anat/${PREFIX}_desc-brain_T1w.nii.gz ]
+		then
+		cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/anat/${PREFIX}_desc-brain_T1w.nii.gz $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+	fi
+	# Locking mechanism to prevent concurrent processing from other machines
+	LOCKFILE="lock.txt"
+	LOCKDIR=$(pwd)
+	LOCKPATH="$LOCKDIR/$LOCKFILE"
+	LOCKHOST=$(hostname)
+	LOCKPID=$$
+	LOCKLIST="$DERIV_DIR/locks_${LOCKHOST}.txt"
+	echo "Locking $LOCKPATH on $LOCKHOST with PID $LOCKPID"
 
+	# Try to create lock file atomically
+	if ( set -o noclobber; echo "$LOCKHOST:$LOCKPID" > "$LOCKPATH" ) 2> /dev/null; then
+		echo "$LOCKPATH" >> "$LOCKLIST"
+		trap 'for f in $(cat "$LOCKLIST" 2>/dev/null); do rm -f "$f"; done; rm -f "$LOCKLIST"; exit $?' INT TERM EXIT
+	else
+		echo "Skipping $dir because it is currently being processed by $(cat $LOCKPATH)." >> $LOG_FILE
+		cd $DERIV_DIR
+		continue
+	fi
 	if [ $SKIP_IF_SUCCESS -eq 1 ]
 		then
 		if [ -f "reports/${PREFIX}_desc-casereport.html" ] && [ -f "anat/${PREFIX}_space-DCEref_desc-wmparc.nii.gz" ]
@@ -245,7 +266,6 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 			tail -1 dce/A_dceR1info.log >> $LOG_FILE
 			cd $DATA_DIR/../derivatives
 			fail=1
-			rm lock.txt
 			continue
 	fi
 	

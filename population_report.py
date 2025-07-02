@@ -115,7 +115,37 @@ successful_timepoints = []
 popAIF_curves = []
 aif_curves = []
 def get_case_stats(subject_id, timepoint):
+        stats_failed = False
         AIFitness = aif_fitted_r2 = max_disp = T1_wm_median = T1_wm_std = T1_gm_median = T1_gm_std = wm_mean = wm_median = wm_std = gm_mean = gm_median = gm_std = 0
+        hippo_vol = phg_vol = putamen_vol = pallidum_vol = thalamus_vol = caudate_vol = amygdala_vol = -1
+        entorhinal_cortex_vol = fusiform_gyrus_cortex_vol = fusiform_gyrus_wm_vol = insula_wm_vol = -1
+        superior_temporal_cortex_vol = inferior_temporal_cortex_vol = posterior_cingulate_cortex_vol = medial_temporal_cortex_vol = -1
+        Ktrans_Hippo_median = Ktrans_PhG_median = Ktrans_Putamen_median = Ktrans_Pallidum_median = -1
+        Ktrans_Thalamus_median = Ktrans_Caudate_median = Ktrans_Amygdala_median = Ktrans_Entorhinal_cortex_median = -1
+        Ktrans_Fusiform_gyrus_cortex_median = Ktrans_Fusiform_gyrus_WM_median = Ktrans_Insula_WM_median = -1
+        Ktrans_Superior_temporal_cortex_median = Ktrans_Inferior_temporal_cortex_median = Ktrans_Posterior_cingulate_cortex_median = Ktrans_Medial_temporal_cortex_median = -1
+        Vp_Hippo_median = Vp_PhG_median = Vp_Putamen_median = Vp_Pallidum_median = Vp_Thalamus_median = -1
+        Vp_Caudate_median = Vp_Amygdala_median = Vp_Entorhinal_cortex_median = Vp_Fusiform_gyrus_cortex_median = -1
+        Vp_Fusiform_gyrus_WM_median = Vp_Insula_WM_median = Vp_Superior_temporal_cortex_median = Vp_Inferior_temporal_cortex_median = -1
+        Vp_Posterior_cingulate_cortex_median = Vp_Medial_temporal_cortex_median = SNR = -1
+        bankssts_thickness_avg = bankssts_thickness_std = caudalanteriorcingulate_thickness_avg = caudalanteriorcingulate_thickness_std = -1
+        caudalmiddlefrontal_thickness_avg = caudalmiddlefrontal_thickness_std = cuneus_thickness_avg = cuneus_thickness_std = -1
+        entorhinal_thickness_avg = entorhinal_thickness_std = fusiform_thickness_avg = fusiform_thickness_std = -1
+        inferiorparietal_thickness_avg = inferiorparietal_thickness_std = inferiortemporal_thickness_avg = inferiortemporal_thickness_std = -1
+        insula_thickness_avg = insula_thickness_std = isthmuscingulate_thickness_avg = isthmuscingulate_thickness_std = -1
+        lateraloccipital_thickness_avg = lateraloccipital_thickness_std = lateralorbitofrontal_thickness_avg = lateralorbitofrontal_thickness_std = -1
+        lingual_thickness_avg = lingual_thickness_std = medialorbitofrontal_thickness_avg = medialorbitofrontal_thickness_std = -1
+        middletemporal_thickness_avg = middletemporal_thickness_std = parahippocampal_thickness_avg = parahippocampal_thickness_std = -1
+        paracentral_thickness_avg = paracentral_thickness_std = parsopercularis_thickness_avg = parsopercularis_thickness_std = -1
+        parsorbitalis_thickness_avg = parsorbitalis_thickness_std = parstriangularis_thickness_avg = parstriangularis_thickness_std = -1
+        pericalcarine_thickness_avg = pericalcarine_thickness_std = postcentral_thickness_avg = postcentral_thickness_std = -1
+        posteriorcingulate_thickness_avg = posteriorcingulate_thickness_std = precentral_thickness_avg = precentral_thickness_std = -1
+        precuneus_thickness_avg = precuneus_thickness_std = rostralanteriorcingulate_thickness_avg = rostralanteriorcingulate_thickness_std = -1
+        rostralmiddlefrontal_thickness_avg = rostralmiddlefrontal_thickness_std = superiorfrontal_thickness_avg = superiorfrontal_thickness_std = -1
+        superiorparietal_thickness_avg = superiorparietal_thickness_std = superiortemporal_thickness_avg = superiortemporal_thickness_std = -1
+        frontalpole_thickness_avg = frontalpole_thickness_std = supramarginal_thickness_avg = supramarginal_thickness_std = -1
+        temporalpole_thickness_avg = temporalpole_thickness_std = transversetemporal_thickness_avg = transversetemporal_thickness_std = -1
+
         if timepoint.startswith("ses-"):
             total_timepoints.append(subject_id + '/' + timepoint)
             # read AIF curve by applying aif.nii to dce.nii
@@ -409,7 +439,6 @@ def get_case_stats(subject_id, timepoint):
             # atlas = atlas.get_fdata()
             # atlas = ktrans_map_hippo
             # atlas = atlas[:,110,:]
-            stats_failed = False
             error = ""
             try:
                 # wmparc = os.path.join(dir, subject_id, timepoint, output_dir, "wmparc_dyn.nii.gz")
@@ -419,40 +448,8 @@ def get_case_stats(subject_id, timepoint):
                     wmparc = nib.load(wmparc_path)
                     wmparc = wmparc.get_fdata()
                 else:
-                    print(f"Error reading {wmparc_path}")
+                    print(f"{wmparc_path} does not exist")
                     error = "anat/wmparc does not exist"
-                    hippo_vol = phg_vol = putamen_vol = pallidum_vol = thalamus_vol = caudate_vol = amygdala_vol = -1
-                    entorhinal_cortex_vol = fusiform_gyrus_cortex_vol = fusiform_gyrus_wm_vol = insula_wm_vol = -1
-                    superior_temporal_cortex_vol = posterior_cingulate_cortex_vol = medial_temporal_cortex_vol = -1
-                    Ktrans_Hippo_median = Ktrans_PhG_median = Ktrans_Putamen_median = Ktrans_Pallidum_median = -1
-                    Ktrans_Thalamus_median = Ktrans_Caudate_median = Ktrans_Amygdala_median = Ktrans_Entorhinal_cortex_median = -1
-                    Ktrans_Fusiform_gyrus_cortex_median = Ktrans_Fusiform_gyrus_WM_median = Ktrans_Insula_WM_median = -1
-                    Ktrans_Superior_temporal_cortex_median = Ktrans_Posterior_cingulate_cortex_median = Ktrans_Medial_temporal_cortex_median = -1
-                    Vp_Hippo_median = Vp_PhG_median = Vp_Putamen_median = Vp_Pallidum_median = Vp_Thalamus_median = -1
-                    Vp_Caudate_median = Vp_Amygdala_median = Vp_Entorhinal_cortex_median = Vp_Fusiform_gyrus_cortex_median = -1
-                    Vp_Fusiform_gyrus_WM_median = Vp_Insula_WM_median = Vp_Superior_temporal_cortex_median = -1
-                    Vp_Posterior_cingulate_cortex_median = Vp_Medial_temporal_cortex_median = -1
-                    bankssts_thickness_avg = bankssts_thickness_std = caudalanteriorcingulate_thickness_avg = caudalanteriorcingulate_thickness_std = -1
-                    caudalmiddlefrontal_thickness_avg = caudalmiddlefrontal_thickness_std = cuneus_thickness_avg = cuneus_thickness_std = -1
-                    entorhinal_thickness_avg = entorhinal_thickness_std = fusiform_thickness_avg = fusiform_thickness_std = -1
-                    inferiorparietal_thickness_avg = inferiorparietal_thickness_std = inferiortemporal_thickness_avg = inferiortemporal_thickness_std = -1
-                    insula_thickness_avg = insula_thickness_std = isthmuscingulate_thickness_avg = isthmuscingulate_thickness_std = -1
-                    isthmuscingulate_thickness_avg = isthmuscingulate_thickness_std = lateraloccipital_thickness_avg = lateraloccipital_thickness_std = -1
-                    lateralorbitofrontal_thickness_avg = lateralorbitofrontal_thickness_std = lingual_thickness_avg = lingual_thickness_std = -1
-                    medialorbitofrontal_thickness_avg = medialorbitofrontal_thickness_std = middletemporal_thickness_avg = middletemporal_thickness_std = -1
-                    parahippocampal_thickness_avg = parahippocampal_thickness_std = paracentral_thickness_avg = paracentral_thickness_std = -1
-                    parsopercularis_thickness_avg = parsopercularis_thickness_std = parsorbitalis_thickness_avg = parsorbitalis_thickness_std = -1
-                    parstriangularis_thickness_avg = parstriangularis_thickness_std = -1
-                    pericalcarine_thickness_avg = pericalcarine_thickness_std = postcentral_thickness_avg = postcentral_thickness_std = -1
-                    posteriorcingulate_thickness_avg = posteriorcingulate_thickness_std = precentral_thickness_avg = precentral_thickness_std = -1
-                    precuneus_thickness_avg = precuneus_thickness_std = rostralanteriorcingulate_thickness_avg = rostralanteriorcingulate_thickness_std = -1
-                    rostralmiddlefrontal_thickness_avg = rostralmiddlefrontal_thickness_std = superiorfrontal_thickness_avg = superiorfrontal_thickness_std = -1
-                    superiorparietal_thickness_avg = superiorparietal_thickness_std = superiortemporal_thickness_avg = superiortemporal_thickness_std = -1
-                    inferiortemporal_thickness_avg = inferiortemporal_thickness_std = frontalpole_thickness_avg = frontalpole_thickness_std = -1
-                    supramarginal_thickness_avg = supramarginal_thickness_std = temporalpole_thickness_avg = temporalpole_thickness_std = -1
-                    transversetemporal_thickness_avg = transversetemporal_thickness_std = -1
-                    inferiorparietal_thickness_avg = inferiorparietal_thickness_std = inferiorparietal_thickness_avg = inferiorparietal_thickness_std = -1
-                    insula_thickness_avg = insula_thickness_std = lateraloccipital_thickness_avg = lateraloccipital_thickness_std = -1
                     stats_failed = True
                 # read stats from tsv
                 freesurfer_path = os.path.join(dir, 'freesurfer', subject_id, timepoint, "stats")
@@ -461,43 +458,19 @@ def get_case_stats(subject_id, timepoint):
                     aseg_stats = os.path.join(freesurfer_path, "aseg.stats")
                     lh_aparc_stats = os.path.join(freesurfer_path, "lh.aparc.stats")
                     rh_aparc_stats = os.path.join(freesurfer_path, "rh.aparc.stats")
+                    fastsurfer = False
+                elif os.path.isfile(os.path.join(freesurfer_path, "wmparc.DKTatlas.mapped.stats")):
+                    # fastsurfer outputs
+                    wmparc_stats = os.path.join(freesurfer_path, "wmparc.DKTatlas.mapped.stats")
+                    aseg_stats = os.path.join(freesurfer_path, "aseg.stats")
+                    lh_aparc_stats = os.path.join(freesurfer_path, "lh.aparc.DKTatlas.mapped.stats")
+                    rh_aparc_stats = os.path.join(freesurfer_path, "rh.aparc.DKTatlas.mapped.stats")
+                    fastsurfer = True
 
             except Exception as e:
                 print("Error reading freesurfer stats for", subject_id, timepoint)
                 print(e)
                 error = "stats error"
-                hippo_vol = phg_vol = putamen_vol = pallidum_vol = thalamus_vol = caudate_vol = amygdala_vol = -1
-                entorhinal_cortex_vol = fusiform_gyrus_cortex_vol = fusiform_gyrus_wm_vol = insula_wm_vol = -1
-                superior_temporal_cortex_vol = posterior_cingulate_cortex_vol = medial_temporal_cortex_vol = -1
-                Ktrans_Hippo_median = Ktrans_PhG_median = Ktrans_Putamen_median = Ktrans_Pallidum_median = -1
-                Ktrans_Thalamus_median = Ktrans_Caudate_median = Ktrans_Amygdala_median = Ktrans_Entorhinal_cortex_median = -1
-                Ktrans_Fusiform_gyrus_cortex_median = Ktrans_Fusiform_gyrus_WM_median = Ktrans_Insula_WM_median = -1
-                Ktrans_Superior_temporal_cortex_median = Ktrans_Posterior_cingulate_cortex_median = Ktrans_Medial_temporal_cortex_median = -1
-                Vp_Hippo_median = Vp_PhG_median = Vp_Putamen_median = Vp_Pallidum_median = Vp_Thalamus_median = -1
-                Vp_Caudate_median = Vp_Amygdala_median = Vp_Entorhinal_cortex_median = Vp_Fusiform_gyrus_cortex_median = -1
-                Vp_Fusiform_gyrus_WM_median = Vp_Insula_WM_median = Vp_Superior_temporal_cortex_median = -1
-                Vp_Posterior_cingulate_cortex_median = Vp_Medial_temporal_cortex_median = SNR = -1
-                bankssts_thickness_avg = bankssts_thickness_std = caudalanteriorcingulate_thickness_avg = caudalanteriorcingulate_thickness_std = -1
-                caudalmiddlefrontal_thickness_avg = caudalmiddlefrontal_thickness_std = cuneus_thickness_avg = cuneus_thickness_std = -1
-                entorhinal_thickness_avg = entorhinal_thickness_std = fusiform_thickness_avg = fusiform_thickness_std = -1
-                inferiorparietal_thickness_avg = inferiorparietal_thickness_std = inferiortemporal_thickness_avg = inferiortemporal_thickness_std = -1
-                insula_thickness_avg = insula_thickness_std = isthmuscingulate_thickness_avg = isthmuscingulate_thickness_std = -1
-                isthmuscingulate_thickness_avg = isthmuscingulate_thickness_std = lateraloccipital_thickness_avg = lateraloccipital_thickness_std = -1
-                lateralorbitofrontal_thickness_avg = lateralorbitofrontal_thickness_std = lingual_thickness_avg = lingual_thickness_std = -1
-                medialorbitofrontal_thickness_avg = medialorbitofrontal_thickness_std = middletemporal_thickness_avg = middletemporal_thickness_std = -1
-                parahippocampal_thickness_avg = parahippocampal_thickness_std = paracentral_thickness_avg = paracentral_thickness_std = -1
-                parsopercularis_thickness_avg = parsopercularis_thickness_std = parsorbitalis_thickness_avg = parsorbitalis_thickness_std = -1
-                parstriangularis_thickness_avg = parstriangularis_thickness_std = -1
-                pericalcarine_thickness_avg = pericalcarine_thickness_std = postcentral_thickness_avg = postcentral_thickness_std = -1
-                posteriorcingulate_thickness_avg = posteriorcingulate_thickness_std = precentral_thickness_avg = precentral_thickness_std = -1
-                precuneus_thickness_avg = precuneus_thickness_std = rostralanteriorcingulate_thickness_avg = rostralanteriorcingulate_thickness_std = -1
-                rostralmiddlefrontal_thickness_avg = rostralmiddlefrontal_thickness_std = superiorfrontal_thickness_avg = superiorfrontal_thickness_std = -1
-                superiorparietal_thickness_avg = superiorparietal_thickness_std = superiortemporal_thickness_avg = superiortemporal_thickness_std = -1
-                inferiortemporal_thickness_avg = inferiortemporal_thickness_std = frontalpole_thickness_avg = frontalpole_thickness_std = -1
-                supramarginal_thickness_avg = supramarginal_thickness_std = temporalpole_thickness_avg = temporalpole_thickness_std = -1
-                transversetemporal_thickness_avg = transversetemporal_thickness_std = -1
-                inferiorparietal_thickness_avg = inferiorparietal_thickness_std = inferiorparietal_thickness_avg = inferiorparietal_thickness_std = -1
-                insula_thickness_avg = insula_thickness_std = lateraloccipital_thickness_avg = lateraloccipital_thickness_std = -1
                 stats_failed = True
             if not stats_failed:
                 with open(wmparc_stats, 'r') as f:
@@ -819,23 +792,23 @@ def get_case_stats(subject_id, timepoint):
                     if subject_id + "_" + timepoint not in whole_medial_temporal_cortex_outliers:
                         whole_medial_temporal_cortex_outliers.append(subject_id + "_" + timepoint)
 
-            # Calculate SNR from getting mean SI in DCE thalamus then stdev of the difference between the last 2 DCE measures
-            DCE_img = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-bfcz_DCE.nii.gz")
-            try:
-                DCE_img = nib.load(DCE_img)
-                DCE_img = DCE_img.get_fdata()
-                SI_Thalamus_DCE = DCE_img[THALAMUS_INDICES]
+                # Calculate SNR from getting mean SI in DCE thalamus then stdev of the difference between the last 2 DCE measures
+                DCE_img = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-bfcz_DCE.nii.gz")
+                try:
+                    DCE_img = nib.load(DCE_img)
+                    DCE_img = DCE_img.get_fdata()
+                    SI_Thalamus_DCE = DCE_img[THALAMUS_INDICES]
 
-                SI_Thalamus_DCE_mean = np.mean(SI_Thalamus_DCE)
-                SI_Thalamus_DCE_last = SI_Thalamus_DCE[:,-1]
-                SI_Thalamus_DCE_penultimate = SI_Thalamus_DCE[:,-2]
-                SI_Thalamus_DCE_last2_difference = SI_Thalamus_DCE_last - SI_Thalamus_DCE_penultimate
-                SI_Thalamus_DCE_noise_stdev = np.std(SI_Thalamus_DCE_last2_difference)
-                # calculate SNR
-                SNR = SI_Thalamus_DCE_mean / SI_Thalamus_DCE_noise_stdev
-            except:
-                SNR = -1
-                print(f"Could not calculate SNR for {subject_id} {timepoint}")
+                    SI_Thalamus_DCE_mean = np.mean(SI_Thalamus_DCE)
+                    SI_Thalamus_DCE_last = SI_Thalamus_DCE[:,-1]
+                    SI_Thalamus_DCE_penultimate = SI_Thalamus_DCE[:,-2]
+                    SI_Thalamus_DCE_last2_difference = SI_Thalamus_DCE_last - SI_Thalamus_DCE_penultimate
+                    SI_Thalamus_DCE_noise_stdev = np.std(SI_Thalamus_DCE_last2_difference)
+                    # calculate SNR
+                    SNR = SI_Thalamus_DCE_mean / SI_Thalamus_DCE_noise_stdev
+                except Exception as e:
+                    SNR = -1
+                    print(f"Could not calculate SNR for {subject_id} {timepoint}: {e}")
             
             entry = subject_id + "_" + timepoint
             if stats_failed is False:
@@ -899,6 +872,7 @@ def get_case_stats(subject_id, timepoint):
                     "Vp_Fusiform_gyrus_WM_median": Vp_Fusiform_gyrus_WM_median,
                     "Vp_Insula_WM_median": Vp_Insula_WM_median,
                     "Vp_Superior_temporal_cortex_median": Vp_Superior_temporal_cortex_median,
+                    "Vp_Inferior_temporal_cortex_median": Vp_Inferior_temporal_cortex_median,
                     "Vp_Posterior_cingulate_cortex_median": Vp_Posterior_cingulate_cortex_median,
                     "Vp_Medial_temporal_cortex_median": Vp_Medial_temporal_cortex_median,
                     "hippo_vol": hippo_vol,
@@ -984,7 +958,8 @@ def get_case_stats(subject_id, timepoint):
                     "transversetemporal_thickness_avg": transversetemporal_thickness_avg,
                     "transversetemporal_thickness_std": transversetemporal_thickness_std,
                     "insula_thickness_avg": insula_thickness_avg,
-                    "insula_thickness_std": insula_thickness_std
+                    "insula_thickness_std": insula_thickness_std,
+                    "fastsurfer": fastsurfer
                 }
             else:
                 # with lock:
@@ -1159,7 +1134,7 @@ for entry in successful_timepoints:
     flag_str = ""
     subject = entry.split('/')[0]
     session = entry.split('/')[1]
-    save_name = f"{entry}/reports/{subject}_{session}_desc-casereport.html"
+    save_name = f"{output_dir}/{entry}/reports/{subject}_{session}_desc-casereport.html"
     flag = False
     entry = subject + "_" + session
     if entry in population_data.keys() and population_data[entry]['max_disp'] > MOTION_THRESHOLD:
@@ -1904,7 +1879,6 @@ plt.close()
 plt.hist(whole_hippo_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Hippocampus Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_hippo_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_hippo_histogram_exclude.png")
 whole_hippo_histogram_exclude_path = os.path.join("figures/", "whole_hippo_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_hippo_histogram_exclude_path, bbox_inches='tight')
 plt.close()
@@ -1912,7 +1886,6 @@ plt.close()
 plt.hist(whole_phg_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Parahippocampal Gyrus Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_phg_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_phg_histogram_exclude.png")
 whole_phg_histogram_exclude_path = os.path.join("figures/", "whole_phg_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_phg_histogram_exclude_path, bbox_inches='tight')
 plt.close()
@@ -1920,7 +1893,6 @@ plt.close()
 plt.hist(whole_putamen_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Putamen Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_putamen_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_putamen_histogram_exclude.png")
 whole_putamen_histogram_exclude_path = os.path.join("figures/", "whole_putamen_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_putamen_histogram_exclude_path, bbox_inches='tight')
 plt.close()
@@ -1928,7 +1900,6 @@ plt.close()
 plt.hist(whole_pallidum_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Pallidum Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_pallidum_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_pallidum_histogram_exclude.png")
 whole_pallidum_histogram_exclude_path = os.path.join("figures/", "whole_pallidum_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_pallidum_histogram_exclude_path, bbox_inches='tight')
 plt.close()
@@ -1936,7 +1907,6 @@ plt.close()
 plt.hist(whole_thalamus_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Thalamus Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_thalamus_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_thalamus_histogram_exclude.png")
 whole_thalamus_histogram_exclude_path = os.path.join("figures/", "whole_thalamus_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_thalamus_histogram_exclude_path, bbox_inches='tight')
 plt.close()
@@ -1944,7 +1914,6 @@ plt.close()
 plt.hist(whole_caudate_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Caudate Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_caudate_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_caudate_histogram_exclude.png")
 whole_caudate_histogram_exclude_path = os.path.join("figures/", "whole_caudate_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_caudate_histogram_exclude_path, bbox_inches='tight')
 plt.close()
@@ -1952,7 +1921,6 @@ plt.close()
 plt.hist(whole_amygdala_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Amygdala Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_amygdala_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_amygdala_histogram_exclude.png")
 whole_amygdala_histogram_exclude_path = os.path.join("figures/", "whole_amygdala_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_amygdala_histogram_exclude_path, bbox_inches='tight')
 plt.close()
@@ -1960,7 +1928,6 @@ plt.close()
 plt.hist(whole_entorhinal_cortex_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Entorhinal Cortex Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_entorhinal_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_entorhinal_cortex_histogram_exclude.png")
 whole_entorhinal_cortex_histogram_exclude_path = os.path.join("figures/", "whole_entorhinal_cortex_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_entorhinal_cortex_histogram_exclude_path, bbox_inches='tight')
 plt.close()
@@ -1968,7 +1935,6 @@ plt.close()
 plt.hist(whole_fusiform_gyrus_cortex_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Fusiform Gyrus Cortex Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_fusiform_gyrus_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_fusiform_gyrus_cortex_histogram_exclude.png")
 whole_fusiform_gyrus_cortex_histogram_exclude_path = os.path.join("figures/", "whole_fusiform_gyrus_cortex_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_fusiform_gyrus_cortex_histogram_exclude_path, bbox_inches='tight')
 plt.close()
@@ -1976,7 +1942,6 @@ plt.close()
 plt.hist(whole_fusiform_gyrus_WM_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Fusiform Gyrus WM Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_fusiform_gyrus_WM_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_fusiform_gyrus_WM_histogram_exclude.png")
 whole_fusiform_gyrus_WM_histogram_exclude_path = os.path.join("figures/", "whole_fusiform_gyrus_WM_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_fusiform_gyrus_WM_histogram_exclude_path, bbox_inches='tight')
 plt.close()
@@ -1984,7 +1949,6 @@ plt.close()
 plt.hist(whole_insula_WM_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Insula WM Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_insula_WM_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_insula_WM_histogram_exclude.png")
 whole_insula_WM_histogram_exclude_path = os.path.join("figures/", "whole_insula_WM_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_insula_WM_histogram_exclude_path, bbox_inches='tight')
 plt.close()
@@ -1992,7 +1956,6 @@ plt.close()
 plt.hist(whole_superior_temporal_cortex_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Superior Temporal Cortex Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_superior_temporal_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_superior_temporal_cortex_histogram_exclude.png")
 whole_superior_temporal_cortex_histogram_exclude_path = os.path.join("figures/", "whole_superior_temporal_cortex_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_superior_temporal_cortex_histogram_exclude_path, bbox_inches='tight')
 plt.close()
@@ -2000,7 +1963,6 @@ plt.close()
 plt.hist(whole_inferior_temporal_cortex_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Inferior Temporal Cortex Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_inferior_temporal_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_inferior_temporal_cortex_histogram_exclude.png")
 whole_inferior_temporal_cortex_histogram_exclude_path = os.path.join("figures/", "whole_inferior_temporal_cortex_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_inferior_temporal_cortex_histogram_exclude_path, bbox_inches='tight')
 plt.close()
@@ -2008,7 +1970,6 @@ plt.close()
 plt.hist(whole_posterior_cingulate_cortex_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Posterior Cingulate Cortex Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_posterior_cingulate_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_posterior_cingulate_cortex_histogram_exclude.png")
 whole_posterior_cingulate_cortex_histogram_exclude_path = os.path.join("figures/", "whole_posterior_cingulate_cortex_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_posterior_cingulate_cortex_histogram_exclude_path, bbox_inches='tight')
 plt.close()
@@ -2016,7 +1977,6 @@ plt.close()
 plt.hist(whole_medial_temporal_cortex_histogram_exclude, bins=50, range=(0, 5))
 plt.title("Whole Medial Temporal Cortex Median Ktrans (Exclude)")
 plt.xlabel("Ktrans (10^-3/min)")
-# whole_medial_temporal_cortex_histogram_exclude_path = os.path.join("figures/", output_dir + "whole_medial_temporal_cortex_histogram_exclude.png")
 whole_medial_temporal_cortex_histogram_exclude_path = os.path.join("figures/", "whole_medial_temporal_cortex_histogram_exclude" + output_dir + "_" + date_filename + ".png")
 plt.savefig(whole_medial_temporal_cortex_histogram_exclude_path, bbox_inches='tight')
 plt.close()
@@ -2035,10 +1995,6 @@ wm_std_exclude = round(wm_std_exclude, 4)
 gm_mean_exclude = round(gm_mean_exclude, 4)
 gm_median_exclude = round(gm_median_exclude, 4)
 gm_std_exclude = round(gm_std_exclude, 4)
-
-# make population report
-# df = pd.DataFrame(population_data)
-# df.to_csv("population_report.csv")
 
 # use jinja2 to generate html
 env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))))
@@ -2230,120 +2186,56 @@ data = {
     'gm_mean': gm_mean,
     'gm_median': gm_median,
     'gm_std': gm_std,
-    # 'rPhG_L_mean': round(rPhG_L_mean, 4),
-    # 'rPhG_L_median': round(rPhG_L_median, 4),
-    # 'rPhG_L_std': round(rPhG_L_std, 4),
-    # 'rPhG_R_mean': round(rPhG_R_mean, 4),
-    # 'rPhG_R_median': round(rPhG_R_median, 4),
-    # 'rPhG_R_std': round(rPhG_R_std, 4),
-    # 'cPhG_L_mean': round(cPhG_L_mean, 4),
-    # 'cPhG_L_median': round(cPhG_L_median, 4),
-    # 'cPhG_L_std': round(cPhG_L_std, 4),
-    # 'cPhG_R_mean': round(cPhG_R_mean, 4),
-    # 'cPhG_R_median': round(cPhG_R_median, 4),
-    # 'cPhG_R_std': round(cPhG_R_std, 4),
-    # 'lateral_PPHC_L_mean': round(lateral_PPHC_L_mean, 4),
-    # 'lateral_PPHC_L_median': round(lateral_PPHC_L_median, 4),
-    # 'lateral_PPHC_L_std': round(lateral_PPHC_L_std, 4),
-    # 'lateral_PPHC_R_mean': round(lateral_PPHC_R_mean, 4),
-    # 'lateral_PPHC_R_median': round(lateral_PPHC_R_median, 4),
-    # 'lateral_PPHC_R_std': round(lateral_PPHC_R_std, 4),
-    # 'ECPhG_L_mean': round(ECPhG_L_mean, 4),
-    # 'ECPhG_L_median': round(ECPhG_L_median, 4),
-    # 'ECPhG_L_std': round(ECPhG_L_std, 4),
-    # 'ECPhG_R_mean': round(ECPhG_R_mean, 4),
-    # 'ECPhG_R_median': round(ECPhG_R_median, 4),
-    # 'ECPhG_R_std': round(ECPhG_R_std, 4),
-    # 'TIPhG_L_mean': round(TIPhG_L_mean, 4),
-    # 'TIPhG_L_median': round(TIPhG_L_median, 4),
-    # 'TIPhG_L_std': round(TIPhG_L_std, 4),
-    # 'TIPhG_R_mean': round(TIPhG_R_mean, 4),
-    # 'TIPhG_R_median': round(TIPhG_R_median, 4),
-    # 'TIPhG_R_std': round(TIPhG_R_std, 4),
-    # 'THPhG_L_mean': round(THPhG_L_mean, 4),
-    # 'THPhG_L_median': round(THPhG_L_median, 4),
-    # 'THPhG_L_std': round(THPhG_L_std, 4),
-    # 'THPhG_R_mean': round(THPhG_R_mean, 4),
-    # 'THPhG_R_median': round(THPhG_R_median, 4),
-    # 'THPhG_R_std': round(THPhG_R_std, 4),
-    # 'rHipp_L_mean': round(rHipp_L_mean, 4),
-    # 'rHipp_L_median': round(rHipp_L_median, 4),
-    # 'rHipp_L_std': round(rHipp_L_std, 4),
-    # 'rHipp_R_mean': round(rHipp_R_mean, 4),
-    # 'rHipp_R_median': round(rHipp_R_median, 4),
-    # 'rHipp_R_std': round(rHipp_R_std, 4),
-    # 'cHipp_L_mean': round(cHipp_L_mean, 4),
-    # 'cHipp_L_median': round(cHipp_L_median, 4),
-    # 'cHipp_L_std': round(cHipp_L_std, 4),
-    # 'cHipp_R_mean': round(cHipp_R_mean, 4),
-    # 'cHipp_R_median': round(cHipp_R_median, 4),
-    # 'cHipp_R_std': round(cHipp_R_std, 4),
-    'whole_hippo_mean': round(whole_hippo_Ktrans_mean, 4),
-    'whole_hippo_median': round(whole_hippo_Ktrans_median, 4),
-    'whole_hippo_std': round(whole_hippo_Ktrans_std, 4),
-    'whole_phg_mean': round(whole_phg_Ktrans_mean, 4),
-    'whole_phg_median': round(whole_phg_Ktrans_median, 4),
-    'whole_phg_std': round(whole_phg_Ktrans_std, 4),
-    'whole_putamen_mean': round(whole_putamen_Ktrans_mean, 4),
-    'whole_putamen_median': round(whole_putamen_Ktrans_median, 4),
-    'whole_putamen_std': round(whole_putamen_Ktrans_std, 4),
-    'whole_pallidum_mean': round(whole_pallidum_Ktrans_mean, 4),
-    'whole_pallidum_median': round(whole_pallidum_Ktrans_median, 4),
-    'whole_pallidum_std': round(whole_pallidum_Ktrans_std, 4),
-    'whole_thalamus_mean': round(whole_thalamus_Ktrans_mean, 4),
-    'whole_thalamus_median': round(whole_thalamus_Ktrans_median, 4),
-    'whole_thalamus_std': round(whole_thalamus_Ktrans_std, 4),
-    'whole_caudate_mean': round(whole_caudate_Ktrans_mean, 4),
-    'whole_caudate_median': round(whole_caudate_Ktrans_median, 4),
-    'whole_caudate_std': round(whole_caudate_Ktrans_std, 4),
-    'whole_amygdala_mean': round(whole_amygdala_Ktrans_mean, 4),
-    'whole_amygdala_median': round(whole_amygdala_Ktrans_median, 4),
-    'whole_amygdala_std': round(whole_amygdala_Ktrans_std, 4),
-    'whole_entorhinal_cortex_mean': round(whole_entorhinal_cortex_Ktrans_mean, 4),
-    'whole_entorhinal_cortex_median': round(whole_entorhinal_cortex_Ktrans_median, 4),
-    'whole_entorhinal_cortex_std': round(whole_entorhinal_cortex_Ktrans_std, 4),
-    'whole_fusiform_gyrus_cortex_mean': round(whole_fusiform_gyrus_cortex_Ktrans_mean, 4),
-    'whole_fusiform_gyrus_cortex_median': round(whole_fusiform_gyrus_cortex_Ktrans_median, 4),
-    'whole_fusiform_gyrus_cortex_std': round(whole_fusiform_gyrus_cortex_Ktrans_std, 4),
-    'whole_fusiform_gyrus_WM_mean': round(whole_fusiform_gyrus_WM_Ktrans_mean, 4),
-    'whole_fusiform_gyrus_WM_median': round(whole_fusiform_gyrus_WM_Ktrans_median, 4),
-    'whole_fusiform_gyrus_WM_std': round(whole_fusiform_gyrus_WM_Ktrans_std, 4),
-    'whole_insula_WM_mean': round(whole_insula_WM_Ktrans_mean, 4),
-    'whole_insula_WM_median': round(whole_insula_WM_Ktrans_median, 4),
-    'whole_insula_WM_std': round(whole_insula_WM_Ktrans_std, 4),
-    'whole_superior_temporal_cortex_mean': round(whole_superior_temporal_cortex_Ktrans_mean, 4),
-    'whole_superior_temporal_cortex_median': round(whole_superior_temporal_cortex_Ktrans_median, 4),
-    'whole_superior_temporal_cortex_std': round(whole_superior_temporal_cortex_Ktrans_std, 4),
-    'whole_inferior_temporal_cortex_mean': round(whole_inferior_temporal_cortex_Ktrans_mean, 4),
-    'whole_inferior_temporal_cortex_median': round(whole_inferior_temporal_cortex_Ktrans_median, 4),
-    'whole_inferior_temporal_cortex_std': round(whole_inferior_temporal_cortex_Ktrans_std, 4),
-    'whole_posterior_cingulate_cortex_mean': round(whole_posterior_cingulate_cortex_Ktrans_mean, 4),
-    'whole_posterior_cingulate_cortex_median': round(whole_posterior_cingulate_cortex_Ktrans_median, 4),
-    'whole_posterior_cingulate_cortex_std': round(whole_posterior_cingulate_cortex_Ktrans_std, 4),
-    'whole_medial_temporal_cortex_mean': round(whole_medial_temporal_cortex_Ktrans_mean, 4),
-    'whole_medial_temporal_cortex_median': round(whole_medial_temporal_cortex_Ktrans_median, 4),
-    'whole_medial_temporal_cortex_std': round(whole_medial_temporal_cortex_Ktrans_std, 4),
+    'whole_hippo_Ktrans_mean': round(whole_hippo_Ktrans_mean, 4),
+    'whole_hippo_Ktrans_median': round(whole_hippo_Ktrans_median, 4),
+    'whole_hippo_Ktrans_std': round(whole_hippo_Ktrans_std, 4),
+    'whole_phg_Ktrans_mean': round(whole_phg_Ktrans_mean, 4),
+    'whole_phg_Ktrans_median': round(whole_phg_Ktrans_median, 4),
+    'whole_phg_Ktrans_std': round(whole_phg_Ktrans_std, 4),
+    'whole_putamen_Ktrans_mean': round(whole_putamen_Ktrans_mean, 4),
+    'whole_putamen_Ktrans_median': round(whole_putamen_Ktrans_median, 4),
+    'whole_putamen_Ktrans_std': round(whole_putamen_Ktrans_std, 4),
+    'whole_pallidum_Ktrans_mean': round(whole_pallidum_Ktrans_mean, 4),
+    'whole_pallidum_Ktrans_median': round(whole_pallidum_Ktrans_median, 4),
+    'whole_pallidum_Ktrans_std': round(whole_pallidum_Ktrans_std, 4),
+    'whole_thalamus_Ktrans_mean': round(whole_thalamus_Ktrans_mean, 4),
+    'whole_thalamus_Ktrans_median': round(whole_thalamus_Ktrans_median, 4),
+    'whole_thalamus_Ktrans_std': round(whole_thalamus_Ktrans_std, 4),
+    'whole_caudate_Ktrans_mean': round(whole_caudate_Ktrans_mean, 4),
+    'whole_caudate_Ktrans_median': round(whole_caudate_Ktrans_median, 4),
+    'whole_caudate_Ktrans_std': round(whole_caudate_Ktrans_std, 4),
+    'whole_amygdala_Ktrans_mean': round(whole_amygdala_Ktrans_mean, 4),
+    'whole_amygdala_Ktrans_median': round(whole_amygdala_Ktrans_median, 4),
+    'whole_amygdala_Ktrans_std': round(whole_amygdala_Ktrans_std, 4),
+    'whole_entorhinal_cortex_Ktrans_mean': round(whole_entorhinal_cortex_Ktrans_mean, 4),
+    'whole_entorhinal_cortex_Ktrans_median': round(whole_entorhinal_cortex_Ktrans_median, 4),
+    'whole_entorhinal_cortex_Ktrans_std': round(whole_entorhinal_cortex_Ktrans_std, 4),
+    'whole_fusiform_gyrus_cortex_Ktrans_mean': round(whole_fusiform_gyrus_cortex_Ktrans_mean, 4),
+    'whole_fusiform_gyrus_cortex_Ktrans_median': round(whole_fusiform_gyrus_cortex_Ktrans_median, 4),
+    'whole_fusiform_gyrus_cortex_Ktrans_std': round(whole_fusiform_gyrus_cortex_Ktrans_std, 4),
+    'whole_fusiform_gyrus_WM_Ktrans_mean': round(whole_fusiform_gyrus_WM_Ktrans_mean, 4),
+    'whole_fusiform_gyrus_WM_Ktrans_median': round(whole_fusiform_gyrus_WM_Ktrans_median, 4),
+    'whole_fusiform_gyrus_WM_Ktrans_std': round(whole_fusiform_gyrus_WM_Ktrans_std, 4),
+    'whole_insula_WM_Ktrans_mean': round(whole_insula_WM_Ktrans_mean, 4),
+    'whole_insula_WM_Ktrans_median': round(whole_insula_WM_Ktrans_median, 4),
+    'whole_insula_WM_Ktrans_std': round(whole_insula_WM_Ktrans_std, 4),
+    'whole_superior_temporal_cortex_Ktrans_mean': round(whole_superior_temporal_cortex_Ktrans_mean, 4),
+    'whole_superior_temporal_cortex_Ktrans_median': round(whole_superior_temporal_cortex_Ktrans_median, 4),
+    'whole_superior_temporal_cortex_Ktrans_std': round(whole_superior_temporal_cortex_Ktrans_std, 4),
+    'whole_inferior_temporal_cortex_Ktrans_mean': round(whole_inferior_temporal_cortex_Ktrans_mean, 4),
+    'whole_inferior_temporal_cortex_Ktrans_median': round(whole_inferior_temporal_cortex_Ktrans_median, 4),
+    'whole_inferior_temporal_cortex_Ktrans_std': round(whole_inferior_temporal_cortex_Ktrans_std, 4),
+    'whole_posterior_cingulate_cortex_Ktrans_mean': round(whole_posterior_cingulate_cortex_Ktrans_mean, 4),
+    'whole_posterior_cingulate_cortex_Ktrans_median': round(whole_posterior_cingulate_cortex_Ktrans_median, 4),
+    'whole_posterior_cingulate_cortex_Ktrans_std': round(whole_posterior_cingulate_cortex_Ktrans_std, 4),
+    'whole_medial_temporal_cortex_Ktrans_mean': round(whole_medial_temporal_cortex_Ktrans_mean, 4),
+    'whole_medial_temporal_cortex_Ktrans_median': round(whole_medial_temporal_cortex_Ktrans_median, 4),
+    'whole_medial_temporal_cortex_Ktrans_std': round(whole_medial_temporal_cortex_Ktrans_std, 4),
     'ktrans_wm_outliers': wm_outliers,
     'ktrans_gm_outliers': gm_outliers,
     'T1_blood_histogram': "../../" + T1_blood_histogram_path,
     'wm_histogram': "../../" + ktrans_wm_histogram_path,
     'gm_histogram': "../../" + ktrans_gm_histogram_path,
-    # 'rPhG_L_outliers': rPhG_L_outliers,
-    # 'rPhG_R_outliers': rPhG_R_outliers,
-    # 'cPhG_L_outliers': cPhG_L_outliers,
-    # 'cPhG_R_outliers': cPhG_R_outliers,
-    # 'lateral_PPHC_L_outliers': lateral_PPHC_L_outliers,
-    # 'lateral_PPHC_R_outliers': lateral_PPHC_R_outliers,
-    # 'ECPhG_L_outliers': ECPhG_L_outliers,
-    # 'ECPhG_R_outliers': ECPhG_R_outliers,
-    # 'TIPhG_L_outliers': TIPhG_L_outliers,
-    # 'TIPhG_R_outliers': TIPhG_R_outliers,
-    # 'THPhG_L_outliers': THPhG_L_outliers,
-    # 'THPhG_R_outliers': THPhG_R_outliers,
-    # 'rHipp_L_outliers': rHipp_L_outliers,
-    # 'rHipp_R_outliers': rHipp_R_outliers,
-    # 'cHipp_L_outliers': cHipp_L_outliers,
-    # 'cHipp_R_outliers': cHipp_R_outliers,
     'whole_hippo_outliers': whole_hippo_outliers,
     'whole_phg_outliers': whole_phg_outliers,
     'whole_putamen_outliers': whole_putamen_outliers,
@@ -2359,22 +2251,6 @@ data = {
     'whole_inferior_temporal_cortex_outliers': whole_inferior_temporal_cortex_outliers,
     'whole_posterior_cingulate_cortex_outliers': whole_posterior_cingulate_cortex_outliers,
     'whole_medial_temporal_cortex_outliers': whole_medial_temporal_cortex_outliers,
-    # 'rPhG_L_histogram': rPhG_L_histogram_path,
-    # 'rPhG_R_histogram': rPhG_R_histogram_path,
-    # 'cPhG_L_histogram': cPhG_L_histogram_path,
-    # 'cPhG_R_histogram': cPhG_R_histogram_path,
-    # 'lateral_PPHC_L_histogram': lateral_PPHC_L_histogram_path,
-    # 'lateral_PPHC_R_histogram': lateral_PPHC_R_histogram_path,
-    # 'ECPhG_L_histogram': ECPhG_L_histogram_path,
-    # 'ECPhG_R_histogram': ECPhG_R_histogram_path,
-    # 'TIPhG_L_histogram': TIPhG_L_histogram_path,
-    # 'TIPhG_R_histogram': TIPhG_R_histogram_path,
-    # 'THPhG_L_histogram': THPhG_L_histogram_path,
-    # 'THPhG_R_histogram': THPhG_R_histogram_path,
-    # 'rHipp_L_histogram': rHipp_L_histogram_path,
-    # 'rHipp_R_histogram': rHipp_R_histogram_path,
-    # 'cHipp_L_histogram': cHipp_L_histogram_path,
-    # 'cHipp_R_histogram': cHipp_R_histogram_path,
     'Ktrans_whole_hippo_histogram': "../../" + Ktrans_whole_hippo_histogram_path,
     'Ktrans_whole_phg_histogram': "../../" + Ktrans_whole_phg_histogram_path,
     'Ktrans_whole_putamen_histogram': "../../" + Ktrans_whole_putamen_histogram_path,
@@ -2460,51 +2336,51 @@ data = {
     'gm_mean': gm_mean_exclude,
     'gm_median': gm_median_exclude,
     'gm_std': gm_std_exclude,
-    'whole_hippo_mean': round(whole_hippo_Ktrans_mean_exclude, 4),
-    'whole_hippo_median': round(whole_hippo_Ktrans_median_exclude, 4),
-    'whole_hippo_std': round(whole_hippo_Ktrans_std_exclude, 4),
-    'whole_phg_mean': round(whole_phg_Ktrans_mean_exclude, 4),
-    'whole_phg_median': round(whole_phg_Ktrans_median_exclude, 4),
-    'whole_phg_std': round(whole_phg_Ktrans_std_exclude, 4),
-    'whole_putamen_mean': round(whole_putamen_Ktrans_mean_exclude, 4),
-    'whole_putamen_median': round(whole_putamen_Ktrans_median_exclude, 4),
-    'whole_putamen_std': round(whole_putamen_Ktrans_std_exclude, 4),
-    'whole_pallidum_mean': round(whole_pallidum_Ktrans_mean_exclude, 4),
-    'whole_pallidum_median': round(whole_pallidum_Ktrans_median_exclude, 4),
-    'whole_pallidum_std': round(whole_pallidum_Ktrans_std_exclude, 4),
-    'whole_thalamus_mean': round(whole_thalamus_Ktrans_mean_exclude, 4),
-    'whole_thalamus_median': round(whole_thalamus_Ktrans_median_exclude, 4),
-    'whole_thalamus_std': round(whole_thalamus_Ktrans_std_exclude, 4),
-    'whole_caudate_mean': round(whole_caudate_Ktrans_mean_exclude, 4),
-    'whole_caudate_median': round(whole_caudate_Ktrans_median_exclude, 4),
-    'whole_caudate_std': round(whole_caudate_Ktrans_std_exclude, 4),
-    'whole_amygdala_mean': round(whole_amygdala_Ktrans_mean_exclude, 4),
-    'whole_amygdala_median': round(whole_amygdala_Ktrans_median_exclude, 4),
-    'whole_amygdala_std': round(whole_amygdala_Ktrans_std_exclude, 4),
-    'whole_entorhinal_cortex_mean': round(whole_entorhinal_cortex_Ktrans_mean_exclude, 4),
-    'whole_entorhinal_cortex_median': round(whole_entorhinal_cortex_Ktrans_median_exclude, 4),
-    'whole_entorhinal_cortex_std': round(whole_entorhinal_cortex_Ktrans_std_exclude, 4),
-    'whole_fusiform_gyrus_cortex_mean': round(whole_fusiform_gyrus_cortex_Ktrans_mean_exclude, 4),
-    'whole_fusiform_gyrus_cortex_median': round(whole_fusiform_gyrus_cortex_Ktrans_median_exclude, 4),
-    'whole_fusiform_gyrus_cortex_std': round(whole_fusiform_gyrus_cortex_Ktrans_std_exclude, 4),
-    'whole_fusiform_gyrus_WM_mean': round(whole_fusiform_gyrus_WM_Ktrans_mean_exclude, 4),
-    'whole_fusiform_gyrus_WM_median': round(whole_fusiform_gyrus_WM_Ktrans_median_exclude, 4),
-    'whole_fusiform_gyrus_WM_std': round(whole_fusiform_gyrus_WM_Ktrans_std_exclude, 4),
-    'whole_insula_WM_mean': round(whole_insula_WM_Ktrans_mean_exclude, 4),
-    'whole_insula_WM_median': round(whole_insula_WM_Ktrans_median_exclude, 4),
-    'whole_insula_WM_std': round(whole_insula_WM_Ktrans_std_exclude, 4),
-    'whole_superior_temporal_cortex_mean': round(whole_superior_temporal_cortex_Ktrans_mean_exclude, 4),
-    'whole_superior_temporal_cortex_median': round(whole_superior_temporal_cortex_Ktrans_median_exclude, 4),
-    'whole_superior_temporal_cortex_std': round(whole_superior_temporal_cortex_Ktrans_std_exclude, 4),
-    'whole_inferior_temporal_cortex_mean': round(whole_inferior_temporal_cortex_Ktrans_mean_exclude, 4),
-    'whole_inferior_temporal_cortex_median': round(whole_inferior_temporal_cortex_Ktrans_median_exclude, 4),
-    'whole_inferior_temporal_cortex_std': round(whole_inferior_temporal_cortex_Ktrans_std_exclude, 4),
-    'whole_posterior_cingulate_cortex_mean': round(whole_posterior_cingulate_cortex_Ktrans_mean_exclude, 4),
-    'whole_posterior_cingulate_cortex_median': round(whole_posterior_cingulate_cortex_Ktrans_median_exclude, 4),
-    'whole_posterior_cingulate_cortex_std': round(whole_posterior_cingulate_cortex_Ktrans_std_exclude, 4),
-    'whole_medial_temporal_cortex_mean': round(whole_medial_temporal_cortex_Ktrans_mean_exclude, 4),
-    'whole_medial_temporal_cortex_median': round(whole_medial_temporal_cortex_Ktrans_median_exclude, 4),
-    'whole_medial_temporal_cortex_std': round(whole_medial_temporal_cortex_Ktrans_std_exclude, 4),
+    'whole_hippo_Ktrans_mean': round(whole_hippo_Ktrans_mean_exclude, 4),
+    'whole_hippo_Ktrans_median': round(whole_hippo_Ktrans_median_exclude, 4),
+    'whole_hippo_Ktrans_std': round(whole_hippo_Ktrans_std_exclude, 4),
+    'whole_phg_Ktrans_mean': round(whole_phg_Ktrans_mean_exclude, 4),
+    'whole_phg_Ktrans_median': round(whole_phg_Ktrans_median_exclude, 4),
+    'whole_phg_Ktrans_std': round(whole_phg_Ktrans_std_exclude, 4),
+    'whole_putamen_Ktrans_mean': round(whole_putamen_Ktrans_mean_exclude, 4),
+    'whole_putamen_Ktrans_median': round(whole_putamen_Ktrans_median_exclude, 4),
+    'whole_putamen_Ktrans_std': round(whole_putamen_Ktrans_std_exclude, 4),
+    'whole_pallidum_Ktrans_mean': round(whole_pallidum_Ktrans_mean_exclude, 4),
+    'whole_pallidum_Ktrans_median': round(whole_pallidum_Ktrans_median_exclude, 4),
+    'whole_pallidum_Ktrans_std': round(whole_pallidum_Ktrans_std_exclude, 4),
+    'whole_thalamus_Ktrans_mean': round(whole_thalamus_Ktrans_mean_exclude, 4),
+    'whole_thalamus_Ktrans_median': round(whole_thalamus_Ktrans_median_exclude, 4),
+    'whole_thalamus_Ktrans_std': round(whole_thalamus_Ktrans_std_exclude, 4),
+    'whole_caudate_Ktrans_mean': round(whole_caudate_Ktrans_mean_exclude, 4),
+    'whole_caudate_Ktrans_median': round(whole_caudate_Ktrans_median_exclude, 4),
+    'whole_caudate_Ktrans_std': round(whole_caudate_Ktrans_std_exclude, 4),
+    'whole_amygdala_Ktrans_mean': round(whole_amygdala_Ktrans_mean_exclude, 4),
+    'whole_amygdala_Ktrans_median': round(whole_amygdala_Ktrans_median_exclude, 4),
+    'whole_amygdala_Ktrans_std': round(whole_amygdala_Ktrans_std_exclude, 4),
+    'whole_entorhinal_cortex_Ktrans_mean': round(whole_entorhinal_cortex_Ktrans_mean_exclude, 4),
+    'whole_entorhinal_cortex_Ktrans_median': round(whole_entorhinal_cortex_Ktrans_median_exclude, 4),
+    'whole_entorhinal_cortex_Ktrans_std': round(whole_entorhinal_cortex_Ktrans_std_exclude, 4),
+    'whole_fusiform_gyrus_cortex_Ktrans_mean': round(whole_fusiform_gyrus_cortex_Ktrans_mean_exclude, 4),
+    'whole_fusiform_gyrus_cortex_Ktrans_median': round(whole_fusiform_gyrus_cortex_Ktrans_median_exclude, 4),
+    'whole_fusiform_gyrus_cortex_Ktrans_std': round(whole_fusiform_gyrus_cortex_Ktrans_std_exclude, 4),
+    'whole_fusiform_gyrus_WM_Ktrans_mean': round(whole_fusiform_gyrus_WM_Ktrans_mean_exclude, 4),
+    'whole_fusiform_gyrus_WM_Ktrans_median': round(whole_fusiform_gyrus_WM_Ktrans_median_exclude, 4),
+    'whole_fusiform_gyrus_WM_Ktrans_std': round(whole_fusiform_gyrus_WM_Ktrans_std_exclude, 4),
+    'whole_insula_WM_Ktrans_mean': round(whole_insula_WM_Ktrans_mean_exclude, 4),
+    'whole_insula_WM_Ktrans_median': round(whole_insula_WM_Ktrans_median_exclude, 4),
+    'whole_insula_WM_Ktrans_std': round(whole_insula_WM_Ktrans_std_exclude, 4),
+    'whole_superior_temporal_cortex_Ktrans_mean': round(whole_superior_temporal_cortex_Ktrans_mean_exclude, 4),
+    'whole_superior_temporal_cortex_Ktrans_median': round(whole_superior_temporal_cortex_Ktrans_median_exclude, 4),
+    'whole_superior_temporal_cortex_Ktrans_std': round(whole_superior_temporal_cortex_Ktrans_std_exclude, 4),
+    'whole_inferior_temporal_cortex_Ktrans_mean': round(whole_inferior_temporal_cortex_Ktrans_mean_exclude, 4),
+    'whole_inferior_temporal_cortex_Ktrans_median': round(whole_inferior_temporal_cortex_Ktrans_median_exclude, 4),
+    'whole_inferior_temporal_cortex_Ktrans_std': round(whole_inferior_temporal_cortex_Ktrans_std_exclude, 4),
+    'whole_posterior_cingulate_cortex_Ktrans_mean': round(whole_posterior_cingulate_cortex_Ktrans_mean_exclude, 4),
+    'whole_posterior_cingulate_cortex_Ktrans_median': round(whole_posterior_cingulate_cortex_Ktrans_median_exclude, 4),
+    'whole_posterior_cingulate_cortex_Ktrans_std': round(whole_posterior_cingulate_cortex_Ktrans_std_exclude, 4),
+    'whole_medial_temporal_cortex_Ktrans_mean': round(whole_medial_temporal_cortex_Ktrans_mean_exclude, 4),
+    'whole_medial_temporal_cortex_Ktrans_median': round(whole_medial_temporal_cortex_Ktrans_median_exclude, 4),
+    'whole_medial_temporal_cortex_Ktrans_std': round(whole_medial_temporal_cortex_Ktrans_std_exclude, 4),
     'ktrans_wm_outliers': wm_outliers,
     'ktrans_gm_outliers': gm_outliers,
     'T1_blood_histogram': "../../" + T1_blood_histogram_exclude_path,
@@ -2525,21 +2401,21 @@ data = {
     'whole_inferior_temporal_cortex_outliers': whole_inferior_temporal_cortex_outliers,
     'whole_posterior_cingulate_cortex_outliers': whole_posterior_cingulate_cortex_outliers,
     'whole_medial_temporal_cortex_outliers': whole_medial_temporal_cortex_outliers,
-    'whole_hippo_histogram': "../../" + whole_hippo_histogram_exclude_path,
-    'whole_phg_histogram': "../../" + whole_phg_histogram_exclude_path,
-    'whole_putamen_histogram': "../../" + whole_putamen_histogram_exclude_path,
-    'whole_pallidum_histogram': "../../" + whole_pallidum_histogram_exclude_path,
-    'whole_thalamus_histogram': "../../" + whole_thalamus_histogram_exclude_path,
-    'whole_caudate_histogram': "../../" + whole_caudate_histogram_exclude_path,
-    'whole_amygdala_histogram': "../../" + whole_amygdala_histogram_exclude_path,
-    'whole_entorhinal_cortex_histogram': "../../" + whole_entorhinal_cortex_histogram_exclude_path,
-    'whole_fusiform_gyrus_cortex_histogram': "../../" + whole_fusiform_gyrus_cortex_histogram_exclude_path,
-    'whole_fusiform_gyrus_WM_histogram': "../../" + whole_fusiform_gyrus_WM_histogram_exclude_path,
-    'whole_insula_WM_histogram': "../../" + whole_insula_WM_histogram_exclude_path,
-    'whole_superior_temporal_cortex_histogram': "../../" + whole_superior_temporal_cortex_histogram_exclude_path,
-    'whole_inferior_temporal_cortex_histogram': "../../" + whole_inferior_temporal_cortex_histogram_exclude_path,
-    'whole_posterior_cingulate_cortex_histogram': "../../" + whole_posterior_cingulate_cortex_histogram_exclude_path,
-    'whole_medial_temporal_cortex_histogram': "../../" + whole_medial_temporal_cortex_histogram_exclude_path
+    'Ktrans_whole_hippo_histogram': "../../" + whole_hippo_histogram_exclude_path,
+    'Ktrans_whole_phg_histogram': "../../" + whole_phg_histogram_exclude_path,
+    'Ktrans_whole_putamen_histogram': "../../" + whole_putamen_histogram_exclude_path,
+    'Ktrans_whole_pallidum_histogram': "../../" + whole_pallidum_histogram_exclude_path,
+    'Ktrans_whole_thalamus_histogram': "../../" + whole_thalamus_histogram_exclude_path,
+    'Ktrans_whole_caudate_histogram': "../../" + whole_caudate_histogram_exclude_path,
+    'Ktrans_whole_amygdala_histogram': "../../" + whole_amygdala_histogram_exclude_path,
+    'Ktrans_whole_entorhinal_cortex_histogram': "../../" + whole_entorhinal_cortex_histogram_exclude_path,
+    'Ktrans_whole_fusiform_gyrus_cortex_histogram': "../../" + whole_fusiform_gyrus_cortex_histogram_exclude_path,
+    'Ktrans_whole_fusiform_gyrus_WM_histogram': "../../" + whole_fusiform_gyrus_WM_histogram_exclude_path,
+    'Ktrans_whole_insula_WM_histogram': "../../" + whole_insula_WM_histogram_exclude_path,
+    'Ktrans_whole_superior_temporal_cortex_histogram': "../../" + whole_superior_temporal_cortex_histogram_exclude_path,
+    'Ktrans_whole_inferior_temporal_cortex_histogram': "../../" + whole_inferior_temporal_cortex_histogram_exclude_path,
+    'Ktrans_whole_posterior_cingulate_cortex_histogram': "../../" + whole_posterior_cingulate_cortex_histogram_exclude_path,
+    'Ktrans_whole_medial_temporal_cortex_histogram': "../../" + whole_medial_temporal_cortex_histogram_exclude_path
 }
 
 output_exclude = template.render(data)
@@ -2579,19 +2455,24 @@ if os.path.exists(os.path.join(dir, '../dce_available_3524_ac.xlsx')):
             # insert underscore after 1st character
             subject_id = subject_id[:1] + "_" + subject_id[1:]
         try:
-            apoe = df.loc[df['Subject_ID'] == int(subject_id), 'APOE'].values[0]
-            cdr = df.loc[df['Subject_ID'] == int(subject_id), 'CDR'].values[0]
-            bmi = df.loc[df['Subject_ID'] == int(subject_id), 'BMI'].values[0]
+            if int(subject_id) in df['Subject_ID'].values:
+                apoe = df.loc[df['Subject_ID'] == int(subject_id), 'APOE'].values[0]
+                # cdr = df.loc[df['Subject_ID'] == int(subject_id), 'CDR'].values[0]
+                # bmi = df.loc[df['Subject_ID'] == int(subject_id), 'BMI'].values[0]
+            else:
+                apoe = "N/A"
+                cdr = "N/A"
+                bmi = "N/A"
             # add to population_data
         except Exception as e:
             print(e)
-            print("Subject " + subject_id + " not found in dce_available_3524_ac.xlsx")
+            # print("Subject " + subject_id + " not found in dce_available_3524_ac.xlsx")
             apoe = "N/A"
             cdr = "N/A"
             bmi = "N/A"
         population_data[subject]["APOE"] = apoe
-        population_data[subject]["CDR"] = cdr
-        population_data[subject]["BMI"] = bmi
+        # population_data[subject]["CDR"] = cdr
+        # population_data[subject]["BMI"] = bmi
 
     for subject in population_data_exclude.keys():
         # get subject's ID
@@ -2605,8 +2486,8 @@ if os.path.exists(os.path.join(dir, '../dce_available_3524_ac.xlsx')):
             subject_id = subject_id[:1] + "_" + subject_id[1:]
         try:
             apoe = df.loc[df['Subject_ID'] == int(subject_id), 'APOE'].values[0]
-            cdr = df.loc[df['Subject_ID'] == int(subject_id), 'CDR'].values[0]
-            bmi = df.loc[df['Subject_ID'] == int(subject_id), 'BMI'].values[0]
+            # cdr = df.loc[df['Subject_ID'] == int(subject_id), 'CDR'].values[0]
+            # bmi = df.loc[df['Subject_ID'] == int(subject_id), 'BMI'].values[0]
             # add to population_data
         except Exception as e:
             print(e)
@@ -2615,8 +2496,8 @@ if os.path.exists(os.path.join(dir, '../dce_available_3524_ac.xlsx')):
             cdr = "N/A"
             bmi = "N/A"
         population_data_exclude[subject]["APOE"] = apoe
-        population_data_exclude[subject]["CDR"] = cdr
-        population_data_exclude[subject]["BMI"] = bmi
+        # population_data_exclude[subject]["CDR"] = cdr
+        # population_data_exclude[subject]["BMI"] = bmi
 
     # for subject in population_data_exclude_signa.keys():
     #     # get subject's ID
@@ -2655,8 +2536,8 @@ if os.path.exists(os.path.join(dir, '../dce_available_3524_ac.xlsx')):
             subject_id = subject_id[:1] + "_" + subject_id[1:]
         try:
             apoe = df.loc[df['Subject_ID'] == int(subject_id), 'APOE'].values[0]
-            cdr = df.loc[df['Subject_ID'] == int(subject_id), 'CDR'].values[0]
-            bmi = df.loc[df['Subject_ID'] == int(subject_id), 'BMI'].values[0]
+            # cdr = df.loc[df['Subject_ID'] == int(subject_id), 'CDR'].values[0]
+            # bmi = df.loc[df['Subject_ID'] == int(subject_id), 'BMI'].values[0]
             # add to population_data
         except Exception as e:
             print(e)
@@ -2665,8 +2546,8 @@ if os.path.exists(os.path.join(dir, '../dce_available_3524_ac.xlsx')):
             cdr = "N/A"
             bmi = "N/A"
         population_data_failed[subject]["APOE"] = apoe
-        population_data_failed[subject]["CDR"] = cdr
-        population_data_failed[subject]["BMI"] = bmi
+        # population_data_failed[subject]["CDR"] = cdr
+        # population_data_failed[subject]["BMI"] = bmi
 
     # read EXCLUDED sheet from dce_available_3524_ac.xlsx and move subjects to population_data_exclude
     df = pd.read_excel(os.path.join(dir, '../dce_available_3524_ac.xlsx'), sheet_name="EXCLUDED")
@@ -2721,7 +2602,7 @@ writer = pd.ExcelWriter(os.path.join(dir, "spreadsheets", output_dir[1:], "datas
 df_success = pd.DataFrame(population_data)
 # df_exclude = pd.DataFrame(population_data_exclude)
 
-order = ["Date", "APOE", "CDR", "BMI", "Sex", "Age", "Machine", "Institution", "Coil", "TR", "Time_resolution", "TE", "Flip_angle", "n_reps",
+order = ["Date", "APOE", "Sex", "Age", "Machine", "Institution", "Coil", "TR", "Time_resolution", "TE", "Flip_angle", "n_reps",
          "Approximate SNR", "AIFitness", "aif_fitted_r2", "manual_aif_status", "max_disp", "T1_blood", "T1_wm_median", "T1_gm_median",
          "wm_median", "gm_median", "Ktrans_Hippo_median", "Ktrans_PhG_median", "Ktrans_Putamen_median", "Ktrans_Pallidum_median",
          "Ktrans_Thalamus_median", "Ktrans_Caudate_median", "Ktrans_Amygdala_median", "Ktrans_Entorhinal_cortex_median",
@@ -2730,7 +2611,7 @@ order = ["Date", "APOE", "CDR", "BMI", "Sex", "Age", "Machine", "Institution", "
          "Vp_Hippo_median", "Vp_PhG_median", "Vp_Putamen_median", "Vp_Pallidum_median", "Vp_Thalamus_median",
          "Vp_Caudate_median", "Vp_Amygdala_median", "Vp_Entorhinal_cortex_median", "Vp_Fusiform_gyrus_cortex_median",
          "Vp_Fusiform_gyrus_WM_median", "Vp_Insula_WM_median", "Vp_Superior_temporal_cortex_median",
-         "Vp_Posterior_cingulate_cortex_median", "Vp_Medial_temporal_cortex_median",
+         "Vp_Inferior_temporal_cortex_median", "Vp_Posterior_cingulate_cortex_median", "Vp_Medial_temporal_cortex_median",
          "hippo_vol", "phg_vol", "putamen_vol", "pallidum_vol", "thalamus_vol", "caudate_vol", "amygdala_vol",
          "entorhinal_cortex_vol", "fusiform_gyrus_cortex_vol", "fusiform_gyrus_wm_vol", "insula_wm_vol",
          "superior_temporal_cortex_vol", "inferior_temporal_cortex_vol", "posterior_cingulate_cortex_vol", "medial_temporal_cortex_vol",
@@ -2764,7 +2645,6 @@ order_exclude.insert(0, "Reason")
 df_success.index.name = "Subject_ID"
 
 # write to excel
-# df_success.to_excel(os.path.join(dir, "dataset_ktrans" + output_dir + ".xlsx"))
 df_success.to_excel(writer, sheet_name='Success')
 cell_format = writer.book.add_format()
 cell_format.set_text_wrap()
@@ -2852,44 +2732,46 @@ for subject_id in subjects:
                 print(e)
                 continue
 
-            # plot histograms
-            plt.hist(wm_histogram, bins=30)
-            plt.title("Ktrans White Matter Median")
-            plt.xlabel("Ktrans (10^-3/min)")
-            plt.axvline(x=case_wm_median, color='black')
-            # put percentile text in top right corner
-            plt.text(0.9, 0.95, "Percentile: " + str(round((len([x for x in wm_histogram if x < case_wm_median]) / len(wm_histogram)) * 100, 2)) + "%", horizontalalignment='center', verticalalignment='center', transform=plt.gca().transAxes)
-            plt.savefig(placement_wm_histogram_path, bbox_inches='tight')
-            plt.close()
+            if os.path.exists(placement_wm_histogram_path) and os.path.exists(placement_gm_histogram_path):
+                # plot histograms
+                plt.hist(wm_histogram, bins=30)
+                plt.title("Ktrans White Matter Median")
+                plt.xlabel("Ktrans (10^-3/min)")
+                plt.axvline(x=case_wm_median, color='black')
+                # put percentile text in top right corner
+                plt.text(0.9, 0.95, "Percentile: " + str(round((len([x for x in wm_histogram if x < case_wm_median]) / len(wm_histogram)) * 100, 2)) + "%", horizontalalignment='center', verticalalignment='center', transform=plt.gca().transAxes)
+                plt.savefig(placement_wm_histogram_path, bbox_inches='tight')
+                plt.close()
 
-            plt.hist(gm_histogram, bins=30)
-            plt.title("Ktrans Gray Matter Median")
-            plt.xlabel("Ktrans (10^-3/min)")
-            plt.axvline(x=case_gm_median, color='black')
-            # put percentile text in top right corner
-            plt.text(0.9, 0.95, "Percentile: " + str(round((len([x for x in gm_histogram if x < case_gm_median]) / len(gm_histogram)) * 100, 2)) + "%", horizontalalignment='center', verticalalignment='center', transform=plt.gca().transAxes)
-            plt.savefig(placement_gm_histogram_path, bbox_inches='tight')
-            plt.close()
+                plt.hist(gm_histogram, bins=30)
+                plt.title("Ktrans Gray Matter Median")
+                plt.xlabel("Ktrans (10^-3/min)")
+                plt.axvline(x=case_gm_median, color='black')
+                # put percentile text in top right corner
+                plt.text(0.9, 0.95, "Percentile: " + str(round((len([x for x in gm_histogram if x < case_gm_median]) / len(gm_histogram)) * 100, 2)) + "%", horizontalalignment='center', verticalalignment='center', transform=plt.gca().transAxes)
+                plt.savefig(placement_gm_histogram_path, bbox_inches='tight')
+                plt.close()
             
             # append to html file
             try:
                 filename = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-casereport.html")
-                with open(filename, "r") as f:
-                    report_content = f.read()
+                if os.path.exists(filename):
+                    with open(filename, "r") as f:
+                        report_content = f.read()
 
-                # replace placeholder with histogram path
-                report_content = report_content.replace("placeholder_wm", "../../figures/placement_wm_histogram.png")
-                report_content = report_content.replace("placeholder_gm", "../../figures/placement_gm_histogram.png")
-                # write html to file
-                with open(filename, 'w') as f:
-                    f.write(report_content)
+                    # replace placeholder with histogram path
+                    report_content = report_content.replace("placeholder_wm", "../../figures/placement_wm_histogram.png")
+                    report_content = report_content.replace("placeholder_gm", "../../figures/placement_gm_histogram.png")
+                    # write html to file
+                    with open(filename, 'w') as f:
+                        f.write(report_content)
 
-                report_path = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-report.png")
-                
-                if f"{subject_id}_{timepoint}" in population_data.keys():
-                    imgs.append(report_path)
-                elif f"{subject_id}_{timepoint}" in population_data_exclude.keys():
-                    imgs_exclude.append(report_path)
+                    report_path = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-report.png")
+
+                    if f"{subject_id}_{timepoint}" in population_data.keys():
+                        imgs.append(report_path)
+                    elif f"{subject_id}_{timepoint}" in population_data_exclude.keys():
+                        imgs_exclude.append(report_path)
             except Exception as e:
                 print(f"Error appending {subject_id} {timepoint} placement histograms.")
                 print(e)

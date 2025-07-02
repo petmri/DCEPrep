@@ -33,9 +33,17 @@ See [tags](https://hub.docker.com/repository/docker/lsaca05/dce/tags) for releas
 
 ## Pipeline Structure
 ### `preprocess_all`
-Inputs: Any number of flip angles `sub-##_ses-##_flip-##_VFA.nii.gz`, `sub-##_ses-##_DCE.nii.gz`, `sub-##_ses-##_T1w.nii.gz`
+Inputs:
+- Any number of flip angles: `sub-##_ses-##_flip-##_VFA.nii.gz`
+- DCE image: `sub-##_ses-##_DCE.nii.gz`
+- T1-weighted image: `sub-##_ses-##_T1w.nii.gz`
 
-Main Outputs: `dce/sub-##_ses-##_desc-bfcz_DCE.nii.gz` `anat/sub-##_ses-##_space-DCEref_T1map.nii` `anat/sub-##_ses-##_space-DCEref_VFA.nii.gz` `dce/sub-##_ses-##_desc-AIF_T1map.nii.gz` `anat/sub-##_ses-##_space-DCEref_desc-brain_mask.nii.gz`
+Main Outputs:
+- `dce/sub-##_ses-##_desc-bfcz_DCE.nii.gz`
+- `anat/sub-##_ses-##_space-DCEref_T1map.nii`
+- `anat/sub-##_ses-##_space-DCEref_VFA.nii.gz`
+- `dce/sub-##_ses-##_desc-AIF_T1map.nii.gz`
+- `anat/sub-##_ses-##_space-DCEref_desc-brain_mask.nii.gz`
 
 Options: `-d [rawdata_path]: REQUIRED - specify path to your BIDS raw data folder`
 
@@ -47,7 +55,7 @@ Options: `-d [rawdata_path]: REQUIRED - specify path to your BIDS raw data folde
 
 `-B: enable second round of bias field corrections, post-Z-norm if enabled`
 
-`-c: clean case's derivative folder prior to processing, ensures \"fresh\" runs but cannot use skips`
+`-c: clean case's derivative folder prior to processing, ensures "fresh" runs but cannot use skips`
 
 `-C [name]: enable comparison mode, which will output all files to the specified directory within each timepoint. Spits out results for that named run. Useful for comparing, say, no corrections vs corrections`
 
@@ -125,9 +133,18 @@ Example: `./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/bids_test/raw
 14. **DCE Z-axis Normalization** using double gaussian fitting `DCE_norm.py`
 
 ### `DCE_all.sh`
-Inputs: `dce/sub-##_ses-##_desc-bfcz_DCE.nii.gz` `anat/sub-##_ses-##_space-DCEref_T1map.nii` `anat/sub-##_ses-##_space-DCEref_VFA.nii.gz` `dce/sub-##_ses-##_desc-AIF_T1map.nii.gz` `anat/sub-##_ses-##_space-DCEref_desc-brain_mask.nii.gz`
+Inputs:
+- `dce/sub-##_ses-##_desc-bfcz_DCE.nii.gz`
+- `anat/sub-##_ses-##_space-DCEref_T1map.nii`
+- `anat/sub-##_ses-##_space-DCEref_VFA.nii.gz`
+- `dce/sub-##_ses-##_desc-AIF_T1map.nii.gz`
+- `anat/sub-##_ses-##_space-DCEref_desc-brain_mask.nii.gz`
 
-Main Outputs: `sub-##_ses-##_Ktrans.nii` `sub-##_ses-##_vp.nii` `case_report.html`, `population_report.html`
+Main Outputs:
+- `sub-##_ses-##_Ktrans.nii`
+- `sub-##_ses-##_vp.nii`
+- `case_report.html`
+- `population_report.html`
 
 Options: `-d: specify raw BIDS data directory (required)`
 
