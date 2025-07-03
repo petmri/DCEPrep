@@ -2002,14 +2002,20 @@ template = env.get_template('population_template.html')
 
 # get date
 date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-# get commit hash
+# get commit hash for this repo
 try:
     commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=os.path.dirname(os.path.realpath(__file__))).decode('ascii').strip()
 except Exception as e:
     print("Git didn't work correctly. Trying a different way of getting latest dev branch commit hash...")
     command = ['cat', '.git/refs/heads/dev']
-
     commit_hash = subprocess.check_output(command, cwd=os.path.dirname(os.path.realpath(__file__))).decode('ascii').strip()
+
+# get commit hash for ROCKETSHIP repo
+try:
+    ROCKETSHIP_commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROCKETSHIP_dir).decode('ascii').strip()
+except Exception as e:
+    print("Could not get ROCKETSHIP commit hash:", e)
+    ROCKETSHIP_commit_hash = "N/A"
 
 # make dict of manufacturer, field strength, machine, and institution
 manufacturers = {}
@@ -2138,6 +2144,7 @@ data = {
     'Excludes': str(len(population_data_exclude)) + '/' + str(len(total_timepoints)) + ' (' + str(round((len(population_data_exclude) / len(total_timepoints)) * 100, 2)) + '%)',
     'Date': date,
     'Commit': commit_hash,
+    'ROCKETSHIP_commit': ROCKETSHIP_commit_hash,
     'Manufacturers': manufacturers,
     'Field_strengths': field_strengths,
     'Machines': machines,
@@ -2288,6 +2295,7 @@ data = {
     'Excludes': str(len(population_data_exclude)) + '/' + str(len(total_timepoints)) + ' (' + str(round((len(population_data_exclude) / len(total_timepoints)) * 100, 2)) + '%)',
     'Date': date,
     'Commit': commit_hash,
+    'ROCKETSHIP_commit': ROCKETSHIP_commit_hash,
     'Manufacturers': manufacturers_exclude,
     'Field_strengths': field_strengths_exclude,
     'Machines': machines,

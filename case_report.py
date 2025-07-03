@@ -97,12 +97,29 @@ template = env.get_template('template.html')
 date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 # get commit hash
 try:
-    commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=os.path.dirname(os.path.realpath(__file__))).decode('ascii').strip()
+    commit_hash = subprocess.check_output(
+        ['git', 'rev-parse', 'HEAD'],
+        cwd=os.path.dirname(os.path.realpath(__file__))
+    ).decode('ascii').strip()
 except Exception as e:
     print("Git didn't work correctly. Trying a different way of getting latest dev branch commit hash...")
     command = ['cat', '.git/refs/heads/dev']
+    commit_hash = subprocess.check_output(
+        command,
+        cwd=os.path.dirname(os.path.realpath(__file__))
+    ).decode('ascii').strip()
 
-    commit_hash = subprocess.check_output(command, cwd=os.path.dirname(os.path.realpath(__file__))).decode('ascii').strip()
+# Get ROCKETSHIP repo commit hash
+try:
+    # Assume ROCKETSHIP is in ../ROCKETSHIP relative to this script
+    rocketship_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'ROCKETSHIP'))
+    rocketship_commit_hash = subprocess.check_output(
+        ['git', 'rev-parse', 'HEAD'],
+        cwd=rocketship_dir
+    ).decode('ascii').strip()
+except Exception as e:
+    print("Could not get ROCKETSHIP commit hash.")
+    rocketship_commit_hash = 'unknown'
 
 # get subject id
 subject_id = source_dir.split('/')[-2]
@@ -551,6 +568,7 @@ data = {
     'Timepoint': 'Timepoint: ' + timepoint,
     'Date': 'Date Processed: ' + date,
     'Commit': 'Commit: ' + commit_hash,
+    'ROCKETSHIP_Commit': 'ROCKETSHIP Commit: ' + rocketship_commit_hash,
     'Institute': 'Institute: ' + institute,
     'Machine': 'Machine: ' + manufacturer + ' ' + MR_machine_model + ' ' + str(field_strength) + 'T',
     'ktrans': '../figures/ktrans.svg',
