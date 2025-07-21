@@ -38,9 +38,9 @@ ENV DEBIAN_FRONTEND="noninteractive" \
     LC_ALL="en_US.UTF-8"
 
 # Installing freesurfer
-COPY docker/files/freesurfer7.3-exclude.txt /usr/local/etc/freesurfer7.3-exclude.txt
-RUN curl -sSL https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.3.2/freesurfer-linux-ubuntu22_amd64-7.3.2.tar.gz \
-    | tar zxv --no-same-owner -C /opt --exclude-from=/usr/local/etc/freesurfer7.3-exclude.txt
+COPY docker/files/freesurfer-exclude.txt /usr/local/etc/freesurfer-exclude.txt
+RUN curl -sSL https://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/7.4.1/freesurfer-linux-ubuntu22_amd64-7.4.1.tar.gz \
+    | tar zxv --no-same-owner -C /opt --exclude-from=/usr/local/etc/freesurfer-exclude.txt
 
 # Simulate SetUpFreeSurfer.sh
 ENV FSL_DIR="/opt/fsl-6.0.5.2" \
