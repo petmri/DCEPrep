@@ -4,7 +4,7 @@ import nibabel as nib
 import numpy as np
 from math import sqrt
 from numpy.core.multiarray import unravel_index
-from numpy.lib.function_base import corrcoef
+# from numpy.lib.function_base import corrcoef
 from sklearn.linear_model import LinearRegression
 from statistics import mean
 

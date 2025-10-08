@@ -35,6 +35,9 @@ mean_gm = 0
 expected_ktrans_vmax = 0.005
 if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
     for file in files_to_reorient:
+        if not os.path.exists(file):
+            print(f"File does not exist, skipping: {file}")
+            continue
         file_no_extension = file.split('.')[0]
         command = ['c3d', file, '-orient', 'RAS', '-o', file_no_extension + '_RAS.nii.gz']
         try:
@@ -60,11 +63,13 @@ if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
                 plt.close()
         except Exception as e:
             print("Error running c3d command: " + ' '.join(command))
-            # print("Check if c3d is installed and in your path, or if the target file exists.")
             print(e)
 else:
     # use freesurfer's mri_convert to reorient files to RAS
     for file in files_to_reorient:
+        if not os.path.exists(file):
+            print(f"File does not exist, skipping: {file}")
+            continue
         file_no_extension = file.split('.')[0]
         command = ['mri_convert', '--in_orientation', 'LPI', file, file_no_extension + '_RAS.nii.gz']
         try:
@@ -291,12 +296,14 @@ aif_curve_ratio = aif_curve / baseline
 aif_metric = quality_ultimate_new(aif_curve_ratio)
 
 # plot AIF
-plt.plot(aif_curve_ratio)
-plt.text(0.25, 0.95, 'Voxel Baseline Avg SI: ' + str(baseline), transform=plt.gca().transAxes, fontsize=11, verticalalignment='top')
-plt.text(0.25, 0.9, 'AIFitness: ' + str(aif_metric), transform=plt.gca().transAxes, fontsize=11, verticalalignment='top')
-plt.title('AIF Curve')
-plt.xlabel('Timepoint')
-plt.ylabel('Signal intensity / Baseline')
+plt.plot(aif_curve_ratio, linewidth=2)
+# plt.text(0.5, 0.95, 'Voxel Baseline Avg SI: ' + str(round(baseline, 2)), transform=plt.gca().transAxes, fontsize=11, verticalalignment='top')
+plt.text(0.5, 0.9, 'AIFitness: ' + str(round(aif_metric, 2)), transform=plt.gca().transAxes, fontsize=18, verticalalignment='top')
+plt.title('AIF Curve', fontsize=18)
+plt.xlabel('Timepoint', fontsize=18)
+plt.ylabel('Normalized Signal Intensity', fontsize=18)
+plt.xticks(fontsize=18)
+plt.yticks(fontsize=18)
 plt.savefig(f'figures/{prefix}_desc-AIF_curve.svg', bbox_inches='tight')
 plt.close()
 
@@ -480,7 +487,6 @@ try:
     GPU = False
     latest_log_file = max(glob.glob('dce/dce_*_fit.log'), key=os.path.getctime)
     latest_log_file_name = os.path.basename(latest_log_file)
-    print(f"Latest log file: {latest_log_file_name}")
     dce_model = latest_log_file_name.replace('dce_', '').replace('_fit.log', '')
     with open(latest_log_file, 'r') as f:
         for line in f:
@@ -517,22 +523,22 @@ else:
 # Ktrans
 
 # get Ktrans mean wm and gm
-KTRANS_MIN_THRESHOLD = 0.00001
+KTRANS_MIN_THRESHOLD = 1e-7
 ktrans_wm = nib.load(f'dce/{prefix}_seg-WM_Ktrans.nii.gz')
 ktrans_wm_data = ktrans_wm.get_fdata()
 ktrans_wm_mask = nib.load(f'anat/{prefix}_space-DCEref_label-WM_mask.nii.gz')
 ktrans_wm_mask_data = ktrans_wm_mask.get_fdata()
-# mean_wm = np.mean(ktrans_wm_data[ktrans_wm_data > 0])*1000
-ktrans_median_wm = np.median(ktrans_wm_data[np.logical_and(ktrans_wm_mask_data > 0, ktrans_wm_data > KTRANS_MIN_THRESHOLD)])*1000
-ktrans_std_wm = np.std(ktrans_wm_data[np.logical_and(ktrans_wm_mask_data > 0, ktrans_wm_data > KTRANS_MIN_THRESHOLD)])*1000
+# mean_wm = np.nanmean(ktrans_wm_data[ktrans_wm_data > 0])*1000
+ktrans_median_wm = np.nanmedian(ktrans_wm_data[np.logical_and(ktrans_wm_mask_data > 0, ktrans_wm_data > KTRANS_MIN_THRESHOLD)])*1000
+ktrans_std_wm = np.nanstd(ktrans_wm_data[np.logical_and(ktrans_wm_mask_data > 0, ktrans_wm_data > KTRANS_MIN_THRESHOLD)])*1000
 
 ktrans_gm = nib.load(f'dce/{prefix}_seg-GM_Ktrans.nii.gz')
 ktrans_gm_data = ktrans_gm.get_fdata()
 ktrans_gm_mask = nib.load(f'anat/{prefix}_space-DCEref_label-GM_mask.nii.gz')
 ktrans_gm_mask_data = ktrans_gm_mask.get_fdata()
-# mean_gm = np.mean(ktrans_gm_data[ktrans_gm_data > 0])*1000
-ktrans_median_gm = np.median(ktrans_gm_data[np.logical_and(ktrans_gm_mask_data > 0, ktrans_gm_data > KTRANS_MIN_THRESHOLD)])*1000
-ktrans_std_gm = np.std(ktrans_gm_data[np.logical_and(ktrans_gm_mask_data > 0, ktrans_gm_data > KTRANS_MIN_THRESHOLD)])*1000
+# mean_gm = np.nanmean(ktrans_gm_data[ktrans_gm_data > 0])*1000
+ktrans_median_gm = np.nanmedian(ktrans_gm_data[np.logical_and(ktrans_gm_mask_data > 0, ktrans_gm_data > KTRANS_MIN_THRESHOLD)])*1000
+ktrans_std_gm = np.nanstd(ktrans_gm_data[np.logical_and(ktrans_gm_mask_data > 0, ktrans_gm_data > KTRANS_MIN_THRESHOLD)])*1000
 
 # get T1 map median wm and gm
 T1_wm = nib.load(f'anat/{prefix}_space-DCEref_label-WM_T1map.nii.gz')

@@ -78,7 +78,7 @@ Example: `./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/bids_test/raw
 2. 
     <details>
     <summary><b>DCE Motion Correction</b> using FSL <code>mcflirt</code> targeting 2nd frame of DCE with mutualinfo for cost function</summary>
-    <code>mcflirt -in $source_dir/dce/${PREFIX}_DCE.nii.gz -refvol '${source_dir}/dce/${PREFIX}_DCE.nii.gz[1]' -cost mutualinfo -report -plots -o dce/${PREFIX}_desc-hmc_DCE.nii
+    <code>mcflirt -in $source_dir/dce/${PREFIX}_DCE.nii.gz -refvol 1 -cost mutualinfo -report -plots -o dce/${PREFIX}_desc-hmc_DCE.nii
     </code>
     </details>
 3. 

@@ -13,7 +13,7 @@ AIF_SUFFIX="desc-AIF_mask"
 AIF_TRAINING_SUFFIX="desc-trainingAIF_mask"
 SKIP_IF_SUCCESS=0
 SCRIPT_LOOP_DIRS=sub-*/ses-*
-AUTOAIF_WEIGHT_PATH="/media/network_mriphysics/USC-PPG/AI_training/weights/huber_real/model_weight_huber1.h5"
+AUTOAIF_WEIGHT_PATH="docker/files/model_weight_huber1.h5"
 AUTOAIF_MODEL="best"
 
 # internal vars (don't change)
@@ -146,7 +146,7 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_cli.m' -printf '%h\n' -quit || find / -name '*run_dce_cli.m' -printf '%h\n' -quit) &> /dev/null
 	SCRIPT_PATH=$(dirname "$(realpath $0)")
 	GPUFIT_PATH=$(find $HOME -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit || find / -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit) &> /dev/null
-	GPUFIT_M_PATH=$(find $HOME -name 'ModelID.m' -printf '%h\n' -quit || find / -name 'ModelID.m' -printf '%h\n' -quit)
+	GPUFIT_M_PATH=$(find $HOME -name 'ModelID.m' -printf '%h\n' -quit || find / -name 'ModelID.m' -printf '%h\n' -quit) &> /dev/null
 else
 	ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 	SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
@@ -335,12 +335,13 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		then
 		if [ nvidia-smi ]
 			then
-			hd-bet -i $source_dir/anat/${PREFIX}_T1w.nii.gz -o anat/${PREFIX}_desc-brain &> /dev/null
+			hd-bet -i $source_dir/anat/${PREFIX}_T1w.nii.gz -o anat/${PREFIX}_desc-brain.nii.gz --save_bet_mask &> /dev/null
 			mETA=$(echo "scale=0;  $SECONDS * 34 * ($count - $current + 1) / 60" | bc -l)
 		else
-			hd-bet -i $source_dir/anat/${PREFIX}_T1w.nii.gz -o anat/${PREFIX}_desc-brain -device cpu &> /dev/null
+			hd-bet -i $source_dir/anat/${PREFIX}_T1w.nii.gz -o anat/${PREFIX}_desc-brain.nii.gz -device cpu --save_bet_mask &> /dev/null
 			mETA=$(echo "scale=0;  $SECONDS * 2 * ($count - $current + 1) / 60" | bc -l)
 		fi
+		mv anat/${PREFIX}_desc-brain_bet.nii.gz anat/${PREFIX}_desc-brain_mask.nii.gz
 		mv anat/${PREFIX}_desc-brain.nii.gz anat/${PREFIX}_desc-brain_T1w.nii.gz
 	elif [ -f "$source_dir/anat/${PREFIX}_T2w.nii.gz" ]
 		then
@@ -635,7 +636,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH/parametric_scripts/custom_scripts'); addpath '$ROCKETSHIP_PATH'; \
 		addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; \
 		addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts';	\
-		addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; T1mapping_fit('$source_dir/anat', '$SUBJECT_TP_PATH/anat', '${PREFIX}_${REF_SPACE}_$VFA_INPUT.nii'); exit;" &> /dev/null
+		addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; T1mapping_fit('$source_dir/anat', '$SUBJECT_TP_PATH/anat', '${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii'); exit;" &> /dev/null
 	mv anat/T1_map_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii anat/${PREFIX}_${REF_SPACE}_T1map.nii
 	mv anat/T1_map_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.mat anat/${PREFIX}_${REF_SPACE}_T1map.mat
 	mv anat/T1_map_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.txt anat/${PREFIX}_${REF_SPACE}_T1map.txt
@@ -678,7 +679,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		if [ $EN_MOTION_CORR -eq 1 ]
 			then
 			python3 $AUTO_AIF_PATH/main_vif.py --mode inference --input_path dce/${PREFIX}_desc-hmc_DCE.nii.gz --save_output_path $PWD/dce \
-				--model_weight_path $AUTOAIF_WEIGHT_PATH \
+				--model_weight_path $SCRIPT_PATH/$AUTOAIF_WEIGHT_PATH \
 				--model_name $AUTOAIF_MODEL \
 				--save_image 1 &> /dev/null
 			# rename output
@@ -690,7 +691,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 			fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_desc-AIFtopvoxels_mask.nii dce/${PREFIX}_desc-AIF_T1map.nii
 		else
 			python3 $AUTO_AIF_PATH/main_vif.py --mode inference --input_path $source_dir/dce/${PREFIX}_DCE.nii.gz --save_output_path $PWD/dce \
-				--model_weight_path $AUTOAIF_WEIGHT_PATH \
+				--model_weight_path $SCRIPT_PATH/$AUTOAIF_WEIGHT_PATH \
 				--model_name $AUTOAIF_MODEL \
 				--save_image 1 &> /dev/null
 			mv dce/${PREFIX}_DCE_float_mask.nii dce/${PREFIX}_AIFfloat_mask.nii
@@ -726,13 +727,9 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	if [ $EN_MOTION_CORR -eq 1 ]
 		then
 		fslmaths dce/${PREFIX}_desc-hmc_DCE.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_desc-brainAIF_mask.nii.gz dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz &> /dev/null
-	elif [ $EN_MOTION_CORR -eq 0 ] && [ $EN_BIAS1 -eq 1 ]
-		then
-		fslmaths dce/${PREFIX}_desc-bfc_DCE.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_desc-brainAIF_mask.nii.gz dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz &> /dev/null
 	else
 		fslmaths $source_dir/dce/${PREFIX}_DCE.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_desc-brainAIF_mask.nii.gz dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz &> /dev/null
 	fi
-		
 	if [ $EN_BIAS1 -eq 1 ]
 		then
 		if [ ! -f "dce/${PREFIX}_desc-bfc_DCE.nii.gz" ]
@@ -750,7 +747,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 			for i in {1..8}
 			do
 				# name file with rep_interval*i
-				fslmerge -n $((rep_interval*i-1)) rep_$((rep_interval*i-1)).nii dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz & &> /dev/null
+				fslmerge -n $((rep_interval*i-1)) rep_$((rep_interval*i-1)).nii dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz &> /dev/null
 			done
 			wait
 
@@ -784,13 +781,13 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 			echo -ne "DCE BFC + NORM [================================================> ] $prog% ($current/$count) ~$ETA min remaining \r"
 			
 			# Concatenation1
-			fslmerge -t dce/dyn_bias.nii.gz rep_*_bias.nii.gz
-	
+			fslmerge -t dce/dyn_bias.nii.gz rep_*_bias.nii.gz &> /dev/null
+
 			# Computing average across 8 bias field that have been sampled
-			fslmaths dce/dyn_bias.nii.gz -Tmean dce/mean_dyn_bias_map.nii.gz
+			fslmaths dce/dyn_bias.nii.gz -Tmean dce/mean_dyn_bias_map.nii.gz &> /dev/null
 	
 			# Normalizing motion corrected DCE image with mean bias field 
-			fslmaths dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz -div dce/mean_dyn_bias_map.nii.gz dce/${PREFIX}_desc-bfc_DCE.nii.gz
+			fslmaths dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz -div dce/mean_dyn_bias_map.nii.gz dce/${PREFIX}_desc-bfc_DCE.nii.gz &> /dev/null
 
 			mv dce/dyn_bias.nii.gz dce/${PREFIX}_desc-biases_DCE.nii.gz
 			mv dce/mean_dyn_bias_map.nii.gz dce/${PREFIX}_desc-meanbias_DCE.nii.gz

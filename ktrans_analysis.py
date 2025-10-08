@@ -12,7 +12,7 @@ import nibabel as nib
 
 # add as arg? add mask arg?
 POLYFIT = True
-KTRANS_MIN_THRESHOLD = 0.00001
+KTRANS_MIN_THRESHOLD = 1e-7
 
 def analyze(tp_dir):
     # load files from script pipeline

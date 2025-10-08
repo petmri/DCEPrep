@@ -8,10 +8,10 @@ nilearn
 numpy
 pandas
 Pillow
-Pillow
 pydicom
-PySimpleGUI
 PySimpleGUI
 reportlab
 scikit_learn
 scipy
+openpyxl
+xlsxwriter
