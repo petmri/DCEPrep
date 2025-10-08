@@ -22,7 +22,7 @@ export GID=$(id -g)
 
 sudo docker run --rm -it -e MLM_LICENSE_FILE=/opt/matlab/licenses/$LICENSE \
     -v /media/network_mriphysics/USC-PPG/docker_test:/data/ \
-    -v $FREESURFER_HOME/license.txt:/opt/freesurfer/license.txt \
+    -v $FREESURFER_HOME/license.txt:/usr/local/freesurfer/8.1.0/license.txt \
     -v $MATLAB_PATH/licenses:/opt/matlab/licenses \
     -v /etc/passwd:/etc/passwd:ro \
     -v $PWD/docker/files/script_preferences.txt:/opt/ROCKETSHIP/ROCKETSHIP-dev/script_preferences.txt \
