@@ -243,7 +243,6 @@ RUN git clone --depth 1 https://github.com/petmri/vascular_function.git /opt/vas
     && grep -vE '^(cupy|tensorrt_cu12)' requirements.txt > filtered-requirements.txt \
     && pip install --no-cache-dir -r filtered-requirements.txt \
     && rm filtered-requirements.txt
-COPY docker/files/model_weight_huber1.h5 /opt/vascular_function/model_weight_huber1.h5
 
 # ROCKETSHIP
 RUN curl -sSLO "https://github.com/petmri/ROCKETSHIP/archive/refs/heads/dev.zip" \

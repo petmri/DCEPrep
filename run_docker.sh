@@ -26,6 +26,7 @@ sudo docker run --rm -it -e MLM_LICENSE_FILE=/opt/matlab/licenses/$LICENSE \
     -v $MATLAB_PATH/licenses:/opt/matlab/licenses \
     -v /etc/passwd:/etc/passwd:ro \
     -v $PWD/docker/files/script_preferences.txt:/opt/ROCKETSHIP/ROCKETSHIP-dev/script_preferences.txt \
+    -v $PWD/docker/files/model_weight_huber1.h5:/opt/vascular_function/docker/files/model_weight_huber1.h5 \
     --shm-size=512M --mac-address $MAC \
     --user $UID:$GID \
     --gpus all \
