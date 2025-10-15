@@ -3,6 +3,9 @@
 # cannot do 24.04 because of freesurfer (libc6 << 2.36)
 FROM nvidia/cuda:13.0.0-cudnn-devel-ubuntu22.04
 
+ENV DEBIAN_FRONTEND="noninteractive" \
+    LANG="en_US.UTF-8" \
+    LC_ALL="en_US.UTF-8"
 
 # # modified from fmriprep (https://github.com/nipreps/fmriprep/blob/master/Dockerfile)
 # # Prepare environment
@@ -27,13 +30,55 @@ RUN apt-get update && \
                     libxext6 libxfixes3 libxft2 libxi6 libxinerama1 libxrandr2 libxrender1 libxt6 libxtst6 libxxf86vm1 \
                     linux-libc-dev \
                     make net-tools procps zlib1g \
+                    bc \
+                    dc \
+                    file \
+                    libfontconfig1 \
+                    libfreetype6 \
+                    libgl1-mesa-dev \
+                    libgl1-mesa-dri \
+                    libglu1-mesa-dev \
+                    libgomp1 \
+                    libice6 \
+                    libxcursor1 \
+                    libxft2 \
+                    libxinerama1 \
+                    libxrandr2 \
+                    libxrender1 \
+                    libxt6 \
                     libtool \
                     lsb-release \
                     netbase \
                     pkg-config \
                     python3-pip \
                     unzip \
-                    xvfb && \
+                    xvfb \
+                    language-pack-en \
+                    libx11-dev \
+                    gettext \
+                    xterm \
+                    x11-apps \
+                    libncurses5 \
+                    libegl1 \
+                    csh \
+                    tcsh \
+                    xorg \
+                    xorg-dev \
+                    xserver-xorg-dev \
+                    xserver-xorg-video-intel \
+                    libjpeg62 \
+                    libpcre2-16-0 \
+                    libxcb-icccm4 \
+                    libxcb-image0 \
+                    libxcb-keysyms1 \
+                    libxcb-render-util0 \
+                    libxcb-shape0 \
+                    libxcb-util1 \
+                    libxcb-xinerama0 \
+                    libxcb-xinput0 \
+                    libxcb-xkb1 \
+                    libxkbcommon-x11-0 \
+                    libxss1 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Simulate SetUpFreeSurfer.sh
@@ -82,23 +127,6 @@ ENV FSLDIR="/opt/fsl" \
     LD_LIBRARY_PATH="/opt/fsl/lib:$LD_LIBRARY_PATH"
 
 RUN apt-get update -qq \
-    && apt-get install -y -q --no-install-recommends \
-        bc \
-        dc \
-        file \
-        libfontconfig1 \
-        libfreetype6 \
-        libgl1-mesa-dev \
-        libgl1-mesa-dri \
-        libglu1-mesa-dev \
-        libgomp1 \
-        libice6 \
-        libxcursor1 \
-        libxft2 \
-        libxinerama1 \
-        libxrandr2 \
-        libxrender1 \
-        libxt6 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* \
     && echo "Downloading FSL ..." \
