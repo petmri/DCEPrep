@@ -14,6 +14,7 @@ from matplotlib import colors as mcolors
 
 from aif_metric import *
 import glob
+from utils.constants import KTRANS_MIN_THRESHOLD
 
 source_dir = sys.argv[1]
 # source_dir = sys.argv[2]
@@ -523,7 +524,6 @@ else:
 # Ktrans
 
 # get Ktrans mean wm and gm
-KTRANS_MIN_THRESHOLD = 1e-7
 ktrans_wm = nib.load(f'dce/{prefix}_seg-WM_Ktrans.nii.gz')
 ktrans_wm_data = ktrans_wm.get_fdata()
 ktrans_wm_mask = nib.load(f'anat/{prefix}_space-DCEref_label-WM_mask.nii.gz')

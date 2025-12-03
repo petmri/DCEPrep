@@ -79,6 +79,7 @@ while getopts ":d:C:fhl:sST:" options; do
 			else
 				SCRIPT_LOOP_DIR=dceprep/$OPTARG
 			fi
+			echo "Processing target directory: $SCRIPT_LOOP_DIR"
 			;;
 		*)
 			echo "Invalid option ${OPTARG}. Please use -h for a list of valid options."
@@ -143,9 +144,9 @@ function show_progress {
 # 	then
 # 	SCRIPT_LOOP_DIR=dceprep/sub-*/ses-*
 # fi
-if [ -z "$(ls -A $SCRIPT_LOOP_DIR 2>/dev/null)" ]; then
-		SCRIPT_LOOP_DIR=dceprep-autoAIF_huber_final/sub-*/ses-*
-fi
+# if [ -z "$(ls -A $SCRIPT_LOOP_DIR 2>/dev/null)" ]; then
+# 		SCRIPT_LOOP_DIR=dceprep-multihance_fix/sub-*/ses-*
+# fi
 for der_dir in $SCRIPT_LOOP_DIR; do
 	((total++))
 done
@@ -170,17 +171,17 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 			mkdir -p $DERIV_DIR/dceprep-"$OUTPUT_DIR"/$SUBJECT/$SESSION
 			mkdir -p $DERIV_DIR/dceprep-"$OUTPUT_DIR"/$SUBJECT/$SESSION/dce
 			mkdir -p $DERIV_DIR/dceprep-"$OUTPUT_DIR"/$SUBJECT/$SESSION/anat
-			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/dce/*bfcz* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
-			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/dce/*desc-AIF*_T1map* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
-			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/dce/*hmc* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
-			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/dce/*.txt $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
-			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/anat/*_T1map* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
-			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/anat/*mask* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
-			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/anat/*.mat $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
-			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/anat/*wmparc* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
-			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/anat/*DCEref_VFA* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
-			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/anat/*DCEref_T1w* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
-			cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/figures $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/figures
+			cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/dce/*bfcz* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
+			cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/dce/*desc-AIF*_T1map* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
+			cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/dce/*hmc* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
+			cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/dce/*.txt $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
+			cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/anat/*_T1map* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/anat/*mask* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/anat/*.mat $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/anat/*wmparc* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/anat/*DCEref_VFA* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/anat/*DCEref_T1w* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+			cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/figures $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/figures
 		fi
 		cd $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION || echo "ERROR: $OUTPUT_DIR does not exist. Preprocess first or check the name and try again." >> $LOG_FILE
 		if [ ! -f dce/${PREFIX}_desc-hmc_DCEref.nii.gz ]
@@ -195,7 +196,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	SUBJECT_TP_PATH=$(pwd)
 	if [ ! -f anat/${PREFIX}_desc-brain_T1w.nii.gz ]
 		then
-		cp -r $DERIV_DIR/dceprep-autoAIF_huber_final/$SUBJECT/$SESSION/anat/${PREFIX}_desc-brain_T1w.nii.gz $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+		cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/anat/${PREFIX}_desc-brain_T1w.nii.gz $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
 	fi
 	# Locking mechanism to prevent concurrent processing from other machines
 	LOCKFILE="lock.txt"
@@ -373,7 +374,6 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	((successes++))
 done # < $INPUT_LIST
 
-# python3 $SCRIPT_PATH/population_report.py $DATA_DIR $OUTPUT_DIR $ROCKETSHIP_PATH
 mkdir -p $DERIV_DIR/reports
 python3 $SCRIPT_PATH/population_report.py $DERIV_DIR $OUTPUT_DIR $ROCKETSHIP_PATH
 ((failures=count-successes))

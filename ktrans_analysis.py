@@ -1,3 +1,4 @@
+from utils.constants import KTRANS_MIN_THRESHOLD
 import sys
 from pathlib import Path
 from statistics import mean, median, pstdev, stdev
@@ -12,7 +13,6 @@ import nibabel as nib
 
 # add as arg? add mask arg?
 POLYFIT = True
-KTRANS_MIN_THRESHOLD = 1e-7
 
 def analyze(tp_dir):
     # load files from script pipeline
@@ -110,13 +110,13 @@ def analyze(tp_dir):
         
         a = np.where(Ktrans_wm_data[:, :, i] > KTRANS_MIN_THRESHOLD)
         if a[0].size > 0:
-            Ktrans_wm_mean.append(Ktrans_wm_data[:, :, i][a].mean())
+            Ktrans_wm_mean.append(np.nanmean(Ktrans_wm_data[:, :, i][a]))
         else:
             Ktrans_wm_mean.append(0)
         
         a = np.where(Ktrans_gm_data[:, :, i] > KTRANS_MIN_THRESHOLD)
         if a[0].size > 0:
-            Ktrans_gm_mean.append(Ktrans_gm_data[:, :, i][a].mean())
+            Ktrans_gm_mean.append(np.nanmean(Ktrans_gm_data[:, :, i][a]))
         else:
             Ktrans_gm_mean.append(0)
 
@@ -128,13 +128,13 @@ def analyze(tp_dir):
         
         a = np.where(Ktrans_wm_data[:, :, i] > KTRANS_MIN_THRESHOLD)
         if a[0].size > 0:
-            Ktrans_wm_median.append(median(Ktrans_wm_data[:, :, i][a]))
+            Ktrans_wm_median.append(np.nanmedian(Ktrans_wm_data[:, :, i][a]))
         else:
             Ktrans_wm_median.append(0)
 
         a = np.where(Ktrans_gm_data[:, :, i] > KTRANS_MIN_THRESHOLD)
         if a[0].size > 0:
-            Ktrans_gm_median.append(median(Ktrans_gm_data[:, :, i][a]))
+            Ktrans_gm_median.append(np.nanmedian(Ktrans_gm_data[:, :, i][a]))
         else:
             Ktrans_gm_median.append(0)
 
@@ -181,10 +181,10 @@ def analyze(tp_dir):
     Ktrans_wm_1D = Ktrans_wm_data.flatten()
     Ktrans_gm_1D = Ktrans_gm_data.flatten()
     # Ktrans_csf_data = Ktrans_csf_data.flatten()
-    Ktrans_wm_median_truncated = median(Ktrans_wm_1D[Ktrans_wm_1D > KTRANS_MIN_THRESHOLD])
-    Ktrans_gm_median_truncated = median(Ktrans_gm_1D[Ktrans_gm_1D > KTRANS_MIN_THRESHOLD])
-    Ktrans_wm_stdev_truncated = stdev(Ktrans_wm_1D[Ktrans_wm_1D > KTRANS_MIN_THRESHOLD])
-    Ktrans_gm_stdev_truncated = stdev(Ktrans_gm_1D[Ktrans_gm_1D > KTRANS_MIN_THRESHOLD])
+    Ktrans_wm_median_truncated = np.nanmedian(Ktrans_wm_1D[Ktrans_wm_1D > KTRANS_MIN_THRESHOLD])
+    Ktrans_gm_median_truncated = np.nanmedian(Ktrans_gm_1D[Ktrans_gm_1D > KTRANS_MIN_THRESHOLD])
+    Ktrans_wm_stdev_truncated = np.nanstd(Ktrans_wm_1D[Ktrans_wm_1D > KTRANS_MIN_THRESHOLD])
+    Ktrans_gm_stdev_truncated = np.nanstd(Ktrans_gm_1D[Ktrans_gm_1D > KTRANS_MIN_THRESHOLD])
 
     # for i in range(slice_num)
     #     T1_wm_zeros = size(T1_wm_data[T1_wm_data[:,:,i] == 0])

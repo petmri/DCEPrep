@@ -272,9 +272,9 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		continue
 	fi
 
-	if [ ! -f $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_SUFFIX}.nii.gz ] && [ ! -f $DERIV_DIR/dceprep-manualAIF/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz ] && [ $USE_AUTO_AIF -eq 2 ]
+	if [ ! -f $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_SUFFIX}.nii.gz ] && [ ! -f $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_SUFFIX}.nii ] && [ ! -f $DERIV_DIR/dceprep-manualAIF/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz ] && [ $USE_AUTO_AIF -eq 0 ]
 		then
-		echo "No ${PREFIX}_$AIF_SUFFIX file found for $DERIV_DIR/dceprep/$SUBJECT/$SESSION/. Skipping timepoint..." >> $LOG_FILE
+		echo "No ${PREFIX}_${AIF_SUFFIX} file found for $DERIV_DIR/dceprep/$SUBJECT/$SESSION/. Skipping timepoint..." >> $LOG_FILE
 		cd $DATA_DIR
 		continue
 	fi
@@ -486,7 +486,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		mv anat/${PREFIX}_label-_seg_1.nii.gz anat/${PREFIX}_label-GM_mask.nii.gz
 		mv anat/${PREFIX}_label-_seg_2.nii.gz anat/${PREFIX}_label-WM_mask.nii.gz
 		rm anat/${PREFIX}_label-_seg.nii.gz
-		antsApplyTransforms -i anat/${PREFIX}_label-WM_mask.nii.gz -r $DCE_REF_VOL -t $T1w_to_DCEref -o anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz &> /dev/null
+		antsApplyTransforms -i anat/${PREFIX}_label-WM_mask.nii.gz -r $DCE_REF_VOL -t $structural_to_DCEref -o anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz &> /dev/null
 		ETA=$(echo "scale=0;  $mETA - ($SECONDS/60)" | bc -l)
 		#ETA=$(echo "scale=0;  $mETA - $mETA * .0667" | bc -l)
 		prog=$(echo "scale=2;  $prog + 6.67 / $count" | bc -l)
@@ -667,7 +667,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	# -----------------------------	
 	prog=$(echo "scale=2;  $prog + 2.77 / $count" | bc -l)
 	echo -ne "REG BET MASK   [========================>                         ] $prog% ($current/$count) ~$ETA min remaining \r"
-	antsApplyTransforms -i anat/${PREFIX}_desc-brain_mask.nii.gz -r $DCE_REF_VOL -t $T1w_to_DCEref -o anat/${PREFIX}_${REF_SPACE}_desc-brain_mask_pv.nii.gz &> /dev/null
+	antsApplyTransforms -i anat/${PREFIX}_desc-brain_mask.nii.gz -r $DCE_REF_VOL -t $structural_to_DCEref -o anat/${PREFIX}_${REF_SPACE}_desc-brain_mask_pv.nii.gz &> /dev/null
 	fslmaths anat/${PREFIX}_${REF_SPACE}_desc-brain_mask_pv.nii.gz -thr 1 -bin anat/${PREFIX}_${REF_SPACE}_desc-brain_mask.nii.gz &> /dev/null
 	rm anat/${PREFIX}_${REF_SPACE}_desc-brain_mask_pv.nii.gz
 	prog=$(echo "scale=2;  $prog + 0.55 / $count" | bc -l)
@@ -675,7 +675,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	echo -ne "FAST DCE REP 1 [========================>                         ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
 	mkdir -p figures &> /dev/null
-	if [ $USE_AUTO_AIF -eq 1 ] || [ ! -f "dce/${PREFIX}_${AIF_SUFFIX}.nii.gz" ] && [ ! -f "dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz" ]
+	if [ $USE_AUTO_AIF -eq 1 ] || [ ! -f "dce/${PREFIX}_${AIF_SUFFIX}.nii.gz" ] && [ ! -f "dce/${PREFIX}_${AIF_SUFFIX}.nii" ] && [ ! -f "dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz" ]
 		then
 		# run AutoAIF
 		if [ $EN_MOTION_CORR -eq 1 ]

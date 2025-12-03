@@ -13,6 +13,8 @@ from sys import argv
 from concurrent.futures import ThreadPoolExecutor
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+from concurrent.futures import as_completed
+from utils.constants import KTRANS_MIN_THRESHOLD
 
 dir = argv[1]
 try:
@@ -36,6 +38,7 @@ if output_dir != "":
 population_data = {}
 population_data_exclude = {}
 population_data_failed = {}
+population_data_missing = {}
 # list directories in dir
 if not os.path.isdir(dceprep_dir):
     print(f"{dceprep_dir} does not exist, trying current working directory")
@@ -75,7 +78,6 @@ use_manual_aif = False
 if "-A M" in command or "-A T" in command:
     use_manual_aif = True
 
-KTRANS_MIN_THRESHOLD = 1e-7
 # Outlier and tracking lists
 Ktrans_wm_outliers, Ktrans_gm_outliers = [], []
 whole_hippo_outliers, whole_phg_outliers, whole_putamen_outliers = [], [], []
@@ -100,6 +102,7 @@ popAIF_curves, aif_curves = [], []
 def get_case_stats(subject_id, timepoint):
         wmparc_failed = False
         stats_failed = False
+        missing = False
         AIFitness = aif_fitted_r2 = max_disp = T1_wm_median = T1_wm_std = T1_gm_median = T1_gm_std = Ktrans_wm_mean = Ktrans_wm_median = Ktrans_wm_std = Ktrans_gm_mean = Ktrans_gm_median = Ktrans_gm_std = 0
         hippo_vol = phg_vol = putamen_vol = pallidum_vol = thalamus_vol = caudate_vol = amygdala_vol = -1
         entorhinal_cortex_vol = fusiform_gyrus_cortex_vol = fusiform_gyrus_wm_vol = insula_wm_vol = -1
@@ -132,53 +135,83 @@ def get_case_stats(subject_id, timepoint):
 
         if timepoint.startswith("ses-"):
             total_timepoints.append(subject_id + '/' + timepoint)
+            # Check for missing data in rawdata folder
+            prefix = f"{subject_id}_{timepoint}"
+            rawdata_dir = os.path.join(dir, "../rawdata", subject_id, timepoint)
+            missing_files = []
+            # Check for anat/prefix_T1w.nii.gz
+            t1w_path = os.path.join(rawdata_dir, f"anat/{prefix}_T1w.nii.gz")
+            if not os.path.exists(t1w_path):
+                missing_files.append("anat/" + os.path.basename(t1w_path))
+            # Check for at least one anat/prefix_*_VFA.nii.gz
+            anat_dir = os.path.join(rawdata_dir, "anat")
+            vfa_files = []
+            if os.path.isdir(anat_dir):
+                vfa_files = [f for f in os.listdir(anat_dir) if f.startswith(prefix) and "_VFA" in f and f.endswith(".nii.gz")]
+            if len(vfa_files) == 0:
+                missing_files.append("anat/*_VFA.nii.gz")
+            # Check for dce/prefix_DCE.nii.gz
+            dce_path = os.path.join(rawdata_dir, f"dce/{prefix}_DCE.nii.gz")
+            if not os.path.exists(dce_path):
+                missing_files.append("dce/" + os.path.basename(dce_path))
+            if missing_files:
+                print(f"Missing rawdata for {subject_id} {timepoint}: {', '.join(missing_files)}")
+                population_data_missing[subject_id + "_" + timepoint] = {"Missing_files": missing_files}
+                missing = True
+                return
+            else:
+                missing = False
             # read AIF curve by applying aif.nii to dce.nii
             try:
                 dce = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-bfcz_DCE.nii.gz")
                 aif = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-AIF_T1map.nii.gz")
-                # load files
-                dce_img = nib.load(dce)
-                aif_img = nib.load(aif)
+                if os.path.exists(dce) and os.path.exists(aif):
+                    # load files
+                    dce_img = nib.load(dce)
+                    aif_img = nib.load(aif)
 
-                # get data from file
-                aif = aif_img.get_fdata()
-                dce = dce_img.get_fdata()
+                    # get data from file
+                    aif = aif_img.get_fdata()
+                    dce = dce_img.get_fdata()
 
-                # binarize aif
-                aif = aif > 400
+                    # binarize aif
+                    aif = aif > 400
 
-                # get curve from masked dce
-                aif = aif.reshape(aif.shape[0], aif.shape[1], aif.shape[2], 1)
-                roi_ = dce * aif
-                num = np.sum(roi_, axis = (0, 1, 2), keepdims=False)
-                den = np.sum(aif, axis = (0, 1, 2), keepdims=False)
+                    # get curve from masked dce
+                    aif = aif.reshape(aif.shape[0], aif.shape[1], aif.shape[2], 1)
+                    roi_ = dce * aif
+                    num = np.sum(roi_, axis = (0, 1, 2), keepdims=False)
+                    den = np.sum(aif, axis = (0, 1, 2), keepdims=False)
 
-                # normalize to baseline
-                intensities = num/(den+1e-8)
-                intensities = np.asarray(intensities)
-                intensities = intensities/intensities[0]
-                if intensities[0] != 1:
-                    print("error")
-                # if intensities[1] < 3 and intensities[2] < 3:
-                #     print(file + " has a weak AIF curve with " + str(intensities[1]) + " and " + str(intensities[2]))
-                # if intensities[2] > intensities[1] or intensities[3] > intensities[2]+.5:
-                #     print(file + " has a delayed injection with " + str(intensities[1]) + " and " + str(intensities[2]) + " and " + str(intensities[3]))
-                # if any(intensities[10:30] < 2):
-                #     print(subject_id, timepoint, "has an intensity < 2")
-                # line up curve peaks
-                max_index = np.argmax(intensities)
-                # intensities = np.roll(intensities, -max_index+2)
-                if intensities.shape[0] < 40:
-                    mean_last_7 = np.mean(intensities[-7:])
-                    intensities = np.pad(intensities, (0, 40-intensities.shape[0]), 'constant', constant_values=(mean_last_7))
-                aif_curves.append(intensities[0:40])
-                intensities = np.roll(intensities, -max_index)
-                if intensities.shape[0] == 64:
-                    # make last five values 0 then roll back
-                    intensities[-5:] = 1
-                    intensities = np.roll(intensities, 5)
-                    if not np.isnan(intensities).any():
-                        popAIF_curves.append(intensities)
+                    # normalize to baseline
+                    intensities = num/(den+1e-8)
+                    intensities = np.asarray(intensities)
+                    intensities = intensities/intensities[0]
+                    if intensities[0] != 1:
+                        print("error")
+                    # if intensities[1] < 3 and intensities[2] < 3:
+                    #     print(file + " has a weak AIF curve with " + str(intensities[1]) + " and " + str(intensities[2]))
+                    # if intensities[2] > intensities[1] or intensities[3] > intensities[2]+.5:
+                    #     print(file + " has a delayed injection with " + str(intensities[1]) + " and " + str(intensities[2]) + " and " + str(intensities[3]))
+                    # if any(intensities[10:30] < 2):
+                    #     print(subject_id, timepoint, "has an intensity < 2")
+                    # line up curve peaks
+                    max_index = np.argmax(intensities)
+                    # intensities = np.roll(intensities, -max_index+2)
+                    if intensities.shape[0] < 40:
+                        mean_last_7 = np.mean(intensities[-7:])
+                        intensities = np.pad(intensities, (0, 40-intensities.shape[0]), 'constant', constant_values=(mean_last_7))
+                    aif_curves.append(intensities[0:40])
+                    intensities = np.roll(intensities, -max_index)
+                    if intensities.shape[0] == 64:
+                        # make last five values 0 then roll back
+                        intensities[-5:] = 1
+                        intensities = np.roll(intensities, 5)
+                        if not np.isnan(intensities).any():
+                            popAIF_curves.append(intensities)
+                else:
+                    print("DCE or AIF file does not exist for", subject_id, timepoint)
+                    return
             except Exception as e:
                 print("Error reading DCE or AIF for", subject_id, timepoint)
                 print(e)
@@ -192,152 +225,6 @@ def get_case_stats(subject_id, timepoint):
                 manual_aif_status = "OMITTED"
             else:
                 manual_aif_status = "AUTO"
-
-            # read wm and gm data from html file
-            filename = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-casereport.html")
-            if os.path.exists(filename):
-                try:
-                    with open(filename, "r") as f:
-                        lines = f.readlines()
-                        for i, line in enumerate(lines):
-                            if "T1 wm median:" in line:
-                                T1_wm_median = float(line.split(":")[-1].strip()[:-5])
-                            if "T1 gm median:" in line:
-                                T1_gm_median = float(line.split(":")[-1].strip()[:-5])
-                            if "Blood T1: " in line:
-                                T1_blood = float(line.split(":")[-1].strip()[:-6])
-                            if "Median wm Ktrans" in line:
-                                Ktrans_wm_median = float(line.split()[-1][:-5])
-                            if "Median gm Ktrans" in line:
-                                Ktrans_gm_median = float(line.split()[-1][:-5])
-                            if "AIFitness" in line:
-                                AIFitness = line.split(":")[-1].strip()[:-4]
-                                AIFitness = float(AIFitness)
-                                AIFitness = round(AIFitness, 4)
-                            if Ktrans_wm_median > 5:
-                                if subject_id + "_" + timepoint not in Ktrans_wm_outliers:
-                                    Ktrans_wm_outliers.append(subject_id + "_" + timepoint)
-                            if Ktrans_gm_median > 5:
-                                if subject_id + "_" + timepoint not in Ktrans_gm_outliers:
-                                    Ktrans_gm_outliers.append(subject_id + "_" + timepoint)
-                except Exception as e:
-                    print("Error reading " + filename)
-                    print(e)
-                    T1_wm_median = T1_gm_median = T1_blood = Ktrans_wm_median = Ktrans_gm_median = AIFitness = -1
-            else:
-                print(f"{filename} does not exist")
-                T1_wm_median = T1_gm_median = T1_blood = Ktrans_wm_median = Ktrans_gm_median = AIFitness = -1
-
-            A_log = os.path.join(dceprep_dir, subject_id, timepoint, "dce/A_dceR1info.log")
-            try:
-                with open(A_log, 'r') as f:
-                    for line in f:
-                        if "User selected TR (ms):" in line:
-                            TR = next(f).strip()
-                            TR = float(TR)
-                        if "User selected FA (degrees):" in line:
-                            flip_angle = next(f).strip()
-                            flip_angle = float(flip_angle)
-                        if "time points = " in line:
-                            n_reps = line.split(" ")[-1]
-                            n_reps = int(n_reps)
-            except Exception as e:
-                print("Error reading " + A_log)
-                print(e)
-                TR = -1
-                flip_angle = -1
-
-            # read lines after "AIF mmol:"
-            aif_mmol = []
-            B_log = os.path.join(dceprep_dir, subject_id, timepoint, "dce/B_dcefitted_R1info.log")
-            B_imported_log = os.path.join(dceprep_dir, subject_id, timepoint, "dce/B_dceimported_R1info.log")
-            try:
-                if os.path.isfile(B_log):
-                    with open(B_log, 'r') as f:
-                        fitted_done = False
-                        for line in f:
-                            if "User selected time resolution (sec)" in line:
-                                # take next line as time resolution
-                                time_resolution = next(f).strip()
-                                time_resolution = float(time_resolution)
-                            if "AIF mmol:" in line:
-                                aif_mmol = f.readlines()
-                                # find index of line after last numbers ("MAT results saved to: \n")
-                                try:
-                                    lastline = aif_mmol.index("MAT results saved to: \n")
-                                except ValueError:
-                                    lastline = aif_mmol.index("Finished B\n")
-                                aif_mmol = aif_mmol[:lastline-1]
-                                # remove \n and \t
-                                aif_mmol = [i[2:-2] for i in aif_mmol]
-                                # split each item into list
-                                aif_mmol = [i.split() for i in aif_mmol]
-                                # unite all lists into one
-                                aif_mmol = [item for sublist in aif_mmol for item in sublist]
-                                # convert to float
-                                aif_mmol = [float(i) for i in aif_mmol]
-                                # take last 33% of aif
-                                aif_mmol = aif_mmol[int(len(aif_mmol) * 0.66):]
-                                # convert to numpy array
-                                aif_mmol = np.array(aif_mmol)
-                                # take mean
-                                aif_mmol = np.mean(aif_mmol)
-                            if "Adjusted R^2 of AIF fit = " in line and not fitted_done:
-                                aif_fitted_r2 = line.split()[-1]
-                                aif_fitted_r2 = float(aif_fitted_r2)
-                                fitted_done = True
-                elif os.path.isfile(B_imported_log):
-                    with open(B_imported_log, 'r') as f:
-                        for line in f:
-                            if "User selected time resolution (sec)" in line:
-                                # take next line as time resolution
-                                time_resolution = next(f).strip()
-                                time_resolution = float(time_resolution)
-                            if "AIF mmol:" in line:
-                                aif_mmol = f.readlines()
-                                # find index of line after last numbers ("MAT results saved to: \n")
-                                try:
-                                    lastline = aif_mmol.index("MAT results saved to: \n")
-                                except ValueError:
-                                    lastline = aif_mmol.index("Finished B\n")
-                                aif_mmol = aif_mmol[:lastline-1]
-                                # remove \n and \t
-                                aif_mmol = [i[2:-2] for i in aif_mmol]
-                                # split each item into list
-                                aif_mmol = [i.split() for i in aif_mmol]
-                                # unite all lists into one
-                                aif_mmol = [item for sublist in aif_mmol for item in sublist]
-                                # convert to float
-                                aif_mmol = [float(i) for i in aif_mmol]
-                                # take last 33% of aif
-                                aif_mmol = aif_mmol[int(len(aif_mmol) * 0.66):]
-                                # convert to numpy array
-                                aif_mmol = np.array(aif_mmol)
-                                # take mean
-                                aif_mmol = np.mean(aif_mmol)
-            except Exception as e:
-                print("Error reading " + B_log)
-                print(e)
-                aif_mmol = -1
-                aif_fitted_r2 = -1
-            # get max_disp from {prefix}_desc-hmcmaxdisp.txt
-            max_disp_path = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-hmc_maxdisp.txt")
-            if os.path.exists(max_disp_path):
-                try:
-                    with open(max_disp_path, 'r') as f:
-                        for line in f:
-                            if "Max displacement" in line:
-                                max_disp = line.split(":")[-1].strip()
-                                max_disp = max_disp.split("mm")[0]
-                                max_disp = float(max_disp)
-                                break
-                except Exception as e:
-                    print("Error reading " + max_disp_path)
-                    print(e)
-                    max_disp = -1
-            else:
-                print(f"{max_disp_path} does not exist")
-                max_disp = -1
             # get fields we want from json
             json_file = os.path.join(dir, "../rawdata", subject_id, timepoint, f"dce/{subject_id}_{timepoint}_DCE.json")
             try:
@@ -371,6 +258,155 @@ def get_case_stats(subject_id, timepoint):
                 print(e)
                 manufacturer = field_strength = machine = institution = date = sex = age = coil = scan_options = TE = flip_angle = TR = time_resolution = "json read error"
 
+            if not missing:
+                # read wm and gm data from html file
+                filename = os.path.join(dceprep_dir, subject_id, timepoint, f"reports/{subject_id}_{timepoint}_desc-casereport.html")
+                if os.path.exists(filename):
+                    try:
+                        with open(filename, "r") as f:
+                            lines = f.readlines()
+                            for i, line in enumerate(lines):
+                                if "T1 wm median:" in line:
+                                    T1_wm_median = float(line.split(":")[-1].strip()[:-5])
+                                if "T1 gm median:" in line:
+                                    T1_gm_median = float(line.split(":")[-1].strip()[:-5])
+                                if "Blood T1: " in line:
+                                    T1_blood = float(line.split(":")[-1].strip()[:-6])
+                                if "Median wm Ktrans" in line:
+                                    Ktrans_wm_median = float(line.split()[-1][:-5])
+                                if "Median gm Ktrans" in line:
+                                    Ktrans_gm_median = float(line.split()[-1][:-5])
+                                if "AIFitness" in line:
+                                    AIFitness = line.split(":")[-1].strip()[:-4]
+                                    AIFitness = float(AIFitness)
+                                    AIFitness = round(AIFitness, 4)
+                                if Ktrans_wm_median > 5:
+                                    if subject_id + "_" + timepoint not in Ktrans_wm_outliers:
+                                        Ktrans_wm_outliers.append(subject_id + "_" + timepoint)
+                                if Ktrans_gm_median > 5:
+                                    if subject_id + "_" + timepoint not in Ktrans_gm_outliers:
+                                        Ktrans_gm_outliers.append(subject_id + "_" + timepoint)
+                    except Exception as e:
+                        print("Error reading " + filename)
+                        print(e)
+                        T1_wm_median = T1_gm_median = T1_blood = Ktrans_wm_median = Ktrans_gm_median = AIFitness = -1
+                else:
+                    print(f"{filename} does not exist")
+                    T1_wm_median = T1_gm_median = T1_blood = Ktrans_wm_median = Ktrans_gm_median = AIFitness = -1
+
+                A_log = os.path.join(dceprep_dir, subject_id, timepoint, "dce/A_dceR1info.log")
+                try:
+                    with open(A_log, 'r') as f:
+                        for line in f:
+                            if "User selected TR (ms):" in line:
+                                TR = next(f).strip()
+                                TR = float(TR)
+                            if "User selected FA (degrees):" in line:
+                                flip_angle = next(f).strip()
+                                flip_angle = float(flip_angle)
+                            if "time points = " in line:
+                                n_reps = line.split(" ")[-1]
+                                n_reps = int(n_reps)
+                except Exception as e:
+                    print("Error reading " + A_log)
+                    print(e)
+                    TR = -1
+                    flip_angle = -1
+
+                # read lines after "AIF mmol:"
+                aif_mmol = []
+                B_log = os.path.join(dceprep_dir, subject_id, timepoint, "dce/B_dcefitted_R1info.log")
+                B_imported_log = os.path.join(dceprep_dir, subject_id, timepoint, "dce/B_dceimported_R1info.log")
+                try:
+                    if os.path.isfile(B_log):
+                        with open(B_log, 'r') as f:
+                            fitted_done = False
+                            for line in f:
+                                if "User selected time resolution (sec)" in line:
+                                    # take next line as time resolution
+                                    time_resolution = next(f).strip()
+                                    time_resolution = float(time_resolution)
+                                if "AIF mmol:" in line:
+                                    aif_mmol = f.readlines()
+                                    # find index of line after last numbers ("MAT results saved to: \n")
+                                    try:
+                                        lastline = aif_mmol.index("MAT results saved to: \n")
+                                    except ValueError:
+                                        lastline = aif_mmol.index("Finished B\n")
+                                    aif_mmol = aif_mmol[:lastline-1]
+                                    # remove \n and \t
+                                    aif_mmol = [i[2:-2] for i in aif_mmol]
+                                    # split each item into list
+                                    aif_mmol = [i.split() for i in aif_mmol]
+                                    # unite all lists into one
+                                    aif_mmol = [item for sublist in aif_mmol for item in sublist]
+                                    # convert to float
+                                    aif_mmol = [float(i) for i in aif_mmol]
+                                    # take last 33% of aif
+                                    aif_mmol = aif_mmol[int(len(aif_mmol) * 0.66):]
+                                    # convert to numpy array
+                                    aif_mmol = np.array(aif_mmol)
+                                    # take mean
+                                    aif_mmol = np.mean(aif_mmol)
+                                if "Adjusted R^2 of AIF fit = " in line and not fitted_done:
+                                    aif_fitted_r2 = line.split()[-1]
+                                    aif_fitted_r2 = float(aif_fitted_r2)
+                                    fitted_done = True
+                    elif os.path.isfile(B_imported_log):
+                        with open(B_imported_log, 'r') as f:
+                            for line in f:
+                                if "User selected time resolution (sec)" in line:
+                                    # take next line as time resolution
+                                    time_resolution = next(f).strip()
+                                    time_resolution = float(time_resolution)
+                                if "AIF mmol:" in line:
+                                    aif_mmol = f.readlines()
+                                    # find index of line after last numbers ("MAT results saved to: \n")
+                                    try:
+                                        lastline = aif_mmol.index("MAT results saved to: \n")
+                                    except ValueError:
+                                        lastline = aif_mmol.index("Finished B\n")
+                                    aif_mmol = aif_mmol[:lastline-1]
+                                    # remove \n and \t
+                                    aif_mmol = [i[2:-2] for i in aif_mmol]
+                                    # split each item into list
+                                    aif_mmol = [i.split() for i in aif_mmol]
+                                    # unite all lists into one
+                                    aif_mmol = [item for sublist in aif_mmol for item in sublist]
+                                    # convert to float
+                                    aif_mmol = [float(i) for i in aif_mmol]
+                                    # take last 33% of aif
+                                    aif_mmol = aif_mmol[int(len(aif_mmol) * 0.66):]
+                                    # convert to numpy array
+                                    aif_mmol = np.array(aif_mmol)
+                                    # take mean
+                                    aif_mmol = np.mean(aif_mmol)
+                except Exception as e:
+                    print("Error reading " + B_log)
+                    print(e)
+                    aif_mmol = -1
+                    aif_fitted_r2 = -1
+                # get max_disp from {prefix}_desc-hmcmaxdisp.txt
+                max_disp_path = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-hmc_maxdisp.txt")
+                if os.path.exists(max_disp_path):
+                    try:
+                        with open(max_disp_path, 'r') as f:
+                            for line in f:
+                                if "Max displacement" in line:
+                                    max_disp = line.split(":")[-1].strip()
+                                    max_disp = max_disp.split("mm")[0]
+                                    max_disp = float(max_disp)
+                                    break
+                    except Exception as e:
+                        print("Error reading " + max_disp_path)
+                        print(e)
+                        max_disp = -1
+                else:
+                    print(f"{max_disp_path} does not exist")
+                    max_disp = -1
+            else:
+                print(f"Skipping stats for {subject_id} {timepoint} due to missing rawdata")
+                return
             # read ktrans map
             try:
                 ktrans_map = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_Ktrans.nii")
@@ -429,23 +465,26 @@ def get_case_stats(subject_id, timepoint):
                     stats_failed = True
                 # read stats from tsv
                 freesurfer_path = os.path.join(dir, 'freesurfer', subject_id, timepoint, "stats")
-                if os.path.isfile(os.path.join(freesurfer_path, "wmparc.stats")):
+                if os.path.isfile(os.path.join(freesurfer_path, "wmparc.stats")) and os.path.isfile(os.path.join(freesurfer_path, "aseg.stats")) and os.path.isfile(os.path.join(freesurfer_path, "lh.aparc.stats")) and os.path.isfile(os.path.join(freesurfer_path, "rh.aparc.stats")):
                     wmparc_stats = os.path.join(freesurfer_path, "wmparc.stats")
                     aseg_stats = os.path.join(freesurfer_path, "aseg.stats")
                     lh_aparc_stats = os.path.join(freesurfer_path, "lh.aparc.stats")
                     rh_aparc_stats = os.path.join(freesurfer_path, "rh.aparc.stats")
-                    fastsurfer = False
-                elif os.path.isfile(os.path.join(freesurfer_path, "wmparc.DKTatlas.mapped.stats")):
-                    # fastsurfer outputs
-                    wmparc_stats = os.path.join(freesurfer_path, "wmparc.DKTatlas.mapped.stats")
-                    aseg_stats = os.path.join(freesurfer_path, "aseg.stats")
-                    lh_aparc_stats = os.path.join(freesurfer_path, "lh.aparc.DKTatlas.mapped.stats")
-                    rh_aparc_stats = os.path.join(freesurfer_path, "rh.aparc.DKTatlas.mapped.stats")
-                    fastsurfer = True
+                    # fastsurfer = False
+                # elif os.path.isfile(os.path.join(freesurfer_path, "wmparc.DKTatlas.mapped.stats")):
+                #     # fastsurfer outputs
+                #     wmparc_stats = os.path.join(freesurfer_path, "wmparc.DKTatlas.mapped.stats")
+                #     aseg_stats = os.path.join(freesurfer_path, "aseg.stats")
+                #     lh_aparc_stats = os.path.join(freesurfer_path, "lh.aparc.DKTatlas.mapped.stats")
+                #     rh_aparc_stats = os.path.join(freesurfer_path, "rh.aparc.DKTatlas.mapped.stats")
+                #     fastsurfer = True
                 else:
                     print("wmparc stats do not exist for", prefix)
+                    if error == "":
+                        error = "stats files are missing"
+                    wmparc_failed = True
                     stats_failed = True
-                    fastsurfer = False
+                    # fastsurfer = False
 
             except Exception as e:
                 print("Error reading freesurfer stats for", subject_id, timepoint)
@@ -649,6 +688,7 @@ def get_case_stats(subject_id, timepoint):
                 insula_thickness_avg = cortical_thickness.get('insula', {}).get('thickness', -1)
                 insula_thickness_std = cortical_thickness.get('insula', {}).get('thickness_std', -1)
 
+            if not wmparc_failed:
                 HIPPO_INDICES = np.where(((wmparc == regions["HIPPO"][0]) | (wmparc == regions["HIPPO"][1])) & (ktrans_map > KTRANS_MIN_THRESHOLD))
                 PHG_INDICES = np.where(((wmparc == regions["PHG"][0]) | (wmparc == regions["PHG"][1])) & (ktrans_map > KTRANS_MIN_THRESHOLD))
                 PUTAMEN_INDICES = np.where(((wmparc == regions["PUTAMEN"][0]) | (wmparc == regions["PUTAMEN"][1])) & (ktrans_map > KTRANS_MIN_THRESHOLD))
@@ -938,7 +978,7 @@ def get_case_stats(subject_id, timepoint):
             }
 
             if wmparc_failed is False:
-                case_data["fastsurfer"] = fastsurfer
+                # case_data["fastsurfer"] = fastsurfer
                 successful_timepoints.append(entry.replace("_", "/"))
                 population_data[entry] = case_data
             else:
@@ -1347,7 +1387,6 @@ date_filename = datetime.datetime.now().strftime("%Y-%m-%d")
 plt.hist(T1_blood_histogram, bins=30)
 plt.title("T1 Blood")
 plt.xlabel("T1 Blood")
-# T1_blood_histogram_path = os.path.join("figures/", output_dir + "T1_blood_histogram.png")
 T1_blood_histogram_path = os.path.join("figures/", "T1_blood_histogram" + output_dir + "_" + date_filename + ".png")
 plt.savefig(T1_blood_histogram_path, bbox_inches='tight')
 plt.close()
@@ -2394,6 +2433,12 @@ if os.path.exists(os.path.join(dir, '../dce_available_3524_ac.xlsx')):
         # skip if reason includes "aliasing"
         if "aliasing" in exclusion_reason.lower():
             continue
+        if "no t1w" in exclusion_reason.lower():
+            continue
+        if "t1w only" in exclusion_reason.lower():
+            continue
+        if "no fas" in exclusion_reason.lower():
+            continue
         # get subject's ID
         subject_id = subject
         # get subject's timepoint
@@ -2478,36 +2523,36 @@ df_success = pd.DataFrame(population_data)
 # df_exclude = pd.DataFrame(population_data_exclude)
 
 order = ["Date", "APOE", "Sex", "Age", "Machine", "Institution", "Coil", "TR", "Time_resolution", "TE", "Flip_angle", "n_reps",
-         "Approximate SNR", "AIFitness", "aif_fitted_r2", "manual_aif_status", "max_disp", "T1_blood", "T1_wm_median", "T1_gm_median",
-         "Ktrans_wm_median", "Ktrans_gm_median", "Ktrans_Hippo_median", "Ktrans_PhG_median", "Ktrans_Putamen_median", "Ktrans_Pallidum_median",
-         "Ktrans_Thalamus_median", "Ktrans_Caudate_median", "Ktrans_Amygdala_median", "Ktrans_Entorhinal_cortex_median",
-         "Ktrans_Fusiform_gyrus_cortex_median", "Ktrans_Fusiform_gyrus_WM_median", "Ktrans_Insula_WM_median",
-         "Ktrans_Superior_temporal_cortex_median", "Ktrans_Inferior_temporal_cortex_median", "Ktrans_Posterior_cingulate_cortex_median", "Ktrans_Medial_temporal_cortex_median",
-         "Vp_Hippo_median", "Vp_PhG_median", "Vp_Putamen_median", "Vp_Pallidum_median", "Vp_Thalamus_median",
-         "Vp_Caudate_median", "Vp_Amygdala_median", "Vp_Entorhinal_cortex_median", "Vp_Fusiform_gyrus_cortex_median",
-         "Vp_Fusiform_gyrus_WM_median", "Vp_Insula_WM_median", "Vp_Superior_temporal_cortex_median",
-         "Vp_Inferior_temporal_cortex_median", "Vp_Posterior_cingulate_cortex_median", "Vp_Medial_temporal_cortex_median",
-         "hippo_vol", "phg_vol", "putamen_vol", "pallidum_vol", "thalamus_vol", "caudate_vol", "amygdala_vol",
-         "entorhinal_cortex_vol", "fusiform_gyrus_cortex_vol", "fusiform_gyrus_wm_vol", "insula_wm_vol",
-         "superior_temporal_cortex_vol", "inferior_temporal_cortex_vol", "posterior_cingulate_cortex_vol", "medial_temporal_cortex_vol",
-         "bankssts_thickness_avg", "bankssts_thickness_std", "caudalanteriorcingulate_thickness_avg", "caudalanteriorcingulate_thickness_std",
-         "caudalmiddlefrontal_thickness_avg", "caudalmiddlefrontal_thickness_std", "cuneus_thickness_avg", "cuneus_thickness_std",
-         "entorhinal_thickness_avg", "entorhinal_thickness_std", "fusiform_thickness_avg", "fusiform_thickness_std",
-         "inferiorparietal_thickness_avg", "inferiorparietal_thickness_std", "inferiortemporal_thickness_avg", "inferiortemporal_thickness_std",
-         "isthmuscingulate_thickness_avg", "isthmuscingulate_thickness_std", "lateraloccipital_thickness_avg", "lateraloccipital_thickness_std",
-         "lateralorbitofrontal_thickness_avg", "lateralorbitofrontal_thickness_std", "lingual_thickness_avg", "lingual_thickness_std",
-         "medialorbitofrontal_thickness_avg", "medialorbitofrontal_thickness_std", "middletemporal_thickness_avg", "middletemporal_thickness_std",
-         "parahippocampal_thickness_avg", "parahippocampal_thickness_std", "paracentral_thickness_avg", "paracentral_thickness_std",
-         "parsopercularis_thickness_avg", "parsopercularis_thickness_std", "parsorbitalis_thickness_avg", "parsorbitalis_thickness_std",
-         "parstriangularis_thickness_avg", "parstriangularis_thickness_std", "pericalcarine_thickness_avg", "pericalcarine_thickness_std",
-         "postcentral_thickness_avg", "postcentral_thickness_std", "posteriorcingulate_thickness_avg", "posteriorcingulate_thickness_std",
-         "precentral_thickness_avg", "precentral_thickness_std", "precuneus_thickness_avg", "precuneus_thickness_std",
-         "rostralanteriorcingulate_thickness_avg", "rostralanteriorcingulate_thickness_std", "rostralmiddlefrontal_thickness_avg",
-         "rostralmiddlefrontal_thickness_std", "superiorfrontal_thickness_avg", "superiorfrontal_thickness_std",
-         "superiorparietal_thickness_avg", "superiorparietal_thickness_std", "superiortemporal_thickness_avg", "superiortemporal_thickness_std",
-         "supramarginal_thickness_avg", "supramarginal_thickness_std", "frontalpole_thickness_avg", "frontalpole_thickness_std",
-         "temporalpole_thickness_avg", "temporalpole_thickness_std", "transversetemporal_thickness_avg", "transversetemporal_thickness_std",
-         "insula_thickness_avg", "insula_thickness_std"]
+        "Approximate SNR", "AIFitness", "aif_fitted_r2", "manual_aif_status", "max_disp", "T1_blood", "T1_wm_median", "T1_gm_median",
+        "Ktrans_wm_median", "Ktrans_gm_median", "Ktrans_Hippo_median", "Ktrans_PhG_median", "Ktrans_Putamen_median", "Ktrans_Pallidum_median",
+        "Ktrans_Thalamus_median", "Ktrans_Caudate_median", "Ktrans_Amygdala_median", "Ktrans_Entorhinal_cortex_median",
+        "Ktrans_Fusiform_gyrus_cortex_median", "Ktrans_Fusiform_gyrus_WM_median", "Ktrans_Insula_WM_median",
+        "Ktrans_Superior_temporal_cortex_median", "Ktrans_Inferior_temporal_cortex_median", "Ktrans_Posterior_cingulate_cortex_median", "Ktrans_Medial_temporal_cortex_median",
+        "Vp_Hippo_median", "Vp_PhG_median", "Vp_Putamen_median", "Vp_Pallidum_median", "Vp_Thalamus_median",
+        "Vp_Caudate_median", "Vp_Amygdala_median", "Vp_Entorhinal_cortex_median", "Vp_Fusiform_gyrus_cortex_median",
+        "Vp_Fusiform_gyrus_WM_median", "Vp_Insula_WM_median", "Vp_Superior_temporal_cortex_median",
+        "Vp_Inferior_temporal_cortex_median", "Vp_Posterior_cingulate_cortex_median", "Vp_Medial_temporal_cortex_median",
+        "hippo_vol", "phg_vol", "putamen_vol", "pallidum_vol", "thalamus_vol", "caudate_vol", "amygdala_vol",
+        "entorhinal_cortex_vol", "fusiform_gyrus_cortex_vol", "fusiform_gyrus_wm_vol", "insula_wm_vol",
+        "superior_temporal_cortex_vol", "inferior_temporal_cortex_vol", "posterior_cingulate_cortex_vol", "medial_temporal_cortex_vol",
+        "bankssts_thickness_avg", "bankssts_thickness_std", "caudalanteriorcingulate_thickness_avg", "caudalanteriorcingulate_thickness_std",
+        "caudalmiddlefrontal_thickness_avg", "caudalmiddlefrontal_thickness_std", "cuneus_thickness_avg", "cuneus_thickness_std",
+        "entorhinal_thickness_avg", "entorhinal_thickness_std", "fusiform_thickness_avg", "fusiform_thickness_std",
+        "inferiorparietal_thickness_avg", "inferiorparietal_thickness_std", "inferiortemporal_thickness_avg", "inferiortemporal_thickness_std",
+        "isthmuscingulate_thickness_avg", "isthmuscingulate_thickness_std", "lateraloccipital_thickness_avg", "lateraloccipital_thickness_std",
+        "lateralorbitofrontal_thickness_avg", "lateralorbitofrontal_thickness_std", "lingual_thickness_avg", "lingual_thickness_std",
+        "medialorbitofrontal_thickness_avg", "medialorbitofrontal_thickness_std", "middletemporal_thickness_avg", "middletemporal_thickness_std",
+        "parahippocampal_thickness_avg", "parahippocampal_thickness_std", "paracentral_thickness_avg", "paracentral_thickness_std",
+        "parsopercularis_thickness_avg", "parsopercularis_thickness_std", "parsorbitalis_thickness_avg", "parsorbitalis_thickness_std",
+        "parstriangularis_thickness_avg", "parstriangularis_thickness_std", "pericalcarine_thickness_avg", "pericalcarine_thickness_std",
+        "postcentral_thickness_avg", "postcentral_thickness_std", "posteriorcingulate_thickness_avg", "posteriorcingulate_thickness_std",
+        "precentral_thickness_avg", "precentral_thickness_std", "precuneus_thickness_avg", "precuneus_thickness_std",
+        "rostralanteriorcingulate_thickness_avg", "rostralanteriorcingulate_thickness_std", "rostralmiddlefrontal_thickness_avg",
+        "rostralmiddlefrontal_thickness_std", "superiorfrontal_thickness_avg", "superiorfrontal_thickness_std",
+        "superiorparietal_thickness_avg", "superiorparietal_thickness_std", "superiortemporal_thickness_avg", "superiortemporal_thickness_std",
+        "supramarginal_thickness_avg", "supramarginal_thickness_std", "frontalpole_thickness_avg", "frontalpole_thickness_std",
+        "temporalpole_thickness_avg", "temporalpole_thickness_std", "transversetemporal_thickness_avg", "transversetemporal_thickness_std",
+        "insula_thickness_avg", "insula_thickness_std"]
 
 df_success = df_success.T
 df_success = df_success[order]
@@ -2554,6 +2599,12 @@ if len(population_data_failed) > 0:
     df_fail = df_fail[order_exclude]
     df_fail.index.name = "Subject_ID"
     df_fail.to_excel(writer, sheet_name='Fail')
+
+if len(population_data_missing) > 0:
+    df_missing = pd.DataFrame(population_data_missing)
+    df_missing = df_missing.T
+    df_missing.index.name = "Subject_ID"
+    df_missing.to_excel(writer, sheet_name='Missing')
 
 # if len(population_data_exclude_signa) > 0:
 #     df_exclude_signa = pd.DataFrame(population_data_exclude_signa)
