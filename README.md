@@ -4,8 +4,8 @@ A preprocessing and analysis pipeline for Dynamic Contrast-Enhanced (DCE) MRI da
 
 ![Overview of DCEprep processing steps](overview.png)
 
-> **Citation:** If you use this software in your research, please cite:
->
+#### If you use this software in your research, please cite:
+
 > Barnes S, et al. Automated DCE-MRI processing with DCEPrep for Blood-Brain Barrier permeability in a multi-site aging study. *Pending*. 2026.
 
 ---
