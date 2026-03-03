@@ -1,0 +1,285 @@
+<html>
+<head>
+    <title>{{ title }}</title>
+    <style>
+        body {
+            padding-top: 35px;
+        }
+
+        /* Styles for the navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #333;
+            height: 50px;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .navbar-nav {
+            list-style-type: none;
+            display: flex;
+            margin: 0;
+            padding: 0;
+        }
+
+        .navbar-nav li {
+        position: relative;
+        }
+
+        .navbar-nav ul.dropdown {
+            position: absolute;
+            top: 30px;
+            display: none;
+            background-color: #fff;
+            padding: 0px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            list-style-type: none;
+            width: 100%;
+        }
+
+        .navbar-nav li:hover ul.dropdown {
+            display: block;
+        }
+
+        .navbar-nav ul.dropdown li {
+            margin: 10px 0;
+        }
+
+        .navbar-nav ul.dropdown li a {
+            color: #000;
+            text-decoration: none;
+        }
+
+        .navbar-nav ul.dropdown li:hover a {
+            background-color: #f1f1f1;
+        }
+
+        .nav-item {
+            margin-right: 10px;
+        }
+
+        .nav-item a {
+            color: #ffffff;
+            text-decoration: none;
+            padding: 10px;
+        }
+
+        .nav-item a:hover {
+            background-color: #555;
+        }
+
+        .image-container {
+            position: relative;
+            width: 75%;
+            height: 40%;
+            background-color: rgba(0, 0, 0, 0);
+        }
+
+        .image-container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 1s ease-in-out;
+        }
+
+        .image-container img.fade {
+            opacity: 0;
+        }
+
+        .image-container:hover img {
+            opacity: 0;
+        }
+
+        .dce-image-container {
+            display: flex;
+        }
+
+        .dce-image-container img {
+            flex: 1;
+            width: 100%;
+            height: auto;
+        }
+
+        
+    </style>
+    </head>
+<body>
+    <nav class="navbar">
+        <ul class="navbar-nav">
+            <li class="nav-item"><a href="#">Summary</a></li>
+            <li class="nav-item">
+                <a href="#Preprocessing">Preprocessing</a>
+                <ul class="dropdown">
+                    <li><a href="#T1w_masks">T1w Masks</a></li>
+                    <li><a href="#T1w_to_DCEref">T1w->DCEref</a></li>
+                    <li><a href="#VFA_Z-norm">VFA Z</a></li>
+                    <li><a href="#T1_map">T1 Map</a></li>
+                    <li><a href="#MCFLIRT">MCFLIRT</a></li>
+                    <li><a href="#AIF">AIF</a></li>
+                    <li><a href="#T1w_dyn">T1w->dyn</a></li>
+                    <li><a href="#DCE_Z-norm">DCE Z</a></li>
+                </ul>
+            </li>
+            
+            <li class="nav-item">
+                <a href="#DCE">DCE</a>
+                <ul class="dropdown">
+                    <li><a href="#RUN_A">RUNA</a></li>
+                    <li><a href="#RUN_B">RUNB</a></li>
+                    <li><a href="#RUN_D">RUND</a></li>
+                    <li><a href="#Ktrans">Ktrans</a></li>
+                    <li><a href="#MNI">MNI</a></li>
+                </ul>
+            </li>
+        </ul>
+    </nav>
+    <p></p>
+    <h1 id="Summary">Summary</h1>
+    <ul>
+        <li>{{ Subject }}</li>
+        <li>{{ Timepoint }}</li>
+        <li>{{ Date }}</li>
+        <li>{{ Commit }}</li>
+        <li>{{ ROCKETSHIP_commit }}</li>
+        <li>{{ Institute }}</li>
+        <li>{{ Machine }}</li>
+    </ul>
+    <h2>Ktrans (/min)</h2>
+    <img src="{{ ktrans }}" alt="{{ ELYOUEL }}" width="90%" alt="{{ image_alt1 }}"></img>
+    <h1 id="Preprocessing">Preprocessing</h1>
+    <h2>Anatomical Info</h2>
+    <li>{{ Dimensions }}</li>
+    <li>{{ Voxel_Size }}</li>
+    <h2 id="T1w_masks">T1w Segmentation and Brain Mask</h2>
+    <div id="image-container" class="image-container">
+        <img id="image1_mask" src="{{ T1w }}" alt="{{ image_alt1 }}">
+        <img id="image2_mask" src="{{ T1w_mask }}" alt="{{ image_alt2 }}">
+    </div>
+    <div id="image-container-1" class="image-container">
+        <img id="image1wm" src="{{ T1w }}" alt="{{ image_alt1 }}">
+        <img id="image2wm" src="{{ T1w_wm }}" alt="{{ image_alt2 }}">
+    </div>
+    <div id="image-container-2" class="image-container">
+        <img id="image1gm" src="{{ T1w }}" alt="{{ image_alt1 }}">
+        <img id="image2gm" src="{{ T1w_gm }}" alt="{{ image_alt2 }}">
+    </div>
+    <h2 id="T1w_to_DCEref">T1w Registration to DCEref Space</h2>
+    <img src="{{ T1w_to_DCEref }}" alt="{{ image_alt1 }}"></img>
+    <h2 id="VFA_Z-norm">VFA Z-Normalization</h2>
+    {% for i in range(0, num_FAs) %}
+        <h3> {{ FAs[i] }} </h3>
+        <img src="{{ Zs[i] }}" alt="{{ image_alt1 }}" width="1000"></img>
+    {% endfor %}
+    <h2 id="T1_map">T1 Map</h2>
+    <!-- <p>check for T1 ROCKETSHIP params</p> -->
+    <li>{{ T1_TR }}</li>
+    <li>{{ T1_FAs }}</li>
+    <li>{{ T1_GPU }}</li>
+    <li>{{ T1_wm_median }}</li>
+    <li>{{ T1_wm_std }}</li>
+    <li>{{ T1_gm_median }}</li>
+    <li>{{ T1_gm_std }}</li>
+    <img src="{{ T1_map }}" alt="{{ image_alt1 }}" width="75%"></img>
+    <!-- <p>T1 wm/gm graphs</p> -->
+    <h2 id="MCFLIRT">MCFLIRT Displacements</h2>
+    <img src="{{ displacements }}" alt="{{ image_alt1 }}" width="1000"></img>
+    <h2 id="AIF">AIF mask and curve</h2>
+    <img src="{{ AIF_mask }}" alt="AutoAIF img missing" width="50%"></img>
+    <img src="{{ AIF_curve }}" alt="AutoAIF img missing" width="50%"></img>
+    <br>
+    <img src="{{ AIF_overlay }}" width="50%"></img>
+    <p>{{ AIF_metric }}</p>
+    <img src="{{ AIF_graph }}" width="50%"></img>
+    <h2 id="T1w_dyn">Registrations to Dynamic Space</h2>
+    <img src="{{ t1w_bet_dyn }}" alt="{{ image_alt1 }}"></img>
+    <img src="{{ t1w_wm_dyn }}" alt="{{ image_alt1 }}"></img>
+    <img src="{{ t1w_gm_dyn }}" alt="{{ image_alt1 }}"></img>
+    <h2 id="DCE_Z-norm">DCE Z-Normalization</h2>
+    <img src="{{ Z_DCE }}" alt="{{ image_alt1 }}" width="1200"></img>
+    <h1 id="DCE">DCE Outputs</h1>
+    <h2 id="RUN_A">RUN A</h2>
+    <ul>
+        <li>{{ DCE_TR }}</li>
+        <li>{{ DCE_FA }}</li>
+        <li>{{ Hematocrit }}</li>
+        <li>{{ SNR_Threshold }}</li>
+        <li>{{ Relaxivity }}</li>
+        <li>{{ T1_blood }}</li>
+        <li>{{ A_last_line }}</li>
+    </ul>
+    <!-- % of voxels removed? -->
+    <h2 id="RUN_B">RUN B</h2>
+    <ul>
+        <li>{{ Time_Resolution }}</li>
+        <li>{{ R_squared_fit }}</li>
+        <li>{{ R_squared_raw }}</li>
+        <li>{{ B_last_line }}</li>
+    </ul>
+    <!-- <h3>AIF Fitting and Time Curves</h2> -->
+    <div class="dce-image-container">
+        <img src="{{ DCE_AIF_fit }}" alt="{{ image_alt1 }}" width="800"></img>
+        <img src="{{ DCE_AIF_timecurve }}" alt="{{ image_alt1 }}" width="800"></img>
+    </div>
+    <h2 id="RUN_D">RUN D</h2>
+    <ul>
+        <li>{{ DCE_model }}</li>
+        <li>{{ GPU_DCE }}</li>
+        <li>{{ DCE_elapsed_time }}</li>
+    </ul>
+    <h2 id="Ktrans">Ktrans maps (10^-3/min)</h2>
+    <ul>
+        <!-- <li>{{ ktrans_wm_mean }}</li> -->
+        <li>{{ ktrans_wm_median }}</li>
+        <li>{{ ktrans_wm_std }}</li>
+        <!-- <li>{{ ktrans_gm_mean }}</li> -->
+        <li> {{ ktrans_gm_median }}</li>
+        <li>{{ ktrans_gm_std }}</li>
+    </ul>
+    <img src="{{ ktrans }}" alt="{{ ELYOUEL }}" width="1600"></img>
+    <!-- <p>maybe Ktrans with segmentation overlay</p> -->
+    <h2>Ktrans stats</h2>
+    <div class="dce-image-container">
+        <img src="{{ ktrans_zeros }}" alt="{{ image_alt1 }}" width="800"></img>
+        <img src="{{ ktrans_analysis }}" alt="{{ image_alt1 }}" width="800"></img>
+    </div>
+    <h2>wmparc Registration</h2>
+    <div id="wmparc_hover" class="image-container">
+        <img id="dceref" src="{{ DCEref }}" alt="{{ image_alt1 }}">
+        <img id="wmparc_overlay" src="{{ wmparc_overlay }}" alt="{{ image_alt2 }}">
+    </div>
+    <!-- <h2 id="MNI">MNI Registration</h2>
+    <div id="image-container-3" class="image-container">
+        <img id="MNI_std" src="{{ MNI_img }}" alt="{{ image_alt1 }}" width="800"></img>
+        <img id="T1w_MNI" src="{{ MNI_T1w }}" alt="{{ image_alt1 }}" width="800"></img>
+    </div> -->
+    <!-- <div id="image-container-3" class="image-container">
+        <img id="MNI_std" src="{{ MNI_img }}" alt="{{ image_alt1 }}" width="800"></img>
+        <img id="Ktrans_MNI" src="{{ MNI_Ktrans }}" alt="{{ image_alt1 }}" width="800"></img>
+    </div> -->
+    <h2 id="Placement">Placement in Population</h2>
+    <img src="placeholder_wm" alt="to be inserted post-population report" width="800"></img>
+    <img src="placeholder_gm" alt="to be inserted post-population report" width="800"></img>
+    <script>
+        var containers = document.querySelectorAll('.image-container');
+        containers.forEach(function(container) {
+            container.addEventListener('mouseenter', function() {
+                var images = container.querySelectorAll('img');
+                images[0].style.opacity = 1;
+            });
+
+            container.addEventListener('mouseleave', function() {
+                var images = container.querySelectorAll('img');
+                images[0].style.opacity = 1;
+            });
+        });
+    </script>
+</body>
+</html>

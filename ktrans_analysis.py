@@ -1,9 +1,10 @@
+from utils.constants import KTRANS_MIN_THRESHOLD
 import sys
 from pathlib import Path
 from statistics import mean, median, pstdev, stdev
 import numpy as np
 import matplotlib
-from numpy.lib.function_base import average
+# from numpy.lib.function_base import average
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
@@ -12,14 +13,19 @@ import nibabel as nib
 
 # add as arg? add mask arg?
 POLYFIT = True
-KTRANS_MIN_THRESHOLD = 0.00001
 
-def analyze(file_dir):
+def analyze(tp_dir):
     # load files from script pipeline
-    files = ['/T1_wm.nii.gz', '/T1_gm.nii.gz', '/T1_csf.nii.gz', '/Ktrans_wm.nii.gz',
-            '/Ktrans_gm.nii.gz', '/Ktrans_csf.nii.gz', '/15_wm_mask_dyn.nii.gz', '/15_gm_mask_dyn.nii.gz']
-    for i, file in enumerate(files):
-        files[i] = file_dir + file
+    files = ['anat/' + prefix + '_space-DCEref_label-WM_T1map.nii.gz',
+             'anat/' + prefix + '_space-DCEref_label-GM_T1map.nii.gz',
+             'anat/' + prefix + '_space-DCEref_label-CSF_T1map.nii.gz',
+             'dce/' + prefix + '_seg-WM_Ktrans.nii.gz',
+             'dce/' + prefix + '_seg-GM_Ktrans.nii.gz',
+             'dce/' + prefix + '_seg-CSF_Ktrans.nii.gz',
+             'anat/' + prefix + '_space-DCEref_label-WM_mask.nii.gz',
+             'anat/' + prefix + '_space-DCEref_label-GM_mask.nii.gz']
+    # for i, file in enumerate(files):
+    #     files[i] = file_dir + file
 
     T1_wm = nib.load(files[0])
     T1_gm = nib.load(files[1])
@@ -104,13 +110,13 @@ def analyze(file_dir):
         
         a = np.where(Ktrans_wm_data[:, :, i] > KTRANS_MIN_THRESHOLD)
         if a[0].size > 0:
-            Ktrans_wm_mean.append(Ktrans_wm_data[:, :, i][a].mean())
+            Ktrans_wm_mean.append(np.nanmean(Ktrans_wm_data[:, :, i][a]))
         else:
             Ktrans_wm_mean.append(0)
         
         a = np.where(Ktrans_gm_data[:, :, i] > KTRANS_MIN_THRESHOLD)
         if a[0].size > 0:
-            Ktrans_gm_mean.append(Ktrans_gm_data[:, :, i][a].mean())
+            Ktrans_gm_mean.append(np.nanmean(Ktrans_gm_data[:, :, i][a]))
         else:
             Ktrans_gm_mean.append(0)
 
@@ -122,13 +128,13 @@ def analyze(file_dir):
         
         a = np.where(Ktrans_wm_data[:, :, i] > KTRANS_MIN_THRESHOLD)
         if a[0].size > 0:
-            Ktrans_wm_median.append(median(Ktrans_wm_data[:, :, i][a]))
+            Ktrans_wm_median.append(np.nanmedian(Ktrans_wm_data[:, :, i][a]))
         else:
             Ktrans_wm_median.append(0)
 
         a = np.where(Ktrans_gm_data[:, :, i] > KTRANS_MIN_THRESHOLD)
         if a[0].size > 0:
-            Ktrans_gm_median.append(median(Ktrans_gm_data[:, :, i][a]))
+            Ktrans_gm_median.append(np.nanmedian(Ktrans_gm_data[:, :, i][a]))
         else:
             Ktrans_gm_median.append(0)
 
@@ -175,10 +181,10 @@ def analyze(file_dir):
     Ktrans_wm_1D = Ktrans_wm_data.flatten()
     Ktrans_gm_1D = Ktrans_gm_data.flatten()
     # Ktrans_csf_data = Ktrans_csf_data.flatten()
-    Ktrans_wm_median_truncated = median(Ktrans_wm_1D[Ktrans_wm_1D > KTRANS_MIN_THRESHOLD])
-    Ktrans_gm_median_truncated = median(Ktrans_gm_1D[Ktrans_gm_1D > KTRANS_MIN_THRESHOLD])
-    Ktrans_wm_stdev_truncated = stdev(Ktrans_wm_1D[Ktrans_wm_1D > KTRANS_MIN_THRESHOLD])
-    Ktrans_gm_stdev_truncated = stdev(Ktrans_gm_1D[Ktrans_gm_1D > KTRANS_MIN_THRESHOLD])
+    Ktrans_wm_median_truncated = np.nanmedian(Ktrans_wm_1D[Ktrans_wm_1D > KTRANS_MIN_THRESHOLD])
+    Ktrans_gm_median_truncated = np.nanmedian(Ktrans_gm_1D[Ktrans_gm_1D > KTRANS_MIN_THRESHOLD])
+    Ktrans_wm_stdev_truncated = np.nanstd(Ktrans_wm_1D[Ktrans_wm_1D > KTRANS_MIN_THRESHOLD])
+    Ktrans_gm_stdev_truncated = np.nanstd(Ktrans_gm_1D[Ktrans_gm_1D > KTRANS_MIN_THRESHOLD])
 
     # for i in range(slice_num)
     #     T1_wm_zeros = size(T1_wm_data[T1_wm_data[:,:,i] == 0])
@@ -241,9 +247,9 @@ def analyze(file_dir):
     _, max_ylim = ax1.get_ylim()
     ax1.axvline(Ktrans_wm_median_truncated, color='pink', linestyle='dashed')
     ax1.axvline(Ktrans_gm_median_truncated, color='gray', linestyle='dashed')
-    ax1.text(Ktrans_wm_median_truncated*.1, max_ylim*0.2, 'Median: {:.5f}'.format(Ktrans_wm_median_truncated), color='whitesmoke')
+    ax1.text(Ktrans_wm_median_truncated*.1, max_ylim*0.2, 'Median: {:.5f}'.format(Ktrans_wm_median_truncated), color='lightgray')
     ax1.text(Ktrans_gm_median_truncated*1.1, max_ylim*0.9, 'Median: {:.5f}'.format(Ktrans_gm_median_truncated), color='gray')
-    ax1.text(Ktrans_wm_median_truncated*.1, max_ylim*0.1, 'stdev: {:.5f}'.format(Ktrans_wm_stdev_truncated), color='whitesmoke')
+    ax1.text(Ktrans_wm_median_truncated*.1, max_ylim*0.1, 'stdev: {:.5f}'.format(Ktrans_wm_stdev_truncated), color='lightgray')
     ax1.text(Ktrans_gm_median_truncated*1.1, max_ylim*0.8, 'stdev: {:.5f}'.format(Ktrans_gm_stdev_truncated), color='gray')
     # ax1.axvline(mean(Ktrans_csf_data[Ktrans_csf_data > 0]), color = 'cyan', linestyle = 'dashed')
     ax1.legend()
@@ -251,7 +257,7 @@ def analyze(file_dir):
     ## T1 medians plot
     ax2.set_xlabel('Slice #')
     ax2.set_ylabel('T1 Medians')
-    ax2.set_ylim([0, 2200])
+    ax2.set_ylim([0, 2700])
     ax2.plot(range(slice_num), T1_wm_median, label='wm', color='pink')
     ax2.plot(range(slice_num), T1_gm_median, label='gm', color='gray')
     # ax2.plot(range(slice_num), T1_csf_mean, label = 'csf', color = 'cyan')
@@ -261,7 +267,7 @@ def analyze(file_dir):
     ## Ktrans medians plot
     ax3.set_xlabel('Slice #')
     ax3.set_ylabel('Ktrans Medians')
-    ax3.set_ylim([0, 0.017])
+    ax3.set_ylim([0, 0.005])
     ax3.plot(range(slice_num), Ktrans_wm_median, label='wm', color='pink')
     ax3.plot(range(slice_num), Ktrans_gm_median, label='gm', color='gray')
     # ax3.plot(range(slice_num), Ktrans_csf_mean, label = 'csf', color = 'cyan')
@@ -269,12 +275,12 @@ def analyze(file_dir):
     ax3.legend()
 
     # Save graphs
-    path2 = file_dir + '/T1_Ktrans_analysis.png'
+    path2 = 'figures/' + prefix + '_desc-analysis.png'
     plt.savefig(path2, bbox_inches='tight')
     
     # Zeros
     # fig2, ((ax4, ax5)) = plt.subplots(2, 1, figsize=(20,6))
-    fig2, ax5 = plt.subplots(1, 1, figsize=(20,6))
+    fig2, ax5 = plt.subplots(1, 1, figsize=(10,6))
 
     ## T1 zeros plot
     # ax4.set_xlabel('Slice #')
@@ -300,8 +306,8 @@ def analyze(file_dir):
     for i in range(slice_num):
         Ktrans_wm_slicevoxels.append(len(Ktrans_wm_data[:, :, i][wm_data[:, :, i] > 0]))
         Ktrans_gm_slicevoxels.append(len(Ktrans_gm_data[:, :, i][gm_data[:, :, i] > 0]))
-    Ktrans_wm_zero_avg = average(Ktrans_wm_zeros, weights=Ktrans_wm_slicevoxels)
-    Ktrans_gm_zero_avg = average(Ktrans_gm_zeros, weights=Ktrans_gm_slicevoxels)
+    Ktrans_wm_zero_avg = np.average(Ktrans_wm_zeros, weights=Ktrans_wm_slicevoxels)
+    Ktrans_gm_zero_avg = np.average(Ktrans_gm_zeros, weights=Ktrans_gm_slicevoxels)
     min_ylim, max_ylim = ax5.get_ylim()
     min_xlim, max_xlim = ax5.get_xlim()
     ax5.hlines(Ktrans_wm_zero_avg, min_xlim, max_xlim, color='pink', linestyle='dashed')
@@ -312,8 +318,12 @@ def analyze(file_dir):
     ax5.grid()
     ax5.legend()
 
-    plt.savefig(file_dir + '/T1_Ktrans_zeros.png', bbox_inches='tight')
+    plt.savefig('figures/' + prefix + '_desc-zeros.png', bbox_inches='tight')
+    # print(any(np.array(Ktrans_wm_zeros) >= 70) or any(np.array(Ktrans_gm_zeros) >= 70))
+    # print((Ktrans_wm_zero_avg >= 55) or (Ktrans_gm_zero_avg >= 55))
 
 
-dir = Path(sys.argv[1])     # takes timepoint directory as argument
-analyze(str(dir))
+tp_dir = Path(sys.argv[1])     # takes timepoint directory as argument
+# output_dir = Path(sys.argv[2]) # takes output directory as argument
+prefix = sys.argv[2]           # takes prefix as argument
+analyze(str(tp_dir))

@@ -1,0 +1,312 @@
+{
+    "dcm2niixOptions": "-b y -ba n -z y -f '%3s_%f_%p_%t'",
+    "compKeys": [
+        "AcquisitionDateTime",
+        "SeriesNumber",
+        "AcquisitionTime",
+        "SidecarFilename"
+    ],
+    "descriptions": [
+        {
+            "datatype": "anat",
+            "suffix": "T1w",
+            "criteria": {
+                "SeriesDescription": "*MPRAGE*SEL."
+            },
+            "sidecarChanges": {
+                "ProtocolName": "T1w"
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "T1w",
+            "criteria": {
+                "SeriesDescription": "*FSPGR*"
+            },
+            "sidecarChanges": {
+                "ProtocolName": "T1w"
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "T1w",
+            "criteria": {
+                "SeriesDescription": "*mprage*"
+            },
+            "sidecarChanges": {
+                "ProtocolName": "T1w"
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "T1w",
+            "criteria": {
+                "SeriesDescription": "Accelerated Sagittal MPRAGE"
+            },
+            "sidecarChanges": {
+                "ProtocolName": "T1w"
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "FLAIR",
+            "criteria": {
+                "SeriesDescription": "*FLAIR*"
+            }
+        },
+        {
+            "datatype": "dce",
+            "suffix": "DCE",
+            "criteria": {
+                "SeriesDescription": "*DCE*"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "dce",
+            "suffix": "DCE",
+            "criteria": {
+                "SeriesDescription": "*_dyn"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "dce",
+            "suffix": "DCE",
+            "criteria": {
+                "SeriesDescription": "*dynamic_waterext*"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-01",
+            "criteria": {
+                "SeriesDescription": "*FA02*",
+                "FlipAngle": "2"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-01",
+            "criteria": {
+                "SeriesDescription": "*dyn_2*",
+                "FlipAngle": "2"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-01",
+            "criteria": {
+                "SeriesDescription": "*tra_flip_2deg*",
+                "FlipAngle": "2"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-02",
+            "criteria": {
+                "SeriesDescription": "*FA05*",
+                "FlipAngle": "5"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-02",
+            "criteria": {
+                "SeriesDescription": "*dyn_5*",
+                "FlipAngle": "5"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-02",
+            "criteria": {
+                "SeriesDescription": "*tra_flip_5deg*",
+                "FlipAngle": "5"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-03",
+            "criteria": {
+                "SeriesDescription": "*FA10*",
+                "FlipAngle": "10"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-03",
+            "criteria": {
+                "SeriesDescription": "*dyn_10*",
+                "FlipAngle": "10"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-03",
+            "criteria": {
+                "SeriesDescription": "*tra_flip_10deg*",
+                "FlipAngle": "10"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-04",
+            "criteria": {
+                "SeriesDescription": "*FA12*",
+                "FlipAngle": "12"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-04",
+            "criteria": {
+                "SeriesDescription": "*dyn_12*",
+                "FlipAngle": "12"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-03",
+            "criteria": {
+                "SeriesDescription": "*tra_flip_12deg*",
+                "FlipAngle": "12"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-05",
+            "criteria": {
+                "SeriesDescription": "*FA15*",
+                "FlipAngle": "15"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-05",
+            "criteria": {
+                "SeriesDescription": "*dyn_15*",
+                "FlipAngle": "15"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-05",
+            "criteria": {
+                "SeriesDescription": "*tra_flip_15deg*",
+                "FlipAngle": "15"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-06",
+            "criteria": {
+                "SeriesDescription": "*FA20*",
+                "FlipAngle": "20"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-07",
+            "criteria": {
+                "SeriesDescription": "*FA25*",
+                "FlipAngle": "25"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-01",
+            "criteria": {
+                "SeriesDescription": "*FLIP1"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-02",
+            "criteria": {
+                "SeriesDescription": "*FLIP2"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-03",
+            "criteria": {
+                "SeriesDescription": "*FLIP3"
+            },
+            "sidecarChanges": {
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "VFA",
+            "custom_entities": "flip-04",
+            "criteria": {
+                "SeriesDescription": "*FLIP4"
+            },
+            "sidecarChanges": {
+            }
+        }
+    ]
+}

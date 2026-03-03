@@ -1,2 +1,4 @@
 .project
 .pydevproject
+docker/files/license.txt
+__pycache__

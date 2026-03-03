@@ -1,0 +1,33 @@
+#!/bin/bash
+
+
+# MAKE SURE MATLAB & FREESURFER LICENSE FILES, DATA DIRECTORY, SCRIPT PREFERENCE FOLDER (docker/files/) AND /etc/ ARE SHARED WITH DOCKER
+
+bozo=$(cat /home/*/.matlab/R*_licenses/*lic* || cat /usr/local/MATLAB/*/licenses/*lic* | grep _HOSTID)
+
+MAC=${bozo#*MATLAB_HOSTID=}
+MAC=${MAC%%:*}
+MAC=${MAC:0:2}:${MAC:2:2}:${MAC:4:2}:${MAC:6:2}:${MAC:8:2}:${MAC:10:2}
+# echo $MAC
+
+MATLAB_PATH=/usr/local/MATLAB/$(ls /usr/local/MATLAB/ | sort -V | tail -n 1)
+# echo $MATLAB_PATH
+MATLAB_VERSION=$(ls /usr/local/MATLAB/ | sort -V | tail -n 1)-dev
+
+LICENSE=$(ls $MATLAB_PATH/licenses)
+# echo $LICENSE
+
+export UID=$(id -u)
+export GID=$(id -g)
+
+sudo docker run --rm -it -e MLM_LICENSE_FILE=/opt/matlab/licenses/$LICENSE \
+    -v /media/network_mriphysics/USC-PPG/docker_test:/data/ \
+    -v $FREESURFER_HOME/license.txt:/usr/local/freesurfer/8.1.0/license.txt \
+    -v $MATLAB_PATH/licenses:/opt/matlab/licenses \
+    -v /etc/passwd:/etc/passwd:ro \
+    -v $PWD/docker/files/script_preferences.txt:/opt/ROCKETSHIP/ROCKETSHIP-dev/script_preferences.txt \
+    -v $PWD/docker/files/model_weight_huber1.h5:/opt/vascular_function/docker/files/model_weight_huber1.h5 \
+    --shm-size=512M --mac-address $MAC \
+    --user $UID:$GID \
+    --gpus all \
+    lsaca05/dce:$MATLAB_VERSION

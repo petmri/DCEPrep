@@ -1,0 +1,353 @@
+<html>
+<head>
+    <title>{{ title }}</title>
+    <style>
+        body {
+            padding-top: 35px;
+        }
+
+        /* Styles for the navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #333;
+            height: 50px;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .navbar-nav {
+            list-style-type: none;
+            display: flex;
+            margin: 0;
+            padding: 0;
+        }
+
+        .navbar-nav li {
+        position: relative;
+        }
+
+        .navbar-nav ul.dropdown {
+            position: absolute;
+            top: 30px;
+            display: none;
+            background-color: #fff;
+            padding: 0px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            list-style-type: none;
+            width: 100%;
+        }
+
+        .navbar-nav li:hover ul.dropdown {
+            display: block;
+        }
+
+        .navbar-nav ul.dropdown li {
+            margin: 10px 0;
+        }
+
+        .navbar-nav ul.dropdown li a {
+            color: #000;
+            text-decoration: none;
+        }
+
+        .navbar-nav ul.dropdown li:hover a {
+            background-color: #f1f1f1;
+        }
+
+        .nav-item {
+            margin-right: 10px;
+        }
+
+        .nav-item a {
+            color: #ffffff;
+            text-decoration: none;
+            padding: 10px;
+        }
+
+        .nav-item a:hover {
+            background-color: #555;
+        }        
+    </style>
+    </head>
+<body>
+    <nav class="navbar">
+        <ul class="navbar-nav">
+            <li class="nav-item"><a href="#">Summary</a></li>
+            <li class="nav-item">
+                <a href="#T1">T1 stats</a>
+                <!-- <ul class="dropdown">
+                    <li><a href="#T1w_masks">T1w Masks</a></li>
+                    <li><a href="#T1w_to_VFA">T1w->VFA</a></li>
+                    <li><a href="#VFA_Z-norm">VFA Z</a></li>
+                    <li><a href="#T1_map">T1 Map</a></li>
+                    <li><a href="#MCFLIRT">MCFLIRT</a></li>
+                    <li><a href="#AIF">AIF</a></li>
+                    <li><a href="#T1w_dyn">T1w->dyn</a></li>
+                    <li><a href="#DCE_Z-norm">DCE Z</a></li>
+                </ul> -->
+            </li>
+            
+            <li class="nav-item">
+                <a href="#AIF">AIF stats</a>
+            </li>
+
+            <li class="nav-item">
+                <a href="#Ktrans">Ktrans stats</a>
+            </li>
+
+            <li class="nav-item">
+                <a href="#MNI">MNI Ktrans</a>
+                <ul class="dropdown">
+                    <li><a href="#PHG">PHG</a></li>
+                    <li><a href="#Hippo">Hippo</a></li>
+                    <li><a href="#Putamen">Putamen</a></li>
+                    <li><a href="#Pallidum">Pallidum</a></li>
+                    <li><a href="#Thalamus">Thalamus</a></li>
+                    <li><a href="#Caudate">Caudate</a></li>
+                    <li><a href="#Amygdala">Amygdala</a></li>
+                    <li><a href="#Entorhinal">Entorhinal</a></li>
+                    <li><a href="#Fusiform">Fusiform Gyrus</a></li>
+                    <li><a href="#Insula_wm">Insula</a></li>
+                    <li><a href="#Sup_temp_c">Sup-Temp-ctx</a></li>
+                </ul>
+            </li>
+            <li class="nav-item">
+                <a href="#Flagged">Flagged Cases</a>
+            </li>
+        </ul>
+    </nav>
+    <!-- <p></p> -->
+    <h1 id="Summary">Population Summary</h1>
+    <ul>
+        <li>Subjects: {{ Subjects }}</li>
+        <!-- <li>Cases: {{ Cases }}</li> -->
+        <li>
+            Successful Cases:
+            {% for link, case in Combo %}
+                <a href="../{{ link }}">{{ case }}</a>{% if not loop.last %}, {% endif %}
+            {% endfor %}
+        </li>
+        <li>
+            Failed Cases:
+            {% for link, case in Failed_combo %}
+                <a href="{{ link }}">{{ case }}</a>{% if not loop.last %}, {% endif %}
+            {% endfor %}
+        </li>
+        
+        <li>Successes: {{ Successes }}</li>
+        <li>Excludes: {{ Excludes }}</li>
+        <!-- <li>{{ Timepoint }}</li> -->
+        <li>Date: {{ Date }}</li>
+        <li>Commit: {{ Commit }}</li>
+        <li>ROCKETSHIP Commit: {{ ROCKETSHIP_commit }}</li>
+        <li>Manufacturer: {{ Manufacturers }}</li>
+        <li>Model: {{ Machines }}</li>
+        <li>Field Strength: {{ Field_strengths }}</li>
+        <li>Institute: {{ Institutions }}</li>
+    </ul>
+    <h2 id="ROCKETSHIP">ROCKETSHIP Script Preferences (defaults overridden by JSONs)</h2>
+    <ul>
+        <li>Default TR: {{ pref_tr }}</li>
+        <li>Default FA: {{ pref_fa }}</li>
+        <li>Default Hematocrit: {{ pref_hematocrit }}</li>
+        <li>SNR Threshold: {{ pref_SNR }}</li>
+        <li>Relaxivity: {{ pref_relaxivity }}</li>
+        <li>Default T1 blood: {{ pref_t1blood }}</li>
+        <li>Starting repetition: {{ pref_start_t }}</li>
+        <li>Ending repetition: {{ pref_end_t }}</li>
+        <li>Time Resolution: {{ pref_timeres }}</li>
+        <li>Model: {{ pref_model }}</li>
+
+    </ul>
+    <h2 id="T1">T1 stats</h2>
+    <ul>
+        <li>White matter mean: {{ T1_wm_mean }}</li>
+        <li>White matter median: {{ T1_wm_median }}</li>
+        <li>White matter stdev: {{ T1_wm_std }}</li>
+        <li>White matter 5th%: {{ T1_wm_5th_percentile }}</li>
+        <li>White matter 95th% {{ T1_wm_95th_percentile }} </li>
+        <br>
+        <li>Gray matter mean: {{ T1_gm_mean }}</li>
+        <li>Gray matter median: {{ T1_gm_median }}</li>
+        <li>Gray matter stdev: {{ T1_gm_std }}</li>
+        <li>Gray matter 5th%: {{ T1_gm_5th_percentile }}</li>
+        <li>Gray matter 95th% {{ T1_gm_95th_percentile }} </li>
+    </ul>
+    <h2 id="AIF">AIF stats</h2>
+    <ul>
+        <li>AIFitness mean: {{ AIFitness_mean }}</li>
+        <li>AIFitness median: {{ AIFitness_median }}</li>
+        <li>AIFitness stdev: {{ AIFitness_std }}</li>
+        <li>AIFitness 5th%: {{ AIFitness_5th_percentile }}</li>
+        <br>
+        <li>mmol mean: {{ aif_mmol_mean }}</li>
+        <li>mmol median: {{ aif_mmol_median }}</li>
+        <li>mmol stdev: {{ aif_mmol_std }}</li>
+        <li>mmol 5th%: {{ aif_mmol_5th_percentile }}</li>
+        <li>mmol 95th% {{ aif_mmol_95th_percentile }}</li>
+    </ul>
+    <div class="image-container">
+        <img src="{{ AIFitness_histogram }}" alt="missing AIFitness histogram"/>
+        <img src="{{ aif_mmol_histogram }}" alt="missing aif mmol histogram"/>
+    </div>
+    <img src="{{ aif_curves }}" alt="missing aif curves" width="50%"/>
+    <li>T1 blood mean median: {{ T1_blood_mean }}</li>
+    <li>T1 blood median median: {{ T1_blood_median }}</li>
+    <li>T1 blood stdev median: {{ T1_blood_std }}</li>
+    <li>T1 blood 5th%: {{ T1_blood_5th_percentile }}</li>
+    <li>T1 blood 95th% {{ T1_blood_95th_percentile }} </li>
+    <img src="{{ T1_blood_histogram }}" alt="missing T1_blood histogram"/>
+    <h2 id="Ktrans">Ktrans stats (10^-3/min, >10^-5)</h2>
+    <ul>
+        <li>White matter mean median Ktrans: {{ Ktrans_wm_mean }}</li>
+        <li>White matter median median Ktrans: {{ Ktrans_wm_median }}</li>
+        <li>White matter stdev median Ktrans: {{ Ktrans_wm_std }}</li>
+        <li>Gray matter mean median Ktrans: {{ Ktrans_gm_mean }}</li>
+        <li>Gray matter median median Ktrans: {{ Ktrans_gm_median }}</li>
+        <li>Gray matter stdev median Ktrans: {{ Ktrans_gm_std }}</li>
+    </ul>
+    <h2>Ktrans Histogram</h2>
+    <ul>
+        <li>wm outliers (> 5): {{ ktrans_wm_outliers }}</li>
+        <li>gm outliers (> 5): {{ ktrans_gm_outliers }}</li>
+    </ul>
+    <div class="image-container">
+        <img src="{{ wm_histogram }}" alt="missing white matter histogram"/>
+        <img src="{{ gm_histogram }}" alt="missing gray matter histogram"/>
+    </div>
+    <h2 id="MNI">recon-all Ktrans (10^-3/min, >10^-5)</h2>
+    <h3 id="PHG">Parahippocampal Gyrus</h3>
+    <ul>
+        <li>Whole PHG mean median: {{ whole_phg_Ktrans_mean }}</li>
+        <li>Whole PHG median median: {{ whole_phg_Ktrans_median }}</li>
+        <li>Whole PHG stdev median: {{ whole_phg_Ktrans_std }}</li>
+        <li>outliers (> 5): {{ whole_phg_outliers }}</li>
+        <img src="{{ Ktrans_whole_phg_histogram }}" alt="missing whole PHG histogram"/>
+    </ul>
+    <h3 id="Hippo">Hippocampus</h3>
+    <ul>
+        <li>Whole hippocampus mean median: {{ whole_hippo_Ktrans_mean }}</li>
+        <li>Whole hippocampus median median: {{ whole_hippo_Ktrans_median }}</li>
+        <li>Whole hippocampus stdev median: {{ whole_hippo_Ktrans_std }}</li>
+        <li>outliers (> 5): {{ whole_hippo_outliers }}</li>
+        <img src="{{ Ktrans_whole_hippo_histogram }}" alt="missing whole hippocampus histogram"/>
+    </ul>
+    <h3 id="Putamen">Putamen</h3>
+    <ul>
+        <li>Whole putamen mean median: {{ whole_putamen_Ktrans_mean }}</li>
+        <li>Whole putamen median median: {{ whole_putamen_Ktrans_median }}</li>
+        <li>Whole putamen stdev median: {{ whole_putamen_Ktrans_std }}</li>
+        <li>outliers (> 5): {{ whole_putamen_outliers }}</li>
+        <img src="{{ Ktrans_whole_putamen_histogram }}" alt="missing whole putamen histogram"/>
+    </ul>
+    <h3 id="Pallidum">Pallidum</h3>
+    <ul>
+        <li>Whole pallidum mean median: {{ whole_pallidum_Ktrans_mean }}</li>
+        <li>Whole pallidum median median: {{ whole_pallidum_Ktrans_median }}</li>
+        <li>Whole pallidum stdev median: {{ whole_pallidum_Ktrans_std }}</li>
+        <li>outliers (> 5): {{ whole_pallidum_outliers }}</li>
+        <img src="{{ Ktrans_whole_pallidum_histogram }}" alt="missing whole pallidum histogram"/>
+    </ul>
+    <h3 id="Thalamus">Thalamus</h3>
+    <ul>
+        <li>Whole thalamus mean median: {{ whole_thalamus_Ktrans_mean }}</li>
+        <li>Whole thalamus median median: {{ whole_thalamus_Ktrans_median }}</li>
+        <li>Whole thalamus stdev median: {{ whole_thalamus_Ktrans_std }}</li>
+        <li>outliers (> 5): {{ whole_thalamus_outliers }}</li>
+        <img src="{{ Ktrans_whole_thalamus_histogram }}" alt="missing whole thalamus histogram"/>
+    </ul>
+    <h3 id="Caudate">Caudate</h3>
+    <ul>
+        <li>Whole caudate mean median: {{ whole_caudate_Ktrans_mean }}</li>
+        <li>Whole caudate median median: {{ whole_caudate_Ktrans_median }}</li>
+        <li>Whole caudate stdev median: {{ whole_caudate_Ktrans_std }}</li>
+        <li>outliers (> 5): {{ whole_caudate_outliers }}</li>
+        <img src="{{ Ktrans_whole_caudate_histogram }}" alt="missing whole caudate histogram"/>
+    </ul>
+    <h3 id="Amygdala">Amygdala</h3>
+    <ul>
+        <li>Whole amygdala mean median: {{ whole_amygdala_Ktrans_mean }}</li>
+        <li>Whole amygdala median median: {{ whole_amygdala_Ktrans_median }}</li>
+        <li>Whole amygdala stdev median: {{ whole_amygdala_Ktrans_std }}</li>
+        <li>outliers (> 5): {{ whole_amygdala_outliers }}</li>
+        <img src="{{ Ktrans_whole_amygdala_histogram }}" alt="missing whole amygdala histogram"/>
+    </ul>
+
+    <h3 id="Entorhinal">Entorhinal Cortex</h3>
+    <ul>
+        <li>Whole entorhinal cortex mean median: {{ whole_entorhinal_cortex_Ktrans_mean }}</li>
+        <li>Whole entorhinal cortex median median: {{ whole_entorhinal_cortex_Ktrans_median }}</li>
+        <li>Whole entorhinal cortex stdev median: {{ whole_entorhinal_cortex_Ktrans_std }}</li>
+        <li>outliers (> 5): {{ whole_entorhinal_cortex_outliers }}</li>
+        <img src="{{ Ktrans_whole_entorhinal_cortex_histogram }}" alt="missing whole entorhinal cortex histogram"/>
+    </ul>
+    
+    <h3 id="Fusiform">Fusiform Gyrus</h3>
+    <h4 id="Fusiform_c">Fusiform Gyrus Cortex</h3>
+    <ul>
+        <li>Whole fusiform gyrus cortex mean median: {{ whole_fusiform_gyrus_cortex_Ktrans_mean }}</li>
+        <li>Whole fusiform gyrus cortex median median: {{ whole_fusiform_gyrus_cortex_Ktrans_median }}</li>
+        <li>Whole fusiform gyrus cortex stdev median: {{ whole_fusiform_gyrus_cortex_Ktrans_std }}</li>
+        <li>outliers (> 5): {{ whole_fusiform_gyrus_cortex_outliers }}</li>
+        <img src="{{ Ktrans_whole_fusiform_gyrus_cortex_histogram }}" alt="missing whole fusiform gyrus cortex histogram"/>
+    </ul>
+
+    <h4 id="Fusiform_wm">Fusiform Gyrus White Matter</h3>
+    <ul>
+        <li>Whole fusiform gyrus white matter mean median: {{ whole_fusiform_gyrus_WM_Ktrans_mean }}</li>
+        <li>Whole fusiform gyrus white matter median median: {{ whole_fusiform_gyrus_WM_Ktrans_median }}</li>
+        <li>Whole fusiform gyrus white matter stdev median: {{ whole_fusiform_gyrus_WM_Ktrans_std }}</li>
+        <li>outliers (> 5): {{ whole_fusiform_gyrus_WM_outliers }}</li>
+        <img src="{{ Ktrans_whole_fusiform_gyrus_WM_histogram }}" alt="missing whole fusiform gyrus white matter histogram"/>
+    </ul>
+
+    <h3 id="Insula_wm">Insula White Matter</h3>
+    <ul>
+        <li>Whole insula white matter mean median: {{ whole_insula_WM_Ktrans_mean }}</li>
+        <li>Whole insula white matter median median: {{ whole_insula_WM_Ktrans_median }}</li>
+        <li>Whole insula white matter stdev median: {{ whole_insula_WM_Ktrans_std }}</li>
+        <li>outliers (> 5): {{ whole_insula_WM_outliers }}</li>
+        <img src="{{ Ktrans_whole_insula_WM_histogram }}" alt="missing whole insula white matter histogram"/>
+    </ul>
+
+    <h3 id="Sup_temp_c">Superior Temporal Cortex</h3>
+    <ul>
+        <li>Whole superior temporal cortex mean median: {{ whole_superior_temporal_cortex_Ktrans_mean }}</li>
+        <li>Whole superior temporal cortex median median: {{ whole_superior_temporal_cortex_Ktrans_median }}</li>
+        <li>Whole superior temporal cortex stdev median: {{ whole_superior_temporal_cortex_Ktrans_std }}</li>
+        <li>outliers (> 5): {{ whole_superior_temporal_cortex_outliers }}</li>
+        <img src="{{ Ktrans_whole_superior_temporal_cortex_histogram }}" alt="missing whole superior temporal cortex histogram"/>
+    </ul>
+    <h3 id="Post_cing_c">Posterior Cingulate Cortex</h3>
+    <ul>
+        <li>Whole posterior cingulate cortex mean median: {{ whole_posterior_cingulate_cortex_Ktrans_mean }}</li>
+        <li>Whole posterior cingulate cortex median median: {{ whole_posterior_cingulate_cortex_Ktrans_median }}</li>
+        <li>Whole posterior cingulate cortex stdev median: {{ whole_posterior_cingulate_cortex_Ktrans_std }}</li>
+        <li>outliers (> 5): {{ whole_posterior_cingulate_cortex_outliers }}</li>
+        <img src="{{ Ktrans_whole_posterior_cingulate_cortex_histogram }}" alt="missing whole posterior cingulate cortex histogram"/>
+    </ul>
+    <h3 id="Med_temp_c">Medial Temporal Cortex</h3>
+    <ul>
+        <li>Whole medial temporal cortex mean median: {{ whole_medial_temporal_cortex_Ktrans_mean }}</li>
+        <li>Whole medial temporal cortex median median: {{ whole_medial_temporal_cortex_Ktrans_median }}</li>
+        <li>Whole medial temporal cortex stdev median: {{ whole_medial_temporal_cortex_Ktrans_std }}</li>
+        <li>outliers (> 5): {{ whole_medial_temporal_cortex_outliers }}</li>
+        <img src="{{ Ktrans_whole_medial_temporal_cortex_histogram }}" alt="missing whole medial temporal cortex histogram"/>
+    </ul>
+    <h2 id="Flagged">Flagged Cases (motion > {{ Motion_threshold }}mm, AIFitness < {{ AIFitness_threshold }})</h4>
+    <li>
+        {% for link, case in Flagged_combo %}
+            {% if "dceprep-" in link %}
+            <a href="../../dceprep{{ link }}">{{ case }}</a>{% if not loop.last %}, {% endif %}
+            {% else %}
+            <a href="../dceprep{{ link }}">{{ case }}</a>{% if not loop.last %}, {% endif %}
+            {% endif %}
+        {% endfor %}
+    </li>
+</body>
+</html>
