@@ -133,7 +133,7 @@ All data is assumed to be [BIDS](https://bids-specification.readthedocs.io/) com
 #### Example
 
 ```bash
-./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/bids_test/rawdata -b -c -Z -A -C noMC
+./preprocess_all.sh -d /path/to/data/bids_data -b -c -Z -A -C noMC
 ```
 
 #### Step Summary
@@ -226,7 +226,7 @@ All data is assumed to be [BIDS](https://bids-specification.readthedocs.io/) com
 #### Example
 
 ```bash
-./DCE_all.sh -d /media/network_mriphysics/USC-PPG/bids_test/rawdata -s -C noMC
+./DCE_all.sh -d /path/to/data/bids_data -s -C noMC
 ```
 
 #### Step Summary

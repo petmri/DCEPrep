@@ -2,3 +2,4 @@
 .pydevproject
 docker/files/license.txt
 __pycache__
+site/

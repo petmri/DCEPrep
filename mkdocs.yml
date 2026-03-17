@@ -1,0 +1,96 @@
+site_name: DCEPrep
+site_description: A preprocessing and analysis pipeline for Dynamic Contrast-Enhanced (DCE) MRI data
+site_url: https://petmri.github.io/DCEPrep
+repo_url: https://github.com/petmri/DCEPrep
+repo_name: petmri/DCEPrep
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - BIDS Data Setup: getting-started/bids-setup.md
+    - Process Data: getting-started/process-data.md
+  - User Guide:
+    - Preprocessing: user-guide/preprocessing.md
+    - Analysis: user-guide/analysis.md
+    - AIF Selection: user-guide/aif-selection.md
+    - Pipeline Outputs: user-guide/outputs.md
+  - How-To Guides:
+    - DICOM to BIDS Conversion: how-to/dicom-to-bids.md
+    - Using Docker: how-to/docker-usage.md
+    - Comparison Mode: how-to/comparison-mode.md
+    - FreeSurfer Parcellation: how-to/freesurfer-parcellation.md
+  - CLI Reference:
+    - Preprocessing CLI: reference/preprocessing-cli.md
+    - Analysis CLI: reference/analysis-cli.md
+    - Pipeline Steps: reference/pipeline-steps.md
+  - Integration:
+    - ROCKETSHIP: integration/rocketship.md
+    - vascular_function: integration/vascular-function.md
+    - GPUfit: integration/gpufit.md
+  - About:
+    - Citation: about/citation.md
+    - Contributing: about/contributing.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/petmri/DCEPrep
