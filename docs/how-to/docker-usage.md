@@ -101,5 +101,27 @@ The Dockerfile performs a multi-stage build that installs CUDA 13, FSL, ANTs, Fr
 
 ## Troubleshooting
 
-!!! warning "Stub"
-    Common Docker issues (license file not found, GPU not detected, permission errors on mounted volumes) and their solutions need to be documented here.
+**MATLAB license not found**
+:   Ensure your MATLAB license file is mounted at the correct container path. Check `run_docker.sh` to verify the mount point matches your host license location. For network licenses, the container must be able to reach the license server (use `--network=host` if needed).
+
+**FreeSurfer license error**
+:   FreeSurfer requires a `license.txt` file at `$FREESURFER_HOME/license.txt`. Mount it explicitly:
+    ```bash
+    -v /path/to/freesurfer/license.txt:/opt/freesurfer/license.txt
+    ```
+    You can obtain a free license from the [FreeSurfer registration page](https://surfer.nmr.mgh.harvard.edu/registration.html).
+
+**GPU not detected**
+:   - Verify the NVIDIA Container Toolkit is installed: `nvidia-container-cli info`
+    - Confirm `docker run --gpus all nvidia/cuda:11.0-base nvidia-smi` works
+    - The `--gpus all` flag must be passed to `docker run`
+    - If GPU is unavailable, DCEPrep falls back to CPU processing (iNESMA smoothing will not run)
+
+**Permission denied on mounted volumes**
+:   Docker may not have permission to write to host-mounted directories. Options:
+    - Run with `--user $(id -u):$(id -g)` to match your host user
+    - Ensure the host data directory has appropriate write permissions
+    - On SELinux systems, add `:z` to volume mounts (e.g., `-v /data:/data:z`)
+
+**Container runs out of memory**
+:   DCE-MRI data can be large. Increase Docker's memory limit in Docker Desktop settings, or use `--memory=16g` (or higher) with `docker run`.

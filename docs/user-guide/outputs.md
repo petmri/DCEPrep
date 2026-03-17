@@ -108,5 +108,37 @@ This allows side-by-side comparison of runs with different preprocessing choices
 
 The population report generates a `.xlsx` spreadsheet in the derivatives root containing per-subject summary statistics for all Ktrans and T1 metrics. This file is suitable for direct import into statistical analysis software.
 
-!!! warning "Stub"
-    The exact columns, sheet names, and missing-data encoding in the spreadsheet output need to be documented here.
+### File location
+
+```
+derivatives/spreadsheets/dataset_ktrans_YYYY-MM-DD.xlsx
+```
+
+### Sheets
+
+| Sheet | Contents |
+|---|---|
+| **Success** | All cases that completed processing and passed automated QC |
+| **Pre-Exclude** | Cases auto-flagged for excessive motion (> 3.8 mm displacement) or low AIFitness (< 59) |
+| **Fail** | Cases that failed processing (missing files, wmparc errors, etc.) |
+| **Missing** | Cases expected but not found in the derivatives |
+
+Each sheet is indexed by `Subject_ID` (format: `sub-##_ses-##`).
+
+### Columns (Success sheet)
+
+The spreadsheet contains the following column groups:
+
+| Group | Columns |
+|---|---|
+| **Demographics** | Date, APOE, Sex, Age |
+| **Scanner** | Machine, Institution, Coil |
+| **Acquisition** | TR, Time_resolution, TE, Flip_angle, n_reps |
+| **QC** | Approximate SNR, AIFitness, aif_fitted_r2, manual_aif_status, max_disp |
+| **T1** | T1_blood, T1_wm_median, T1_gm_median |
+| **Ktrans** | Ktrans_wm_median, Ktrans_gm_median, plus per-region medians (Hippo, PhG, Putamen, Pallidum, Thalamus, Caudate, Amygdala, Entorhinal cortex, Fusiform gyrus cortex/WM, Insula WM, Superior/Inferior temporal cortex, Posterior cingulate cortex, Medial temporal cortex) |
+| **Vp** | Per-region Vp medians (same regions as Ktrans) |
+| **Volume** | Per-region volumes in mm³ (same regions) |
+| **Cortical thickness** | Per-region average and std thickness from FreeSurfer aparc (34 regions, bilateral average) |
+
+The Pre-Exclude and Fail sheets include an additional **Reason** column at the beginning.

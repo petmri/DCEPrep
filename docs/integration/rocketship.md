@@ -56,8 +56,49 @@ The GitHub Actions CI/CD workflow automatically clones the `petmri/ROCKETSHIP` r
 
 ROCKETSHIP's behavior is configured via a `script_preferences.txt` file. In Docker, this is provided by DCEPrep's `docker/files/` directory and mounted at the expected location.
 
-!!! warning "Stub"
-    The specific ROCKETSHIP script preference settings used by DCEPrep (model selection, convergence criteria, fitting options) should be documented here.
+DCEPrep ships a default `script_preferences.txt` in `docker/files/`. Key settings:
+
+### Input configuration
+
+| Setting | Value | Description |
+|---|---|---|
+| `filevolume` | `1` | 4D NIfTI input |
+| `dynamic_files` | `/dce/*_desc-bfcz_DCE.nii*` | Preprocessed DCE series |
+| `t1map_files` | `/anat/*space-DCEref_T1map.nii*` | T1 map in DCE space |
+| `roi_files` | `/anat/*space-DCEref_desc-brain_mask.nii*` | Brain mask ROI |
+| `aif_files` | `/dce/*desc-AIF_T1map.nii*` | AIF T1 map |
+| `start_t` | `3` | Skip first 2 timepoints |
+
+### Pharmacokinetic model
+
+| Setting | Value | Description |
+|---|---|---|
+| `quant` | `1` | Quantitative DCE (not semi-quantitative) |
+| `patlak` | `1` | **Patlak model enabled** (2-parameter, no backflux) |
+| `ex_tofts` | `0` | Extended Tofts disabled |
+| `tofts` | `0` | Standard Tofts disabled |
+| `auc` | `0` | Area-under-curve disabled |
+
+### AIF and contrast agent
+
+| Setting | Value | Description |
+|---|---|---|
+| `aif_rr_type` | `aif_roi` | Use provided AIF mask |
+| `aif_type` | `1` | Fitted AIF |
+| `hematocrit` | `0.45` | Default hematocrit |
+| `relaxivity` | `2.8` | r1 relaxivity (mM⁻¹s⁻¹); auto-adjusted based on `AcquisitionDateTime` |
+| `blood_t1` | `2.000` | Blood T1 in seconds |
+| `injection_time` | `-2` | Auto-detect injection time |
+
+### Processing
+
+| Setting | Value | Description |
+|---|---|---|
+| `fit_voxels` | `1` | Voxel-wise fitting |
+| `number_cpus` | `0` | Use all available CPU cores |
+| `time_smoothing` | `none` | No temporal smoothing |
+| `xy_smooth_size` | `0` | No spatial smoothing |
+| `outputft` | `1` | NIfTI output |
 
 ---
 

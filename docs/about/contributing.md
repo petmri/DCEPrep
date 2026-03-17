@@ -1,27 +1,65 @@
 # Contributing
 
-!!! warning "Stub article"
-    Contribution guidelines have not yet been written. This page should cover: branching strategy, how to submit a pull request, coding conventions, how to run the CI tests locally, and who to contact for questions.
-
 ---
 
 ## Reporting Issues
 
-Please open an issue on [GitHub](https://github.com/petmri/DCEPrep/issues) to report bugs or request features.
+Please open an issue on [GitHub](https://github.com/petmri/DCEPrep/issues) to report bugs or request features. Include:
+
+- The command you ran
+- Relevant log output (`logs/preprocessing_log_*.txt` or `logs/dce_log_*.txt`)
+- Your environment (Docker tag or local install details)
 
 ---
 
 ## Branch Strategy
 
-!!! warning "Stub"
-    Document the branch strategy (e.g., `main` = stable, `dev` = development, feature branches) and how contributions should be structured.
+| Branch | Purpose |
+|---|---|
+| `main` | Stable releases — Docker images tagged with `-main` are built from this branch |
+| `dev` | Active development — new features and fixes land here first |
+| Feature branches | Short-lived branches for individual features or fixes, branched from `dev` |
+
+To contribute:
+
+1. Fork the repository
+2. Create a feature branch from `dev`
+3. Make your changes and push to your fork
+4. Open a pull request targeting `dev`
 
 ---
 
 ## Development Setup
 
-!!! warning "Stub"
-    Add instructions for setting up a local development environment, running tests, and building docs locally with `mkdocs serve`.
+### Local environment
+
+```bash
+# Clone the repository
+git clone https://github.com/petmri/DCEPrep.git
+cd DCEPrep
+git checkout dev
+
+# Set up Python environment
+python3 -m venv tf
+source tf/bin/activate
+pip install -r venv_requirements.txt
+```
+
+You will also need FSL, ANTs, FreeSurfer, and MATLAB installed locally (see [Installation](../getting-started/installation.md)).
+
+### Running with Docker
+
+For testing without a full local install, use the dev Docker image:
+
+```bash
+docker pull lsaca05/dce:R2023a-dev
+```
+
+### CI/CD
+
+The GitHub Actions workflow automatically clones the `petmri/ROCKETSHIP` dev branch and builds the Docker image. Check `.github/workflows/` for the current CI configuration.
+
+---
 
 ## Building Docs Locally
 

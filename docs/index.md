@@ -71,7 +71,7 @@ See [ROCKETSHIP Integration](integration/rocketship.md) for details on the MATLA
 ## Quick Links
 
 - [Installation](getting-started/installation.md)
-- [Quick Start](getting-started/quickstart.md)
+- [Process Data](getting-started/process-data.md)
 - [Preprocessing Pipeline](user-guide/preprocessing.md)
 - [Analysis Pipeline](user-guide/analysis.md)
 - [CLI Reference — Preprocessing](reference/preprocessing-cli.md)

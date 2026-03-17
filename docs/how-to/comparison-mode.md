@@ -2,17 +2,23 @@
 
 Comparison mode (`-C [name]`) writes all outputs into a named subdirectory within each subject/session's derivatives folder. This lets you run the pipeline with different preprocessing options and compare outputs side-by-side without overwriting each other.
 
-!!! warning "Stub article"
-    This article needs real worked examples showing output differences and how to interpret them. Details on what files are copied vs. regenerated in comparison mode should also be added.
-
 ---
 
 ## How It Works
 
 When `-C [name]` is passed:
 
-- **Preprocessing:** All output files are written to `derivatives/sub-##/ses-##/<name>/` instead of directly under the session folder.
-- **Analysis:** If a preprocessed run named `<name>` does not exist, essential files are copied from the standard (non-named) run before analysis proceeds.
+- **Preprocessing:** All output files are written to `derivatives/dceprep-<name>/sub-##/ses-##/` instead of the standard `derivatives/dceprep/` directory.
+- **Analysis:** If a comparison run's preprocessed data does not exist, essential files (T1 maps, brain masks, registration transforms) are copied from the standard run before analysis proceeds. This avoids redundant computation for steps that are unchanged between comparisons.
+
+### What gets copied vs. regenerated
+
+| Copied from standard run | Regenerated in comparison run |
+|---|---|
+| Registration transforms (`.mat` files) | DCE preprocessing (bias correction, z-norm) |
+| Brain masks | Ktrans maps |
+| T1 maps (if unchanged) | QC reports |
+| Segmentation masks | Population report |
 
 ---
 
@@ -32,21 +38,36 @@ Run the pipeline twice — once with motion correction, once without:
 
 Outputs land in:
 ```
-derivatives/sub-01/ses-01/
-├── withMC/
-│   ├── anat/
-│   └── dce/
-└── noMC/
-    ├── anat/
-    └── dce/
+derivatives/
+├── dceprep-withMC/
+│   └── sub-01/ses-01/
+│       ├── anat/
+│       └── dce/
+└── dceprep-noMC/
+    └── sub-01/ses-01/
+        ├── anat/
+        └── dce/
 ```
+
+Compare the Ktrans maps and population reports between the two runs to assess the impact of motion correction on your dataset.
 
 ---
 
 ## Example: Comparing Z-Normalization
 
-!!! warning "Stub"
-    Add a concrete example showing the effect of z-normalization on Ktrans values, with before/after report comparisons.
+Test whether z-axis normalization improves inter-scanner consistency:
+
+```bash
+# Without z-normalization
+./preprocess_all.sh -d /data/rawdata -b -C noZnorm
+./DCE_all.sh -d /data/rawdata -C noZnorm
+
+# With z-normalization
+./preprocess_all.sh -d /data/rawdata -b -Z -C withZnorm
+./DCE_all.sh -d /data/rawdata -C withZnorm
+```
+
+Compare the population reports: the z-normalized run should show reduced variance in Ktrans across subjects scanned on different machines.
 
 ---
 

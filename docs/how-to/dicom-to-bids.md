@@ -33,8 +33,22 @@ python sort_dicom.py \
     --session 01
 ```
 
-!!! warning "Stub"
-    The exact CLI arguments, batch processing options, and handling of missing series need to be documented here. Check `sort_dicom.py --help` for current usage.
+### How `sort_dicom.py` works
+
+The script is designed for batch processing. It:
+
+1. Scans the source directory for subject folders
+2. Detects session ID from the folder name (`_s2` suffix → session 02, otherwise session 01)
+3. Expects each subject folder to contain exactly two subdirectories: `dicom/` and `log/`
+4. Calls `dcm2bids` with `-d <dicom_dir> -p <subject_id> -s <session_id> -c config.json -o <output_dir>`
+5. Moves log files into the BIDS `logs/` directory for that subject/session
+
+!!! note
+    The source and output directories are currently hardcoded in the script. Edit lines 13–14 of `sort_dicom.py` to point to your data locations before running.
+
+### Handling missing series
+
+If a DICOM series does not match any pattern in `config.json`, `dcm2bids` places it in a `tmp_dcm2bids/` folder. Check this folder after conversion to see if any series were missed, and update `config.json` patterns if needed.
 
 ---
 
@@ -92,5 +106,14 @@ rawdata/sub-01/ses-01/
 
 ## Troubleshooting
 
-!!! warning "Stub"
-    Common conversion issues (missing series, wrong flip angle labels, multi-echo data) and their solutions need to be added here.
+**Missing series after conversion**
+:   Check the `tmp_dcm2bids/` folder for unconverted files. Compare the DICOM `SeriesDescription` with your `config.json` patterns. Use `dcm2bids_helper` to list all series descriptions in a DICOM directory.
+
+**Wrong flip angle labels**
+:   The flip angle entity (`flip-##`) is determined by the `config.json` mapping, not the DICOM `FlipAngle` field. If flip angles are mislabeled, update the `"SeriesDescription"` patterns in `config.json` to match your scanner's naming (e.g., `*FA2*` vs `*flip2*`).
+
+**Duplicate or extra files**
+:   `dcm2bids` may produce multiple files if a series description matches more than one config entry, or if the scanner splits a series. Check the `tmp_dcm2bids/` output and refine the `config.json` criteria (add `"SidecarFilename"` or other DICOM fields) to disambiguate.
+
+**Session detection**
+:   `sort_dicom.py` detects session 02 by looking for `_s2` (case-insensitive) in the folder name. All other folders are treated as session 01. Rename folders if your naming convention differs.
