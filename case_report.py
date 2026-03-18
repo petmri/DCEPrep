@@ -373,6 +373,74 @@ def extract_value(pattern, text):
         return match.group(1)
     return None
 
+
+def get_nested_value(data, *keys):
+    value = data
+    for key in keys:
+        if not isinstance(value, dict) or key not in value:
+            return None
+        value = value[key]
+    return value
+
+
+def format_backend_usage(backend_used):
+    if backend_used is None:
+        return None
+
+    backend_text = str(backend_used).strip().lower()
+    if 'gpu' in backend_text:
+        return 'GPU was used'
+    if 'cpu' in backend_text:
+        return 'CPU was used'
+    return str(backend_used)
+
+
+def convert_minutes_to_seconds(value):
+    if value is None:
+        return None
+
+    try:
+        seconds = float(value) * 60
+    except (TypeError, ValueError):
+        return value
+
+    if seconds.is_integer():
+        return int(seconds)
+    return seconds
+
+
+pipeline_run = {}
+pipeline_run_path = None
+pipeline_run_candidates = [
+    os.path.join('reports', 'dce_pipeline_run.json'),
+    os.path.join(source_dir, 'reports', 'dce_pipeline_run.json'),
+]
+
+for candidate in pipeline_run_candidates:
+    try:
+        with open(candidate, 'r') as file:
+            pipeline_run = json.load(file)
+        pipeline_run_path = candidate
+        break
+    except Exception:
+        continue
+
+python_blood_t1 = get_nested_value(pipeline_run, 'stages', 'A', 'timepoint_window', 'blood_t1_mean_sec')
+python_time_resolution = get_nested_value(pipeline_run, 'stages', 'B', 'time_reoslution_min')
+if python_time_resolution is None:
+    python_time_resolution = get_nested_value(pipeline_run, 'stages', 'B', 'time_resolution_min')
+python_time_resolution = convert_minutes_to_seconds(python_time_resolution)
+python_r2_fit = get_nested_value(pipeline_run, 'stages', 'B', 'array_shapes', 'fit_rsquared_cp_adj')
+python_r2_raw = get_nested_value(pipeline_run, 'stages', 'B', 'array_shapes', 'fit_rsquared_stlv_adj')
+
+# Keep both fields populated even if only one Python key is present.
+if python_r2_fit is None:
+    python_r2_fit = python_r2_raw
+if python_r2_raw is None:
+    python_r2_raw = python_r2_fit
+
+python_backend_used = get_nested_value(pipeline_run, 'stages', 'D', 'backend_used')
+
 try:
     with open('dce/A_dceR1info.log', 'r') as file:
         log_text = file.read()
@@ -397,6 +465,7 @@ snr_threshold = extract_value(snr_threshold_pattern, log_text)
 relaxivity = extract_value(relaxivity_pattern, log_text)
 steady_state = extract_value(steady_state_pattern, log_text)
 blood_t1_pattern = "Average Filtered AIF T1: "
+blood_t1 = python_blood_t1
 
 if RUNA_log:
     # get last line of log file
@@ -405,16 +474,21 @@ if RUNA_log:
         for line in file:
             if line[:-1] == blood_t1_pattern:
                 match = True
-            elif match:
+            elif match and blood_t1 is None:
                 blood_t1 = line[:-1]
                 match = False
         A_last_line = line
+elif pipeline_run_path is not None and blood_t1 is not None:
+    A_last_line = f'Loaded blood T1 from {pipeline_run_path}'
 else:
+    blood_t1 = 'Failed to load RUNA log'
     A_last_line = 'Failed to load RUNA log'
 
 try:
     # now get Time Resolution from log file
-    time_resolution = None
+    time_resolution = python_time_resolution
+    r2_aif_fit = python_r2_fit
+    r2_raw_values = python_r2_raw
     is_target_line = False
     B_log = 'dce/B_dcefitted_R1info.log'
     B_imported_log = 'dce/B_dceimported_R1info.log'
@@ -423,7 +497,7 @@ try:
             for line in f:
                 if "User selected time resolution (sec)" in line:
                     is_target_line = True
-                elif is_target_line:
+                elif is_target_line and time_resolution is None:
                     match = re.search(r'(\d+)(.*)\d*', line)
                     if match:
                         time_resolution = match.group()
@@ -434,7 +508,7 @@ try:
             for line in f:
                 if "User selected time resolution (sec)" in line:
                     is_target_line = True
-                elif is_target_line:
+                elif is_target_line and time_resolution is None:
                     match = re.search(r'(\d+)(.*)\d*', line)
                     if match:
                         time_resolution = match.group()
@@ -462,47 +536,48 @@ if RUNB_log:
     r2_values = extract_r2_values(log_text)
 
     if len(r2_values) >= 2:
-        r2_aif_fit = r2_values[-2]
-        r2_raw_values = r2_values[-1]
+        if r2_aif_fit is None:
+            r2_aif_fit = r2_values[-2]
+        if r2_raw_values is None:
+            r2_raw_values = r2_values[-1]
 
-    # get last line of B log file (time elapsed)
-    if os.path.isfile(B_log):
-        with open('dce/B_dcefitted_R1info.log', 'r') as file:
-            for line in file:
-                pass
-            B_last_line = line
-    elif os.path.isfile(B_imported_log):
-        with open('dce/B_dceimported_R1info.log', 'r') as file:
-            for line in file:
-                pass
-            B_last_line = line
-        r2_aif_fit = 'Imported AIF'
-        r2_raw_values = 'Imported AIF'
+    if os.path.isfile(B_imported_log):
+        if r2_aif_fit is None:
+            r2_aif_fit = 'Imported AIF'
+        if r2_raw_values is None:
+            r2_raw_values = 'Imported AIF'
+
+    if r2_aif_fit is None:
+        r2_aif_fit = 'Failed to load RUNB log'
+    if r2_raw_values is None:
+        r2_raw_values = 'Failed to load RUNB log'
 else:
     r2_aif_fit = 'Failed to load RUNB log'
     r2_raw_values = 'Failed to load RUNB log'
-    B_last_line = 'Failed to load RUNB log'
 
 try:
     # get GPU info
-    GPU = False
+    GPU_DCE = format_backend_usage(python_backend_used)
+    GPU = GPU_DCE == 'GPU was used'
     latest_log_file = max(glob.glob('dce/dce_*_fit.log'), key=os.path.getctime)
     latest_log_file_name = os.path.basename(latest_log_file)
     dce_model = latest_log_file_name.replace('dce_', '').replace('_fit.log', '')
     with open(latest_log_file, 'r') as f:
         for line in f:
-            if "Gpufit detected" in line:
+            if "Gpufit detected" in line and GPU_DCE is None:
                 GPU = True
-    if GPU:
-        GPU_DCE = 'GPU was used'
-    else:
-        GPU_DCE = 'CPU was used'
+    if GPU_DCE is None:
+        if GPU:
+            GPU_DCE = 'GPU was used'
+        else:
+            GPU_DCE = 'CPU was used'
     RUND_log = True
 except Exception as e:
     print("Error getting DCE GPU info from latest dce_*_fit.log")
     print(e)
     RUND_log = False
-    GPU_DCE = 'Failed to load GPU info'
+    if GPU_DCE is None:
+        GPU_DCE = 'Failed to load GPU info'
     dce_model = 'Failed to load DCE model'
 
 if RUND_log:
@@ -618,7 +693,6 @@ data = {
     'Time_Resolution' : 'Time Resolution: ' + str(time_resolution) + 's',
     'R_squared_fit' : 'R squared of AIF fit (fitted): ' + str(r2_aif_fit),
     'R_squared_raw' : 'R squared of AIF fit (raw): ' + str(r2_raw_values),
-    'B_last_line' : str(B_last_line),
     'DCE_AIF_fit' : '../figures/dceAIF_fitting.png',
     'DCE_AIF_timecurve' : '../figures/dce_timecurves.png',
     'DCE_model' : 'Model: ' + dce_model,
