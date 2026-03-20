@@ -10,11 +10,12 @@ import subprocess
 import threading
 import time
 from sys import argv
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from concurrent.futures import as_completed
 from utils.constants import KTRANS_MIN_THRESHOLD
+from utils.nifti import first_existing_nifti_path
+from utils.run_metadata import resolve_dce_report_metadata
 
 dir = argv[1]
 try:
@@ -99,6 +100,36 @@ whole_medial_temporal_cortex_outliers_exclude = []
 
 total_timepoints, successful_timepoints = [], []
 popAIF_curves, aif_curves = [], []
+def collect_population_values(data_dict, key, cast=None):
+    values = []
+    for entry in data_dict:
+        value = data_dict[entry][key]
+        if cast is not None:
+            value = cast(value)
+        values.append(value)
+    return values
+
+
+def summarize_population_values(data_dict, key, cast=None, use_nan=False, percentiles=()):
+    try:
+        values = collect_population_values(data_dict, key, cast=cast)
+    except Exception:
+        return tuple([-1] * (3 + len(percentiles)))
+
+    if len(values) == 0:
+        return tuple([-1] * (3 + len(percentiles)))
+
+    values = np.asarray(values, dtype=float)
+    mean_func = np.nanmean if use_nan else np.mean
+    median_func = np.nanmedian if use_nan else np.median
+    std_func = np.nanstd if use_nan else np.std
+
+    results = [mean_func(values), median_func(values), std_func(values)]
+    for percentile in percentiles:
+        results.append(np.nanpercentile(values, percentile) if use_nan else np.percentile(values, percentile))
+    return tuple(results)
+
+
 def get_case_stats(subject_id, timepoint):
         wmparc_failed = False
         stats_failed = False
@@ -294,24 +325,42 @@ def get_case_stats(subject_id, timepoint):
                     print(f"{filename} does not exist")
                     T1_wm_median = T1_gm_median = T1_blood = Ktrans_wm_median = Ktrans_gm_median = AIFitness = -1
 
+                report_dir = os.path.join(dceprep_dir, subject_id, timepoint)
+                dce_run_metadata = resolve_dce_report_metadata(report_dir)
+                TR = dce_run_metadata.get('tr_ms')
+                flip_angle = dce_run_metadata.get('fa_deg')
+                n_reps = dce_run_metadata.get('n_timepoints_output')
+                if dce_run_metadata.get('blood_t1_sec') is not None:
+                    T1_blood = dce_run_metadata.get('blood_t1_sec')
+                time_resolution = dce_run_metadata.get('time_resolution_sec')
+                aif_fitted_r2 = dce_run_metadata.get('r2_fit')
+
                 A_log = os.path.join(dceprep_dir, subject_id, timepoint, "dce/A_dceR1info.log")
                 try:
-                    with open(A_log, 'r') as f:
-                        for line in f:
-                            if "User selected TR (ms):" in line:
-                                TR = next(f).strip()
-                                TR = float(TR)
-                            if "User selected FA (degrees):" in line:
-                                flip_angle = next(f).strip()
-                                flip_angle = float(flip_angle)
-                            if "time points = " in line:
-                                n_reps = line.split(" ")[-1]
-                                n_reps = int(n_reps)
+                    if os.path.isfile(A_log):
+                        with open(A_log, 'r') as f:
+                            for line in f:
+                                if "User selected TR (ms):" in line and TR is None:
+                                    TR = next(f).strip()
+                                    TR = float(TR)
+                                if "User selected FA (degrees):" in line and flip_angle is None:
+                                    flip_angle = next(f).strip()
+                                    flip_angle = float(flip_angle)
+                                if "time points = " in line and n_reps is None:
+                                    n_reps = line.split(" ")[-1]
+                                    n_reps = int(n_reps)
+                    else:
+                        if TR is None or flip_angle is None or n_reps is None:
+                            print(f"RUNA log does not exist")
                 except Exception as e:
                     print("Error reading " + A_log)
                     print(e)
+                if TR is None:
                     TR = -1
+                if flip_angle is None:
                     flip_angle = -1
+                if n_reps is None:
+                    n_reps = -1
 
                 # read lines after "AIF mmol:"
                 aif_mmol = []
@@ -324,8 +373,11 @@ def get_case_stats(subject_id, timepoint):
                             for line in f:
                                 if "User selected time resolution (sec)" in line:
                                     # take next line as time resolution
-                                    time_resolution = next(f).strip()
-                                    time_resolution = float(time_resolution)
+                                    if time_resolution is None:
+                                        time_resolution = next(f).strip()
+                                        time_resolution = float(time_resolution)
+                                    else:
+                                        next(f)
                                 if "AIF mmol:" in line:
                                     aif_mmol = f.readlines()
                                     # find index of line after last numbers ("MAT results saved to: \n")
@@ -349,16 +401,20 @@ def get_case_stats(subject_id, timepoint):
                                     # take mean
                                     aif_mmol = np.mean(aif_mmol)
                                 if "Adjusted R^2 of AIF fit = " in line and not fitted_done:
-                                    aif_fitted_r2 = line.split()[-1]
-                                    aif_fitted_r2 = float(aif_fitted_r2)
+                                    if aif_fitted_r2 is None:
+                                        aif_fitted_r2 = line.split()[-1]
+                                        aif_fitted_r2 = float(aif_fitted_r2)
                                     fitted_done = True
                     elif os.path.isfile(B_imported_log):
                         with open(B_imported_log, 'r') as f:
                             for line in f:
                                 if "User selected time resolution (sec)" in line:
                                     # take next line as time resolution
-                                    time_resolution = next(f).strip()
-                                    time_resolution = float(time_resolution)
+                                    if time_resolution is None:
+                                        time_resolution = next(f).strip()
+                                        time_resolution = float(time_resolution)
+                                    else:
+                                        next(f)
                                 if "AIF mmol:" in line:
                                     aif_mmol = f.readlines()
                                     # find index of line after last numbers ("MAT results saved to: \n")
@@ -420,7 +476,10 @@ def get_case_stats(subject_id, timepoint):
 
             # read Vp map
             try:
-                Vp_map = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_Vp.nii")
+                Vp_map = first_existing_nifti_path(
+                    os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_Vp.nii"),
+                    os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_vp.nii"),
+                )
                 Vp_map = nib.load(Vp_map)
                 Vp_map = Vp_map.get_fdata()
             except:
@@ -1088,18 +1147,13 @@ except Exception as e:
     AIFitness_std = -1
     AIFitness_5th_percentile = -1
 
-try:
-    AIFitness_exclude = [float(population_data_exclude[entry]["AIFitness"]) for entry in population_data_exclude]
-    AIFitness_exclude_mean = np.mean(AIFitness_exclude)
-    AIFitness_exclude_median = np.median(AIFitness_exclude)
-    AIFitness_exclude_std = np.std(AIFitness_exclude)
-    AIFitness_exclude_5th_percentile = np.percentile(AIFitness_exclude, 5)
-except Exception as e:
-    print("AIFitness issue.", e)
-    AIFitness_exclude_mean = -1
-    AIFitness_exclude_median = -1
-    AIFitness_exclude_std = -1
-    AIFitness_exclude_5th_percentile = -1
+AIFitness_exclude = collect_population_values(population_data_exclude, "AIFitness", cast=float)
+AIFitness_exclude_mean, AIFitness_exclude_median, AIFitness_exclude_std, AIFitness_exclude_5th_percentile = summarize_population_values(
+    population_data_exclude,
+    "AIFitness",
+    cast=float,
+    percentiles=(5,),
+)
 
 try:
     aif_mmol_mean = np.mean([population_data[entry]["aif_mmol"] for entry in population_data])
@@ -1115,20 +1169,12 @@ except Exception as e:
     aif_mmol_5th_percentile = -1
     aif_mmol_95th_percentile = -1
 
-try:
-    aif_mmol_exclude = [population_data_exclude[entry]["aif_mmol"] for entry in population_data_exclude]
-    aif_mmol_mean_exclude = np.mean(aif_mmol_exclude)
-    aif_mmol_median_exclude = np.median(aif_mmol_exclude)
-    aif_mmol_std_exclude = np.std(aif_mmol_exclude)
-    aif_mmol_5th_percentile_exclude = np.percentile(aif_mmol_exclude, 5)
-    aif_mmol_95th_percentile_exclude = np.percentile(aif_mmol_exclude, 95)
-except Exception as e:
-    print(e)
-    aif_mmol_mean_exclude = -1
-    aif_mmol_median_exclude = -1
-    aif_mmol_std_exclude = -1
-    aif_mmol_5th_percentile_exclude = -1
-    aif_mmol_95th_percentile_exclude = -1
+aif_mmol_exclude = collect_population_values(population_data_exclude, "aif_mmol")
+aif_mmol_mean_exclude, aif_mmol_median_exclude, aif_mmol_std_exclude, aif_mmol_5th_percentile_exclude, aif_mmol_95th_percentile_exclude = summarize_population_values(
+    population_data_exclude,
+    "aif_mmol",
+    percentiles=(5, 95),
+)
 
 try:
     T1_wm_mean = np.mean([population_data[entry]["T1_wm_median"] for entry in population_data])
@@ -1144,19 +1190,11 @@ except Exception as e:
     T1_wm_5th_percentile = -1
     T1_wm_95th_percentile = -1
 
-try:
-    T1_wm_mean_exclude = np.mean([population_data_exclude[entry]["T1_wm_median"] for entry in population_data_exclude])
-    T1_wm_median_exclude = np.median([population_data_exclude[entry]["T1_wm_median"] for entry in population_data_exclude])
-    T1_wm_std_exclude = np.std([population_data_exclude[entry]["T1_wm_median"] for entry in population_data_exclude])
-    T1_wm_5th_percentile_exclude = np.percentile([population_data_exclude[entry]["T1_wm_median"] for entry in population_data_exclude], 5)
-    T1_wm_95th_percentile_exclude = np.percentile([population_data_exclude[entry]["T1_wm_median"] for entry in population_data_exclude], 95)
-except Exception as e:
-    print(e)
-    T1_wm_mean_exclude = -1
-    T1_wm_median_exclude = -1
-    T1_wm_std_exclude = -1
-    T1_wm_5th_percentile_exclude = -1
-    T1_wm_95th_percentile_exclude = -1
+T1_wm_mean_exclude, T1_wm_median_exclude, T1_wm_std_exclude, T1_wm_5th_percentile_exclude, T1_wm_95th_percentile_exclude = summarize_population_values(
+    population_data_exclude,
+    "T1_wm_median",
+    percentiles=(5, 95),
+)
 
 try:
     T1_gm_mean = np.mean([population_data[entry]["T1_gm_median"] for entry in population_data])
@@ -1172,19 +1210,11 @@ except Exception as e:
     T1_gm_5th_percentile = -1
     T1_gm_95th_percentile = -1
 
-try:
-    T1_gm_mean_exclude = np.mean([population_data_exclude[entry]["T1_gm_median"] for entry in population_data_exclude])
-    T1_gm_median_exclude = np.median([population_data_exclude[entry]["T1_gm_median"] for entry in population_data_exclude])
-    T1_gm_std_exclude = np.std([population_data_exclude[entry]["T1_gm_median"] for entry in population_data_exclude])
-    T1_gm_5th_percentile_exclude = np.percentile([population_data_exclude[entry]["T1_gm_median"] for entry in population_data_exclude], 5)
-    T1_gm_95th_percentile_exclude = np.percentile([population_data_exclude[entry]["T1_gm_median"] for entry in population_data_exclude], 95)
-except Exception as e:
-    print(e)
-    T1_gm_mean_exclude = -1
-    T1_gm_median_exclude = -1
-    T1_gm_std_exclude = -1
-    T1_gm_5th_percentile_exclude = -1
-    T1_gm_95th_percentile_exclude = -1
+T1_gm_mean_exclude, T1_gm_median_exclude, T1_gm_std_exclude, T1_gm_5th_percentile_exclude, T1_gm_95th_percentile_exclude = summarize_population_values(
+    population_data_exclude,
+    "T1_gm_median",
+    percentiles=(5, 95),
+)
 
 try:
     T1_blood_mean = np.mean([population_data[entry]["T1_blood"] for entry in population_data])
@@ -1200,19 +1230,11 @@ except Exception as e:
     T1_blood_5th_percentile = -1
     T1_blood_95th_percentile = -1
 
-try:
-    T1_blood_mean_exclude = np.mean([population_data_exclude[entry]["T1_blood"] for entry in population_data_exclude])
-    T1_blood_median_exclude = np.median([population_data_exclude[entry]["T1_blood"] for entry in population_data_exclude])
-    T1_blood_std_exclude = np.std([population_data_exclude[entry]["T1_blood"] for entry in population_data_exclude])
-    T1_blood_5th_percentile_exclude = np.percentile([population_data_exclude[entry]["T1_blood"] for entry in population_data_exclude], 5)
-    T1_blood_95th_percentile_exclude = np.percentile([population_data_exclude[entry]["T1_blood"] for entry in population_data_exclude], 95)
-except Exception as e:
-    print(e)
-    T1_blood_mean_exclude = -1
-    T1_blood_median_exclude = -1
-    T1_blood_std_exclude = -1
-    T1_blood_5th_percentile_exclude = -1
-    T1_blood_95th_percentile_exclude = -1
+T1_blood_mean_exclude, T1_blood_median_exclude, T1_blood_std_exclude, T1_blood_5th_percentile_exclude, T1_blood_95th_percentile_exclude = summarize_population_values(
+    population_data_exclude,
+    "T1_blood",
+    percentiles=(5, 95),
+)
 
 try:
     Ktrans_wm_mean = np.nanmean([population_data[entry]["Ktrans_wm_median"] for entry in population_data])
@@ -1230,141 +1252,106 @@ except Exception as e:
     Ktrans_gm_median = -1
     Ktrans_gm_std = -1
 
-try:
-    wm_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_wm_median"] for entry in population_data_exclude])
-    wm_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_wm_median"] for entry in population_data_exclude])
-    wm_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_wm_median"] for entry in population_data_exclude])
-    gm_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_gm_median"] for entry in population_data_exclude])
-    gm_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_gm_median"] for entry in population_data_exclude])
-    gm_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_gm_median"] for entry in population_data_exclude])
-except Exception as e:
-    print(e)
-    wm_mean_exclude = -1
-    wm_median_exclude = -1
-    wm_std_exclude = -1
-    gm_mean_exclude = -1
-    gm_median_exclude = -1
-    gm_std_exclude = -1
+wm_mean_exclude, wm_median_exclude, wm_std_exclude = summarize_population_values(
+    population_data_exclude,
+    "Ktrans_wm_median",
+    use_nan=True,
+)
+gm_mean_exclude, gm_median_exclude, gm_std_exclude = summarize_population_values(
+    population_data_exclude,
+    "Ktrans_gm_median",
+    use_nan=True,
+)
 
 whole_hippo_Ktrans_mean = np.nanmean([population_data[entry]["Ktrans_Hippo_median"] for entry in population_data])
 whole_hippo_Ktrans_median = np.nanmedian([population_data[entry]["Ktrans_Hippo_median"] for entry in population_data])
 whole_hippo_Ktrans_std = np.nanstd([population_data[entry]["Ktrans_Hippo_median"] for entry in population_data])
 
-whole_hippo_Ktrans_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_Hippo_median"] for entry in population_data_exclude])
-whole_hippo_Ktrans_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_Hippo_median"] for entry in population_data_exclude])
-whole_hippo_Ktrans_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_Hippo_median"] for entry in population_data_exclude])
+whole_hippo_Ktrans_mean_exclude, whole_hippo_Ktrans_median_exclude, whole_hippo_Ktrans_std_exclude = summarize_population_values(population_data_exclude, "Ktrans_Hippo_median", use_nan=True)
 
 whole_phg_Ktrans_mean = np.nanmean([population_data[entry]["Ktrans_PhG_median"] for entry in population_data])
 whole_phg_Ktrans_median = np.nanmedian([population_data[entry]["Ktrans_PhG_median"] for entry in population_data])
 whole_phg_Ktrans_std = np.nanstd([population_data[entry]["Ktrans_PhG_median"] for entry in population_data])
 
-whole_phg_Ktrans_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_PhG_median"] for entry in population_data_exclude])
-whole_phg_Ktrans_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_PhG_median"] for entry in population_data_exclude])
-whole_phg_Ktrans_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_PhG_median"] for entry in population_data_exclude])
+whole_phg_Ktrans_mean_exclude, whole_phg_Ktrans_median_exclude, whole_phg_Ktrans_std_exclude = summarize_population_values(population_data_exclude, "Ktrans_PhG_median", use_nan=True)
 
 whole_putamen_Ktrans_mean = np.nanmean([population_data[entry]["Ktrans_Putamen_median"] for entry in population_data])
 whole_putamen_Ktrans_median = np.nanmedian([population_data[entry]["Ktrans_Putamen_median"] for entry in population_data])
 whole_putamen_Ktrans_std = np.nanstd([population_data[entry]["Ktrans_Putamen_median"] for entry in population_data])
 
-whole_putamen_Ktrans_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_Putamen_median"] for entry in population_data_exclude])
-whole_putamen_Ktrans_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_Putamen_median"] for entry in population_data_exclude])
-whole_putamen_Ktrans_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_Putamen_median"] for entry in population_data_exclude])
+whole_putamen_Ktrans_mean_exclude, whole_putamen_Ktrans_median_exclude, whole_putamen_Ktrans_std_exclude = summarize_population_values(population_data_exclude, "Ktrans_Putamen_median", use_nan=True)
 
 whole_pallidum_Ktrans_mean = np.nanmean([population_data[entry]["Ktrans_Pallidum_median"] for entry in population_data])
 whole_pallidum_Ktrans_median = np.nanmedian([population_data[entry]["Ktrans_Pallidum_median"] for entry in population_data])
 whole_pallidum_Ktrans_std = np.nanstd([population_data[entry]["Ktrans_Pallidum_median"] for entry in population_data])
 
-whole_pallidum_Ktrans_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_Pallidum_median"] for entry in population_data_exclude])
-whole_pallidum_Ktrans_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_Pallidum_median"] for entry in population_data_exclude])
-whole_pallidum_Ktrans_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_Pallidum_median"] for entry in population_data_exclude])
+whole_pallidum_Ktrans_mean_exclude, whole_pallidum_Ktrans_median_exclude, whole_pallidum_Ktrans_std_exclude = summarize_population_values(population_data_exclude, "Ktrans_Pallidum_median", use_nan=True)
 
 whole_thalamus_Ktrans_mean = np.nanmean([population_data[entry]["Ktrans_Thalamus_median"] for entry in population_data])
 whole_thalamus_Ktrans_median = np.nanmedian([population_data[entry]["Ktrans_Thalamus_median"] for entry in population_data])
 whole_thalamus_Ktrans_std = np.nanstd([population_data[entry]["Ktrans_Thalamus_median"] for entry in population_data])
 
-whole_thalamus_Ktrans_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_Thalamus_median"] for entry in population_data_exclude])
-whole_thalamus_Ktrans_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_Thalamus_median"] for entry in population_data_exclude])
-whole_thalamus_Ktrans_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_Thalamus_median"] for entry in population_data_exclude])
+whole_thalamus_Ktrans_mean_exclude, whole_thalamus_Ktrans_median_exclude, whole_thalamus_Ktrans_std_exclude = summarize_population_values(population_data_exclude, "Ktrans_Thalamus_median", use_nan=True)
 
 whole_caudate_Ktrans_mean = np.nanmean([population_data[entry]["Ktrans_Caudate_median"] for entry in population_data])
 whole_caudate_Ktrans_median = np.nanmedian([population_data[entry]["Ktrans_Caudate_median"] for entry in population_data])
 whole_caudate_Ktrans_std = np.nanstd([population_data[entry]["Ktrans_Caudate_median"] for entry in population_data])
 
-whole_caudate_Ktrans_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_Caudate_median"] for entry in population_data_exclude])
-whole_caudate_Ktrans_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_Caudate_median"] for entry in population_data_exclude])
-whole_caudate_Ktrans_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_Caudate_median"] for entry in population_data_exclude])
+whole_caudate_Ktrans_mean_exclude, whole_caudate_Ktrans_median_exclude, whole_caudate_Ktrans_std_exclude = summarize_population_values(population_data_exclude, "Ktrans_Caudate_median", use_nan=True)
 
 whole_amygdala_Ktrans_mean = np.nanmean([population_data[entry]["Ktrans_Amygdala_median"] for entry in population_data])
 whole_amygdala_Ktrans_median = np.nanmedian([population_data[entry]["Ktrans_Amygdala_median"] for entry in population_data])
 whole_amygdala_Ktrans_std = np.nanstd([population_data[entry]["Ktrans_Amygdala_median"] for entry in population_data])
 
-whole_amygdala_Ktrans_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_Amygdala_median"] for entry in population_data_exclude])
-whole_amygdala_Ktrans_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_Amygdala_median"] for entry in population_data_exclude])
-whole_amygdala_Ktrans_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_Amygdala_median"] for entry in population_data_exclude])
+whole_amygdala_Ktrans_mean_exclude, whole_amygdala_Ktrans_median_exclude, whole_amygdala_Ktrans_std_exclude = summarize_population_values(population_data_exclude, "Ktrans_Amygdala_median", use_nan=True)
 
 whole_entorhinal_cortex_Ktrans_mean = np.nanmean([population_data[entry]["Ktrans_Entorhinal_cortex_median"] for entry in population_data])
 whole_entorhinal_cortex_Ktrans_median = np.nanmedian([population_data[entry]["Ktrans_Entorhinal_cortex_median"] for entry in population_data])
 whole_entorhinal_cortex_Ktrans_std = np.nanstd([population_data[entry]["Ktrans_Entorhinal_cortex_median"] for entry in population_data])
 
-whole_entorhinal_cortex_Ktrans_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_Entorhinal_cortex_median"] for entry in population_data_exclude])
-whole_entorhinal_cortex_Ktrans_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_Entorhinal_cortex_median"] for entry in population_data_exclude])
-whole_entorhinal_cortex_Ktrans_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_Entorhinal_cortex_median"] for entry in population_data_exclude])
+whole_entorhinal_cortex_Ktrans_mean_exclude, whole_entorhinal_cortex_Ktrans_median_exclude, whole_entorhinal_cortex_Ktrans_std_exclude = summarize_population_values(population_data_exclude, "Ktrans_Entorhinal_cortex_median", use_nan=True)
 
 whole_fusiform_gyrus_cortex_Ktrans_mean = np.nanmean([population_data[entry]["Ktrans_Fusiform_gyrus_cortex_median"] for entry in population_data])
 whole_fusiform_gyrus_cortex_Ktrans_median = np.nanmedian([population_data[entry]["Ktrans_Fusiform_gyrus_cortex_median"] for entry in population_data])
 whole_fusiform_gyrus_cortex_Ktrans_std = np.nanstd([population_data[entry]["Ktrans_Fusiform_gyrus_cortex_median"] for entry in population_data])
 
-whole_fusiform_gyrus_cortex_Ktrans_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_Fusiform_gyrus_cortex_median"] for entry in population_data_exclude])
-whole_fusiform_gyrus_cortex_Ktrans_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_Fusiform_gyrus_cortex_median"] for entry in population_data_exclude])
-whole_fusiform_gyrus_cortex_Ktrans_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_Fusiform_gyrus_cortex_median"] for entry in population_data_exclude])
+whole_fusiform_gyrus_cortex_Ktrans_mean_exclude, whole_fusiform_gyrus_cortex_Ktrans_median_exclude, whole_fusiform_gyrus_cortex_Ktrans_std_exclude = summarize_population_values(population_data_exclude, "Ktrans_Fusiform_gyrus_cortex_median", use_nan=True)
 
 whole_fusiform_gyrus_WM_Ktrans_mean = np.nanmean([population_data[entry]["Ktrans_Fusiform_gyrus_WM_median"] for entry in population_data])
 whole_fusiform_gyrus_WM_Ktrans_median = np.nanmedian([population_data[entry]["Ktrans_Fusiform_gyrus_WM_median"] for entry in population_data])
 whole_fusiform_gyrus_WM_Ktrans_std = np.nanstd([population_data[entry]["Ktrans_Fusiform_gyrus_WM_median"] for entry in population_data])
 
-whole_fusiform_gyrus_WM_Ktrans_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_Fusiform_gyrus_WM_median"] for entry in population_data_exclude])
-whole_fusiform_gyrus_WM_Ktrans_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_Fusiform_gyrus_WM_median"] for entry in population_data_exclude])
-whole_fusiform_gyrus_WM_Ktrans_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_Fusiform_gyrus_WM_median"] for entry in population_data_exclude])
+whole_fusiform_gyrus_WM_Ktrans_mean_exclude, whole_fusiform_gyrus_WM_Ktrans_median_exclude, whole_fusiform_gyrus_WM_Ktrans_std_exclude = summarize_population_values(population_data_exclude, "Ktrans_Fusiform_gyrus_WM_median", use_nan=True)
 
 whole_insula_WM_Ktrans_mean = np.nanmean([population_data[entry]["Ktrans_Insula_WM_median"] for entry in population_data])
 whole_insula_WM_Ktrans_median = np.nanmedian([population_data[entry]["Ktrans_Insula_WM_median"] for entry in population_data])
 whole_insula_WM_Ktrans_std = np.nanstd([population_data[entry]["Ktrans_Insula_WM_median"] for entry in population_data])
 
-whole_insula_WM_Ktrans_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_Insula_WM_median"] for entry in population_data_exclude])
-whole_insula_WM_Ktrans_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_Insula_WM_median"] for entry in population_data_exclude])
-whole_insula_WM_Ktrans_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_Insula_WM_median"] for entry in population_data_exclude])
+whole_insula_WM_Ktrans_mean_exclude, whole_insula_WM_Ktrans_median_exclude, whole_insula_WM_Ktrans_std_exclude = summarize_population_values(population_data_exclude, "Ktrans_Insula_WM_median", use_nan=True)
 
 whole_superior_temporal_cortex_Ktrans_mean = np.nanmean([population_data[entry]["Ktrans_Superior_temporal_cortex_median"] for entry in population_data])
 whole_superior_temporal_cortex_Ktrans_median = np.nanmedian([population_data[entry]["Ktrans_Superior_temporal_cortex_median"] for entry in population_data])
 whole_superior_temporal_cortex_Ktrans_std = np.nanstd([population_data[entry]["Ktrans_Superior_temporal_cortex_median"] for entry in population_data])
 
-whole_superior_temporal_cortex_Ktrans_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_Superior_temporal_cortex_median"] for entry in population_data_exclude])
-whole_superior_temporal_cortex_Ktrans_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_Superior_temporal_cortex_median"] for entry in population_data_exclude])
-whole_superior_temporal_cortex_Ktrans_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_Superior_temporal_cortex_median"] for entry in population_data_exclude])
+whole_superior_temporal_cortex_Ktrans_mean_exclude, whole_superior_temporal_cortex_Ktrans_median_exclude, whole_superior_temporal_cortex_Ktrans_std_exclude = summarize_population_values(population_data_exclude, "Ktrans_Superior_temporal_cortex_median", use_nan=True)
 
 whole_inferior_temporal_cortex_Ktrans_mean = np.nanmean([population_data[entry]["Ktrans_Inferior_temporal_cortex_median"] for entry in population_data])
 whole_inferior_temporal_cortex_Ktrans_median = np.nanmedian([population_data[entry]["Ktrans_Inferior_temporal_cortex_median"] for entry in population_data])
 whole_inferior_temporal_cortex_Ktrans_std = np.nanstd([population_data[entry]["Ktrans_Inferior_temporal_cortex_median"] for entry in population_data])
 
-whole_inferior_temporal_cortex_Ktrans_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_Inferior_temporal_cortex_median"] for entry in population_data_exclude])
-whole_inferior_temporal_cortex_Ktrans_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_Inferior_temporal_cortex_median"] for entry in population_data_exclude])
-whole_inferior_temporal_cortex_Ktrans_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_Inferior_temporal_cortex_median"] for entry in population_data_exclude])
+whole_inferior_temporal_cortex_Ktrans_mean_exclude, whole_inferior_temporal_cortex_Ktrans_median_exclude, whole_inferior_temporal_cortex_Ktrans_std_exclude = summarize_population_values(population_data_exclude, "Ktrans_Inferior_temporal_cortex_median", use_nan=True)
 
 whole_posterior_cingulate_cortex_Ktrans_mean = np.nanmean([population_data[entry]["Ktrans_Posterior_cingulate_cortex_median"] for entry in population_data])
 whole_posterior_cingulate_cortex_Ktrans_median = np.nanmedian([population_data[entry]["Ktrans_Posterior_cingulate_cortex_median"] for entry in population_data])
 whole_posterior_cingulate_cortex_Ktrans_std = np.nanstd([population_data[entry]["Ktrans_Posterior_cingulate_cortex_median"] for entry in population_data])
 
-whole_posterior_cingulate_cortex_Ktrans_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_Posterior_cingulate_cortex_median"] for entry in population_data_exclude])
-whole_posterior_cingulate_cortex_Ktrans_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_Posterior_cingulate_cortex_median"] for entry in population_data_exclude])
-whole_posterior_cingulate_cortex_Ktrans_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_Posterior_cingulate_cortex_median"] for entry in population_data_exclude])
+whole_posterior_cingulate_cortex_Ktrans_mean_exclude, whole_posterior_cingulate_cortex_Ktrans_median_exclude, whole_posterior_cingulate_cortex_Ktrans_std_exclude = summarize_population_values(population_data_exclude, "Ktrans_Posterior_cingulate_cortex_median", use_nan=True)
 
 whole_medial_temporal_cortex_Ktrans_mean = np.nanmean([population_data[entry]["Ktrans_Medial_temporal_cortex_median"] for entry in population_data])
 whole_medial_temporal_cortex_Ktrans_median = np.nanmedian([population_data[entry]["Ktrans_Medial_temporal_cortex_median"] for entry in population_data])
 whole_medial_temporal_cortex_Ktrans_std = np.nanstd([population_data[entry]["Ktrans_Medial_temporal_cortex_median"] for entry in population_data])
 
-whole_medial_temporal_cortex_Ktrans_mean_exclude = np.nanmean([population_data_exclude[entry]["Ktrans_Medial_temporal_cortex_median"] for entry in population_data_exclude])
-whole_medial_temporal_cortex_Ktrans_median_exclude = np.nanmedian([population_data_exclude[entry]["Ktrans_Medial_temporal_cortex_median"] for entry in population_data_exclude])
-whole_medial_temporal_cortex_Ktrans_std_exclude = np.nanstd([population_data_exclude[entry]["Ktrans_Medial_temporal_cortex_median"] for entry in population_data_exclude])
+whole_medial_temporal_cortex_Ktrans_mean_exclude, whole_medial_temporal_cortex_Ktrans_median_exclude, whole_medial_temporal_cortex_Ktrans_std_exclude = summarize_population_values(population_data_exclude, "Ktrans_Medial_temporal_cortex_median", use_nan=True)
 
 # if no outliers, set to "None"
 if len(Ktrans_wm_outliers) == 0:

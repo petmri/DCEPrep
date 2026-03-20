@@ -1,12 +1,11 @@
 import sys
 import matplotlib.pyplot as plt
-import nibabel as nib
+# import nibabel as nib
 import numpy as np
 from math import sqrt
-from numpy.core.multiarray import unravel_index
 # from numpy.lib.function_base import corrcoef
-from sklearn.linear_model import LinearRegression
-from statistics import mean
+# from sklearn.linear_model import LinearRegression
+# from statistics import mean
 
 
 dir = sys.argv[1]
@@ -14,7 +13,7 @@ prefix = sys.argv[2]
 mc_params = np.loadtxt(dir + "/" + prefix + "_desc-hmc_DCE.nii.par", dtype=float)
 mc_params[:,0:3] = mc_params[:,0:3]*70
 max_i = np.abs(mc_params).argmax()
-max_disp_i = unravel_index(max_i, mc_params.shape)
+max_disp_i = np.unravel_index(max_i, mc_params.shape)
 max_disp = str(mc_params[max_disp_i])
 param_num = max_disp_i[1]
 # get max displacement of 3d transformation
