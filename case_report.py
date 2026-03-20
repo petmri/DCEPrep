@@ -15,6 +15,8 @@ from matplotlib import colors as mcolors
 from aif_metric import *
 import glob
 from utils.constants import KTRANS_MIN_THRESHOLD
+from utils.nifti import *
+from utils.run_metadata import *
 
 source_dir = sys.argv[1]
 # source_dir = sys.argv[2]
@@ -27,7 +29,7 @@ files_to_reorient = [f'anat/{prefix}_flip-01_space-DCEref_VFA.nii.gz', f'dce/{pr
                      f'anat/{prefix}_space-DCEref_T1w.nii.gz', f'anat/{prefix}_space-DCEref_label-WM_mask.nii.gz',
                      f'anat/{prefix}_space-DCEref_T1map.nii', f'anat/{prefix}_space-DCEref_desc-brain_mask.nii.gz',
                      f'anat/{prefix}_space-DCEref_label-GM_mask.nii.gz', f'anat/{prefix}_space-DCEref_desc-wmparc.nii.gz',
-                     f'dce/{prefix}_desc-hmc_DCEref.nii.gz', f'dce/{prefix}_DCEref.nii.gz']
+                     first_existing_nifti_path(f'dce/{prefix}_desc-hmc_DCEref.nii.gz', f'dce/{prefix}_DCEref.nii.gz')]
 # if c3d exists, reorient files to RAS
 dimensions = 0
 voxel_size = 0
@@ -36,15 +38,16 @@ mean_gm = 0
 expected_ktrans_vmax = 0.005
 if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
     for file in files_to_reorient:
+        file = resolve_nifti_path(file)
         if not os.path.exists(file):
             print(f"File does not exist, skipping: {file}")
             continue
-        file_no_extension = file.split('.')[0]
+        file_no_extension = nifti_stem(file)
         command = ['c3d', file, '-orient', 'RAS', '-o', file_no_extension + '_RAS.nii.gz']
         try:
             subprocess.run(command, check=True)
-            if file == (f'dce/{prefix}_Ktrans.nii'):
-                ktrans = nib.load(f'dce/{prefix}_Ktrans_RAS.nii.gz')
+            if nifti_stem(file) == f'dce/{prefix}_Ktrans':
+                ktrans = nib.load(resolve_nifti_path(f'dce/{prefix}_Ktrans_RAS.nii.gz'))
                 ktrans_data = ktrans.get_fdata()
                 ktrans_flipped = np.flip(ktrans_data, axis=1)
                 ktrans_flipped = nib.Nifti1Image(ktrans_flipped, ktrans.affine, ktrans.header)
@@ -68,15 +71,16 @@ if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
 else:
     # use freesurfer's mri_convert to reorient files to RAS
     for file in files_to_reorient:
+        file = resolve_nifti_path(file)
         if not os.path.exists(file):
             print(f"File does not exist, skipping: {file}")
             continue
-        file_no_extension = file.split('.')[0]
+        file_no_extension = nifti_stem(file)
         command = ['mri_convert', '--in_orientation', 'LPI', file, file_no_extension + '_RAS.nii.gz']
         try:
             subprocess.run(command, check=True)
-            if file == (f'dce/{prefix}_Ktrans.nii'):
-                ktrans = nib.load(f'dce/{prefix}_Ktrans_RAS.nii.gz')
+            if nifti_stem(file) == f'dce/{prefix}_Ktrans':
+                ktrans = nib.load(resolve_nifti_path(f'dce/{prefix}_Ktrans_RAS.nii.gz'))
                 ktrans_data = ktrans.get_fdata()
                 ktrans_flipped = np.flip(ktrans_data, axis=1)
                 ktrans_flipped = nib.Nifti1Image(ktrans_flipped, ktrans.affine, ktrans.header)
@@ -153,13 +157,18 @@ except Exception as e:
     print(e)
 
 try:
+    t1w_native = load_nifti_float32(f'{source_dir}/anat/{prefix}_T1w.nii.gz')
+    brain_mask_native = load_nifti_float32(f'anat/{prefix}_desc-brain_mask.nii.gz')
+    wm_mask_native = load_nifti_float32(f'anat/{prefix}_label-WM_mask.nii.gz')
+    gm_mask_native = load_nifti_float32(f'anat/{prefix}_label-GM_mask.nii.gz')
+
     # brain mask
-    plotting.plot_roi(f'anat/{prefix}_desc-brain_mask.nii.gz', bg_img=f'{source_dir}/anat/{prefix}_T1w.nii.gz', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=-1, cmap='gray', output_file='figures/t1w_mask.svg', colorbar=False, draw_cross=False, title='mask')
+    plotting.plot_roi(brain_mask_native, bg_img=t1w_native, cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=-1, cmap='gray', output_file='figures/t1w_mask.svg', colorbar=False, draw_cross=False, title='mask')
 
     # T1w segmentation
-    plotting.plot_roi(f'{source_dir}/anat/{prefix}_T1w.nii.gz', bg_img=f'{source_dir}/anat/{prefix}_T1w.nii.gz', cmap='gray', output_file='figures/t1w.svg', cut_coords=(-20, 0, -15), dim=-1, colorbar=False, draw_cross=False)
-    plotting.plot_roi(f'anat/{prefix}_label-WM_mask.nii.gz', bg_img=f'{source_dir}/anat/{prefix}_T1w.nii.gz', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=-1, cmap='gray', output_file='figures/t1w_wm.svg', colorbar=False, draw_cross=False, title='wm')
-    plotting.plot_roi(f'anat/{prefix}_label-GM_mask.nii.gz', bg_img=f'{source_dir}/anat/{prefix}_T1w.nii.gz', cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=-1, cmap='gray', output_file='figures/t1w_gm.svg', colorbar=False, draw_cross=False, title='gm')
+    plotting.plot_roi(t1w_native, bg_img=t1w_native, cmap='gray', output_file='figures/t1w.svg', cut_coords=(-20, 0, -15), dim=-1, colorbar=False, draw_cross=False)
+    plotting.plot_roi(wm_mask_native, bg_img=t1w_native, cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=-1, cmap='gray', output_file='figures/t1w_wm.svg', colorbar=False, draw_cross=False, title='wm')
+    plotting.plot_roi(gm_mask_native, bg_img=t1w_native, cut_coords=(-20, 0, -15), vmin=0, vmax=1, dim=-1, cmap='gray', output_file='figures/t1w_gm.svg', colorbar=False, draw_cross=False, title='gm')
 except Exception as e:
     print("Error plotting T1w segmentation")
     print(e)
@@ -169,26 +178,26 @@ try:
     # plotting.plot_anat(f'anat/{prefix}_label-WM_mask_RAS.nii.gz', cmap='gray', output_file='figures/t1w_to_dceref.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w to DCEref')
 
     # T1w to dyn
-    t1w_dceref = nib.load(f'anat/{prefix}_space-DCEref_T1w_RAS.nii.gz')
+    t1w_dceref = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_T1w_RAS.nii.gz'))
     t1w_dceref_data = t1w_dceref.get_fdata()
     t1w_dceref_flipped = np.flip(t1w_dceref_data, axis=1)
     t1w_dceref_flipped = nib.Nifti1Image(t1w_dceref_flipped, t1w_dceref.affine, t1w_dceref.header)
     plotting.plot_anat(t1w_dceref_flipped, cmap='gray', output_file=f'figures/{prefix}_space-DCEref_T1w.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w to dyn')
 
     # flip T1w masks
-    t1w_mask = nib.load(f'anat/{prefix}_space-DCEref_desc-brain_mask_RAS.nii.gz')
+    t1w_mask = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_desc-brain_mask_RAS.nii.gz'))
     t1w_mask_data = t1w_mask.get_fdata()
     t1w_mask_flipped = np.flip(t1w_mask_data, axis=1)
     t1w_mask_flipped = nib.Nifti1Image(t1w_mask_flipped, t1w_mask.affine, t1w_mask.header)
     # nib.save(t1w_mask_flipped, str(tp_dir) + '/T1_bet_mask_RAS.nii')
 
-    t1w_wm_mask = nib.load(f'anat/{prefix}_space-DCEref_label-WM_mask_RAS.nii.gz')
+    t1w_wm_mask = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_label-WM_mask_RAS.nii.gz'))
     t1w_wm_mask_data = t1w_wm_mask.get_fdata()
     t1w_wm_mask_flipped = np.flip(t1w_wm_mask_data, axis=1)
     t1w_wm_mask_flipped = nib.Nifti1Image(t1w_wm_mask_flipped, t1w_wm_mask.affine, t1w_wm_mask.header)
     # nib.save(t1w_wm_mask_flipped, str(tp_dir) + '/T1_wm_mask_RAS.nii')
 
-    t1w_gm_mask = nib.load(f'anat/{prefix}_space-DCEref_label-GM_mask_RAS.nii.gz')
+    t1w_gm_mask = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_label-GM_mask_RAS.nii.gz'))
     t1w_gm_mask_data = t1w_gm_mask.get_fdata()
     t1w_gm_mask_flipped = np.flip(t1w_gm_mask_data, axis=1)
     t1w_gm_mask_flipped = nib.Nifti1Image(t1w_gm_mask_flipped, t1w_gm_mask.affine, t1w_gm_mask.header)
@@ -203,50 +212,60 @@ except Exception as e:
 
 try:
     # T1 map
+    t1_run_metadata = resolve_t1_report_metadata(os.getcwd(), source_dir)
+    python_t1_flip_angles = t1_run_metadata.get('flip_angles_deg') or []
+    python_t1_tr = t1_run_metadata.get('tr_ms')
+    python_t1_backend = format_backend_usage(t1_run_metadata.get('backend_used'))
+
     # read txt file
-    FAs = []
-    is_target_line = False
-    with open(f'anat/{prefix}_space-DCEref_T1map.txt', 'r') as f:
-        for line in f:
-            if "User selected TE/TR/FA/TI: " in line:
-                is_target_line = True
-            elif is_target_line:
-                match = re.search(r'\d+', line)
-                if match:
-                    number = int(match.group())
-                    FAs.append(number)
-                else:
-                    is_target_line = False
-    # take last set of non-repeating numbers
-    FAs = FAs[-5:]
+    FAs = [int(round(value)) for value in python_t1_flip_angles]
+    if not FAs:
+        is_target_line = False
+        with open(f'anat/{prefix}_space-DCEref_T1map.txt', 'r') as f:
+            for line in f:
+                if "User selected TE/TR/FA/TI: " in line:
+                    is_target_line = True
+                elif is_target_line:
+                    match = re.search(r'\d+', line)
+                    if match:
+                        number = int(match.group())
+                        FAs.append(number)
+                    else:
+                        is_target_line = False
+        # take last set of non-repeating numbers
+        FAs = FAs[-5:]
+
     # convert from list to string
     FA_str = [str(i) for i in FAs]
     FA_str = ', '.join(FA_str)
 
     # now get TR from txt file
-    TR = None
-    is_target_line = False
-    with open(f'anat/{prefix}_space-DCEref_T1map.txt', 'r') as f:
-        for line in f:
-            if "User selected tr: " in line:
-                is_target_line = True
-            elif is_target_line:
-                match = re.search(r'\d+.\d+', line)
-                if match:
-                    TR = match.group()
-                else:
-                    is_target_line = False
+    TR = python_t1_tr
+    if TR is None:
+        is_target_line = False
+        with open(f'anat/{prefix}_space-DCEref_T1map.txt', 'r') as f:
+            for line in f:
+                if "User selected tr: " in line:
+                    is_target_line = True
+                elif is_target_line:
+                    match = re.search(r'\d+.\d+', line)
+                    if match:
+                        TR = match.group()
+                    else:
+                        is_target_line = False
 
     # check if GPU was used
-    GPU = False
-    with open(f'anat/{prefix}_space-DCEref_T1map.txt', 'r') as f:
-        for line in f:
-            if "GPU detected" in line:
-                GPU = True
-    if GPU:
-        GPU_T1 = 'GPU was used'
-    else:
-        GPU_T1 = 'CPU was used'
+    GPU_T1 = python_t1_backend
+    if GPU_T1 is None:
+        GPU = False
+        with open(f'anat/{prefix}_space-DCEref_T1map.txt', 'r') as f:
+            for line in f:
+                if "GPU detected" in line:
+                    GPU = True
+        if GPU:
+            GPU_T1 = 'GPU was used'
+        else:
+            GPU_T1 = 'CPU was used'
 except Exception as e:
     print("Error getting T1 map parameters")
     FAs = [-1, -1, -1, -1, -1]
@@ -258,7 +277,7 @@ except Exception as e:
 try:
     # T1 map
     # flip T1 map
-    img = nib.load(f'anat/{prefix}_space-DCEref_T1map_RAS.nii.gz')
+    img = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_T1map_RAS.nii.gz'))
     img_data = img.get_fdata()
     img_data = np.flip(img_data, axis=0)
     img_data = np.flip(img_data, axis=1)
@@ -271,14 +290,14 @@ except Exception as e:
 # try:
 # AIF
 # plot graph of AIF region
-aif = nib.load(f'dce/{prefix}_desc-AIFpos_T1map.nii.gz')
+aif = nib.load(resolve_nifti_path(f'dce/{prefix}_desc-AIFpos_T1map.nii.gz'))
 aif_data = aif.get_fdata()
 # img = nib.load(str(tp_dir) + '/DCE_mc.nii.gz')
 try:
-    img = nib.load(f'dce/{prefix}_desc-hmc_DCE.nii.gz')
+    img = nib.load(resolve_nifti_path(f'dce/{prefix}_desc-hmc_DCE.nii.gz'))
     img_data = img.get_fdata()
 except FileNotFoundError:
-    img = nib.load(f'{source_dir}/dce/{prefix}_DCE.nii.gz')
+    img = nib.load(resolve_nifti_path(f'{source_dir}/dce/{prefix}_DCE.nii.gz'))
     img_data = img.get_fdata()
 # binarize AIF
 aif_data[aif_data > 0] = 1
@@ -334,15 +353,15 @@ plt.close()
 
 if freesurfer:
     # wmparc overlay on DCE
-    wmparc = nib.load(f'anat/{prefix}_space-DCEref_desc-wmparc_RAS.nii.gz')
+    wmparc = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_desc-wmparc_RAS.nii.gz'))
     wmparc_data = wmparc.get_fdata()
     wmparc_flipped = np.flip(wmparc_data, axis=1)
     wmparc_flipped = nib.Nifti1Image(wmparc_flipped, wmparc.affine, wmparc.header)
 
     try:
-        dce = nib.load(f'dce/{prefix}_desc-hmc_DCEref_RAS.nii.gz')
+        dce = nib.load(resolve_nifti_path(f'dce/{prefix}_desc-hmc_DCEref_RAS.nii.gz'))
     except FileNotFoundError:
-        dce = nib.load(f'dce/{prefix}_DCEref_RAS.nii.gz')
+        dce = nib.load(resolve_nifti_path(f'dce/{prefix}_DCEref_RAS.nii.gz'))
     dce_data = dce.get_fdata()
     dce_flipped = np.flip(dce_data, axis=1)
     dce_flipped = nib.Nifti1Image(dce_flipped, dce.affine, dce.header)
@@ -373,83 +392,31 @@ def extract_value(pattern, text):
         return match.group(1)
     return None
 
+dce_run_metadata = resolve_dce_report_metadata(os.getcwd(), source_dir)
+pipeline_run_path = dce_run_metadata.get('path')
+python_dce_tr = dce_run_metadata.get('tr_ms')
+python_dce_fa = dce_run_metadata.get('fa_deg')
+python_hematocrit = dce_run_metadata.get('hematocrit')
+python_snr_threshold = dce_run_metadata.get('snr_threshold')
+python_relaxivity = dce_run_metadata.get('relaxivity')
+python_steady_state = dce_run_metadata.get('steady_state_image')
+python_blood_t1 = dce_run_metadata.get('blood_t1_sec')
+python_time_resolution = dce_run_metadata.get('time_resolution_sec')
+python_r2_fit = dce_run_metadata.get('r2_fit')
+python_r2_raw = dce_run_metadata.get('r2_raw')
+python_backend_used = dce_run_metadata.get('backend_used')
+python_dce_model = dce_run_metadata.get('model')
+python_dce_elapsed_time = dce_run_metadata.get('elapsed_time_sec')
 
-def get_nested_value(data, *keys):
-    value = data
-    for key in keys:
-        if not isinstance(value, dict) or key not in value:
-            return None
-        value = value[key]
-    return value
-
-
-def format_backend_usage(backend_used):
-    if backend_used is None:
-        return None
-
-    backend_text = str(backend_used).strip().lower()
-    if 'gpu' in backend_text:
-        return 'GPU was used'
-    if 'cpu' in backend_text:
-        return 'CPU was used'
-    return str(backend_used)
-
-
-def convert_minutes_to_seconds(value):
-    if value is None:
-        return None
-
-    try:
-        seconds = float(value) * 60
-    except (TypeError, ValueError):
-        return value
-
-    if seconds.is_integer():
-        return int(seconds)
-    return seconds
-
-
-pipeline_run = {}
-pipeline_run_path = None
-pipeline_run_candidates = [
-    os.path.join('reports', 'dce_pipeline_run.json'),
-    os.path.join(source_dir, 'reports', 'dce_pipeline_run.json'),
-]
-
-for candidate in pipeline_run_candidates:
-    try:
-        with open(candidate, 'r') as file:
-            pipeline_run = json.load(file)
-        pipeline_run_path = candidate
-        break
-    except Exception:
-        continue
-
-python_blood_t1 = get_nested_value(pipeline_run, 'stages', 'A', 'timepoint_window', 'blood_t1_mean_sec')
-python_time_resolution = get_nested_value(pipeline_run, 'stages', 'B', 'time_reoslution_min')
-if python_time_resolution is None:
-    python_time_resolution = get_nested_value(pipeline_run, 'stages', 'B', 'time_resolution_min')
-python_time_resolution = convert_minutes_to_seconds(python_time_resolution)
-python_r2_fit = get_nested_value(pipeline_run, 'stages', 'B', 'array_shapes', 'fit_rsquared_cp_adj')
-python_r2_raw = get_nested_value(pipeline_run, 'stages', 'B', 'array_shapes', 'fit_rsquared_stlv_adj')
-
-# Keep both fields populated even if only one Python key is present.
-if python_r2_fit is None:
-    python_r2_fit = python_r2_raw
-if python_r2_raw is None:
-    python_r2_raw = python_r2_fit
-
-python_backend_used = get_nested_value(pipeline_run, 'stages', 'D', 'backend_used')
-
-try:
-    with open('dce/A_dceR1info.log', 'r') as file:
+log_text = ''
+RUNA_log_path = 'dce/A_dceR1info.log'
+RUNA_log = os.path.isfile(RUNA_log_path)
+if RUNA_log:
+    with open(RUNA_log_path, 'r') as file:
         log_text = file.read()
-    RUNA_log = True
-except Exception as e:
+elif pipeline_run_path is None:
     log_text = ''
-    RUNA_log = False
     print("Error getting DCE parameters from A_dceR1info.log")
-    print(e)
 
 tr_pattern = r"User selected TR \(ms\):\s+(\d+(\.\d+)?)"
 fa_pattern = r"User selected FA \(degrees\):\s+(\d+)"
@@ -458,18 +425,18 @@ snr_threshold_pattern = r"User selected SNR threshold for AIF:\s+(\d+)"
 relaxivity_pattern = r"User selected contrast agent R1 relaxivity \(/mM/sec\):\s+(\d+\.\d+)"
 steady_state_pattern = r"User selected end of steady state time \(image number\):\s+(-?\d+)"
 
-DCE_tr = extract_value(tr_pattern, log_text)
-DCE_fa = extract_value(fa_pattern, log_text)
-hematocrit = extract_value(hematocrit_pattern, log_text)
-snr_threshold = extract_value(snr_threshold_pattern, log_text)
-relaxivity = extract_value(relaxivity_pattern, log_text)
-steady_state = extract_value(steady_state_pattern, log_text)
+DCE_tr = python_dce_tr if python_dce_tr is not None else extract_value(tr_pattern, log_text)
+DCE_fa = python_dce_fa if python_dce_fa is not None else extract_value(fa_pattern, log_text)
+hematocrit = python_hematocrit if python_hematocrit is not None else extract_value(hematocrit_pattern, log_text)
+snr_threshold = python_snr_threshold if python_snr_threshold is not None else extract_value(snr_threshold_pattern, log_text)
+relaxivity = python_relaxivity if python_relaxivity is not None else extract_value(relaxivity_pattern, log_text)
+steady_state = python_steady_state if python_steady_state is not None else extract_value(steady_state_pattern, log_text)
 blood_t1_pattern = "Average Filtered AIF T1: "
 blood_t1 = python_blood_t1
 
 if RUNA_log:
     # get last line of log file
-    with open('dce/A_dceR1info.log', 'r') as file:
+    with open(RUNA_log_path, 'r') as file:
         match = False
         for line in file:
             if line[:-1] == blood_t1_pattern:
@@ -514,7 +481,7 @@ try:
                         time_resolution = match.group()
                     else:
                         is_target_line = False
-    RUNB_log = True
+    RUNB_log = os.path.isfile(B_log) or os.path.isfile(B_imported_log)
 except Exception as e:
     print("Error getting DCE RUNB parameters from B_dcefitted_R1info.log")
     print(e)
@@ -559,22 +526,31 @@ try:
     # get GPU info
     GPU_DCE = format_backend_usage(python_backend_used)
     GPU = GPU_DCE == 'GPU was used'
-    latest_log_file = max(glob.glob('dce/dce_*_fit.log'), key=os.path.getctime)
-    latest_log_file_name = os.path.basename(latest_log_file)
-    dce_model = latest_log_file_name.replace('dce_', '').replace('_fit.log', '')
-    with open(latest_log_file, 'r') as f:
-        for line in f:
-            if "Gpufit detected" in line and GPU_DCE is None:
-                GPU = True
+    dce_model = python_dce_model
+    latest_log_file = None
+    rund_logs = glob.glob('dce/dce_*_fit.log')
+
+    if (GPU_DCE is None or dce_model is None or python_dce_elapsed_time is None) and rund_logs:
+        latest_log_file = max(rund_logs, key=os.path.getctime)
+        latest_log_file_name = os.path.basename(latest_log_file)
+        if dce_model is None:
+            dce_model = latest_log_file_name.replace('dce_', '').replace('_fit.log', '')
+
+        with open(latest_log_file, 'r') as f:
+            for line in f:
+                if "Gpufit detected" in line and GPU_DCE is None:
+                    GPU = True
+
     if GPU_DCE is None:
         if GPU:
             GPU_DCE = 'GPU was used'
         else:
             GPU_DCE = 'CPU was used'
-    RUND_log = True
+    RUND_log = latest_log_file is not None
 except Exception as e:
-    print("Error getting DCE GPU info from latest dce_*_fit.log")
-    print(e)
+    if pipeline_run_path is None:
+        print("Error getting DCE GPU info from latest dce_*_fit.log")
+        print(e)
     RUND_log = False
     if GPU_DCE is None:
         GPU_DCE = 'Failed to load GPU info'
@@ -589,39 +565,43 @@ if RUND_log:
             return match.group(1)
         return None
 
-    with open(latest_log_file, 'r') as file:
-        log_text = file.read()
+    dce_elapsed_time = python_dce_elapsed_time
+    if dce_elapsed_time is None:
+        with open(latest_log_file, 'r') as file:
+            log_text = file.read()
 
-    dce_elapsed_time = extract_elapsed_time(log_text)
+        dce_elapsed_time = extract_elapsed_time(log_text)
 else:
-    dce_elapsed_time = 'Failed to load RUND log'
+    dce_elapsed_time = python_dce_elapsed_time
+    if dce_elapsed_time is None:
+        dce_elapsed_time = 'Failed to load RUND log'
 
 # Ktrans
 
 # get Ktrans mean wm and gm
-ktrans_wm = nib.load(f'dce/{prefix}_seg-WM_Ktrans.nii.gz')
+ktrans_wm = nib.load(resolve_nifti_path(f'dce/{prefix}_seg-WM_Ktrans.nii.gz'))
 ktrans_wm_data = ktrans_wm.get_fdata()
-ktrans_wm_mask = nib.load(f'anat/{prefix}_space-DCEref_label-WM_mask.nii.gz')
+ktrans_wm_mask = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_label-WM_mask.nii.gz'))
 ktrans_wm_mask_data = ktrans_wm_mask.get_fdata()
 # mean_wm = np.nanmean(ktrans_wm_data[ktrans_wm_data > 0])*1000
 ktrans_median_wm = np.nanmedian(ktrans_wm_data[np.logical_and(ktrans_wm_mask_data > 0, ktrans_wm_data > KTRANS_MIN_THRESHOLD)])*1000
 ktrans_std_wm = np.nanstd(ktrans_wm_data[np.logical_and(ktrans_wm_mask_data > 0, ktrans_wm_data > KTRANS_MIN_THRESHOLD)])*1000
 
-ktrans_gm = nib.load(f'dce/{prefix}_seg-GM_Ktrans.nii.gz')
+ktrans_gm = nib.load(resolve_nifti_path(f'dce/{prefix}_seg-GM_Ktrans.nii.gz'))
 ktrans_gm_data = ktrans_gm.get_fdata()
-ktrans_gm_mask = nib.load(f'anat/{prefix}_space-DCEref_label-GM_mask.nii.gz')
+ktrans_gm_mask = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_label-GM_mask.nii.gz'))
 ktrans_gm_mask_data = ktrans_gm_mask.get_fdata()
 # mean_gm = np.nanmean(ktrans_gm_data[ktrans_gm_data > 0])*1000
 ktrans_median_gm = np.nanmedian(ktrans_gm_data[np.logical_and(ktrans_gm_mask_data > 0, ktrans_gm_data > KTRANS_MIN_THRESHOLD)])*1000
 ktrans_std_gm = np.nanstd(ktrans_gm_data[np.logical_and(ktrans_gm_mask_data > 0, ktrans_gm_data > KTRANS_MIN_THRESHOLD)])*1000
 
 # get T1 map median wm and gm
-T1_wm = nib.load(f'anat/{prefix}_space-DCEref_label-WM_T1map.nii.gz')
+T1_wm = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_label-WM_T1map.nii.gz'))
 T1_wm_data = T1_wm.get_fdata()
 T1_wm_median = np.median(T1_wm_data[T1_wm_data > 0])
 T1_wm_std = np.std(T1_wm_data[T1_wm_data > 0])
 
-T1_gm = nib.load(f'anat/{prefix}_space-DCEref_label-GM_T1map.nii.gz')
+T1_gm = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_label-GM_T1map.nii.gz'))
 T1_gm_data = T1_gm.get_fdata()
 T1_gm_median = np.median(T1_gm_data[T1_gm_data > 0])
 T1_gm_std = np.std(T1_gm_data[T1_gm_data > 0])

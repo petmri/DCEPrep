@@ -639,12 +639,12 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		addpath '$ROCKETSHIP_PATH/dce'; addpath '$ROCKETSHIP_PATH/external_programs'; \
 		addpath '$ROCKETSHIP_PATH/external_programs/niftitools'; addpath '$ROCKETSHIP_PATH/parametric_scripts';	\
 		addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; T1mapping_fit('$source_dir/anat', '$SUBJECT_TP_PATH/anat', '${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii'); exit;" &> /dev/null
-	mv anat/T1_map_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii anat/${PREFIX}_${REF_SPACE}_T1map.nii
-	mv anat/T1_map_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.mat anat/${PREFIX}_${REF_SPACE}_T1map.mat
-	mv anat/T1_map_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.txt anat/${PREFIX}_${REF_SPACE}_T1map.txt
-	mv anat/Rsquared_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii anat/${PREFIX}_${REF_SPACE}_desc-rsquared_T1map.nii
-	mv anat/CI_low_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii anat/${PREFIX}_${REF_SPACE}_desc-CIlow_T1map.nii
-	mv anat/CI_high_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii anat/${PREFIX}_${REF_SPACE}_desc-CIhigh_T1map.nii
+	[ -f "anat/T1_map_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii" ] && mv anat/T1_map_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii anat/${PREFIX}_${REF_SPACE}_T1map.nii
+	[ -f "anat/T1_map_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.mat" ] && mv anat/T1_map_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.mat anat/${PREFIX}_${REF_SPACE}_T1map.mat
+	[ -f "anat/T1_map_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.txt" ] && mv anat/T1_map_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.txt anat/${PREFIX}_${REF_SPACE}_T1map.txt
+	[ -f "anat/Rsquared_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii" ] && mv anat/Rsquared_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii anat/${PREFIX}_${REF_SPACE}_desc-rsquared_T1map.nii
+	[ -f "anat/CI_low_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii" ] && mv anat/CI_low_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii anat/${PREFIX}_${REF_SPACE}_desc-CIlow_T1map.nii
+	[ -f "anat/CI_high_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii" ] && mv anat/CI_high_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii anat/${PREFIX}_${REF_SPACE}_desc-CIhigh_T1map.nii
 	((diff = SECONDS - diff))
 	ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 	prog=$(echo "scale=2;  $prog + 1.33 / $count" | bc -l)
