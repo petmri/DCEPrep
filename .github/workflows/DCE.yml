@@ -16,10 +16,10 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Checkout ROCKETSHIP repo
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
       with:
         repository: petmri/ROCKETSHIP
         ref: dev
@@ -69,7 +69,7 @@ jobs:
       continue-on-error: true
 
     - name: Upload analysis results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: HTML_report
         path: |
@@ -89,7 +89,7 @@ jobs:
     runs-on: self-hosted
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     
     - name: Extract branch name
       id: extract_branch
