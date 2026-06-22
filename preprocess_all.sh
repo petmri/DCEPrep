@@ -28,7 +28,7 @@ prog=0
 successes=0
 
 # options
-while getopts ":d:bBa:A:ZfhcC:mMstl:T:w:" options; do
+while getopts ":d:bBa:A:ZfhcC:mMsS:tl:T:w:" options; do
 	case "${options}" in
 		a)
 			AIF_SUFFIX=${OPTARG}
@@ -645,11 +645,14 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	[ -f "anat/Rsquared_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii" ] && mv anat/Rsquared_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii anat/${PREFIX}_${REF_SPACE}_desc-rsquared_T1map.nii
 	[ -f "anat/CI_low_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii" ] && mv anat/CI_low_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii anat/${PREFIX}_${REF_SPACE}_desc-CIlow_T1map.nii
 	[ -f "anat/CI_high_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii" ] && mv anat/CI_high_t1_fa_fit_${PREFIX}_${REF_SPACE}_${VFA_INPUT}.nii anat/${PREFIX}_${REF_SPACE}_desc-CIhigh_T1map.nii
+	[ -f "anat/${PREFIX}_${REF_SPACE}_T1map.nii" ] && fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii -nan anat/${PREFIX}_${REF_SPACE}_T1map_fix.nii &> /dev/null
+	mv anat/${PREFIX}_${REF_SPACE}_T1map_fix.nii.gz anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz
+	rm anat/${PREFIX}_${REF_SPACE}_T1map.nii
 	((diff = SECONDS - diff))
 	ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 	prog=$(echo "scale=2;  $prog + 1.33 / $count" | bc -l)
 	echo -ne "DCE MOTIONCORR [====================>                             ] $prog% ($current/$count) ~$ETA min remaining \r"
-	if [ ! -f anat/${PREFIX}_${REF_SPACE}_T1map.nii ]
+	if [ ! -f anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz ] && [ ! -f anat/${PREFIX}_${REF_SPACE}_T1map.nii ]
 		then
 			echo $source_dir "Missing T1 map file. T1 mapping may have failed." >> $LOG_FILE
 			cd $DATA_DIR
