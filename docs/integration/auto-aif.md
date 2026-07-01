@@ -1,14 +1,17 @@
-# vascular_function Integration
+# AutoAIF Integration
 
-DCEPrep uses [vascular_function](https://github.com/petmri/vascular_function), a companion repository from the petmri group, to perform automated Arterial Input Function (AIF) detection via a pre-trained deep learning model.
+DCEPrep uses [AutoAIF](https://github.com/petmri/AutoAIF) (formerly `vascular_function`), a companion repository from the petmri group, to perform automated Arterial Input Function (AIF) detection via a pre-trained deep learning model.
+
+!!! note
+    This project was renamed from `vascular_function` to `AutoAIF` and moved to [github.com/petmri/AutoAIF](https://github.com/petmri/AutoAIF). Existing installs cloned from the old repository should re-clone from the new location.
 
 ---
 
-## What vascular_function Does in DCEPrep
+## What AutoAIF Does in DCEPrep
 
-The AIF describes the concentration of contrast agent in blood over time and is required for pharmacokinetic modeling. Selecting the AIF manually from DCE-MRI data is time-consuming and operator-dependent. vascular_function provides a neural network (`main_vif.py`) that identifies arterial voxels automatically from the DCE image.
+The AIF describes the concentration of contrast agent in blood over time and is required for pharmacokinetic modeling. Selecting the AIF manually from DCE-MRI data is time-consuming and operator-dependent. AutoAIF provides a neural network (`main_vif.py`) that identifies arterial voxels automatically from the DCE image.
 
-DCEPrep calls vascular_function during **Preprocessing Step 12** when the `-A` flag is passed to `preprocess_all.sh`.
+DCEPrep calls AutoAIF during **Preprocessing Step 12** when the `-A` flag is passed to `preprocess_all.sh`.
 
 | Mode | Flag | Behavior |
 |---|---|---|
@@ -20,7 +23,7 @@ DCEPrep calls vascular_function during **Preprocessing Step 12** when the `-A` f
 
 ## Outputs
 
-vascular_function produces the following files per subject:
+AutoAIF produces the following files per subject:
 
 | File | Description |
 |---|---|
@@ -31,7 +34,7 @@ vascular_function produces the following files per subject:
 
 ---
 
-## How DCEPrep Locates vascular_function
+## How DCEPrep Locates AutoAIF
 
 At runtime DCEPrep searches for `main_vif.py`:
 
@@ -40,7 +43,7 @@ AUTO_AIF_PATH=$(find $HOME -wholename '*main_vif.py' -printf '%h\n' -quit \
   || find / -name '*main_vif.py' -printf '%h\n' -quit)
 ```
 
-In Docker, vascular_function is installed at `/opt/vascular_function` and the pre-trained model weights are mounted at:
+In Docker, AutoAIF is installed at `/opt/vascular_function` and the pre-trained model weights are mounted at:
 
 ```
 /opt/vascular_function/docker/files/model_weight_huber1.h5
@@ -48,11 +51,11 @@ In Docker, vascular_function is installed at `/opt/vascular_function` and the pr
 
 ---
 
-## Installing vascular_function Without Docker
+## Installing AutoAIF Without Docker
 
 ```bash
-git clone https://github.com/petmri/vascular_function.git
-pip install -r vascular_function/requirements.txt
+git clone https://github.com/petmri/AutoAIF.git
+pip install -r AutoAIF/requirements.txt
 ```
 
 !!! note
@@ -65,4 +68,4 @@ Ensure `main_vif.py` is discoverable from your `$HOME` directory, or set `AUTO_A
 ## Related Pages
 
 - [AIF Selection](../user-guide/aif-selection.md) — full walkthrough of AIF selection modes
-- [vascular_function on GitHub](https://github.com/petmri/vascular_function)
+- [AutoAIF on GitHub](https://github.com/petmri/AutoAIF)

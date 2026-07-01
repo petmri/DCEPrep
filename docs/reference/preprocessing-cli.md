@@ -16,7 +16,7 @@ Full reference for `preprocess_all.sh`.
 |---|---|---|---|
 | `-d` | `rawdata_path` | **Yes** | Path to BIDS raw data folder. |
 | `-a` | `suffix` | No | AIF mask file suffix (default: `desc-AIF_mask`). `.nii.gz` is appended automatically. |
-| `-A` | `mode` | No | Enable AutoAIF. Mode: `A` = fully automatic, `M` = manual if available else auto, `T` = manual + training data generation. Requires the [vascular_function repo](https://github.com/petmri/vascular_function). |
+| `-A` | `mode` | No | Enable AutoAIF. Mode: `A` = fully automatic, `M` = manual if available else auto, `T` = manual + training data generation. Requires the [AutoAIF repo](https://github.com/petmri/AutoAIF). |
 | `-b` | — | No | Enable **first round** of bias field correction on VFA and DCE images. |
 | `-B` | — | No | Enable **second round** of bias field correction (applied after z-normalization). Only relevant when `-Z` is also set. |
 | `-c` | — | No | Clean the case's derivatives folder before processing. Ensures a fresh run; disables skip behavior. |
@@ -44,7 +44,7 @@ Full reference for `preprocess_all.sh`.
 
 ### With automatic AIF detection
 ```bash
-./preprocess_all.sh -d /data/rawdata -b -Z -A A -w /opt/vascular_function/weights.h5
+./preprocess_all.sh -d /data/rawdata -b -Z -A A -w /opt/AutoAIF/weights.h5
 ```
 
 ### Target a single subject, comparison mode

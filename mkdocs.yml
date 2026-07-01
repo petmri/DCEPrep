@@ -84,7 +84,8 @@ nav:
     - Pipeline Steps: reference/pipeline-steps.md
   - Integration:
     - ROCKETSHIP: integration/rocketship.md
-    - vascular_function: integration/vascular-function.md
+    - AutoAIF: integration/auto-aif.md
+    - dce2bids: integration/dce2bids.md
     - GPUfit: integration/gpufit.md
   - About:
     - Citation: about/citation.md
@@ -94,3 +95,6 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/petmri/DCEPrep
+    - icon: material/web
+      link: https://petmri.github.io/
+      name: petmri software family

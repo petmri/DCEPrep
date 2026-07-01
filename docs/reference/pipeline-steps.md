@@ -19,7 +19,7 @@ Quick-reference summary of all steps in both pipeline phases.
 | 9 | VFA bias field correction (2nd round) | FSL `fast` | `-B` |
 | 10 | T1 map generation | ROCKETSHIP / MATLAB | — (always runs) |
 | 11 | Apply MPRAGE → DCE transform to brain mask | ANTs `antsApplyTransforms` | — (always runs) |
-| 12 | AIF selection | `vascular_function` neural network | `-A` |
+| 12 | AIF selection | `AutoAIF` neural network | `-A` |
 | 13 | DCE bias field correction | FSL `fast` | `-b` |
 | 14 | DCE z-axis normalization | `DCE_norm.py` | `-Z` |
 

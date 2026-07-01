@@ -116,6 +116,6 @@ Add the ROCKETSHIP directory to MATLAB's path, and ensure the `parametric_script
 
 ## Related Projects
 
-- [vascular_function](vascular-function.md) — companion repo providing the neural network for automated AIF detection
+- [AutoAIF](auto-aif.md) — companion repo providing the neural network for automated AIF detection
 - [GPUfit](gpufit.md) — CUDA-accelerated curve fitting used by ROCKETSHIP for T1 mapping and Ktrans fitting
 - [ROCKETSHIP on GitHub](https://github.com/petmri/ROCKETSHIP)

@@ -27,17 +27,17 @@ The `-A` flag controls AIF selection mode in `preprocess_all.sh`:
 
 ## Automatic AIF (Neural Network)
 
-DCEPrep's automated AIF detection uses a neural network from the companion [vascular_function](https://github.com/petmri/vascular_function) repository.
+DCEPrep's automated AIF detection uses a neural network from the companion [AutoAIF](https://github.com/petmri/AutoAIF) repository (formerly `vascular_function`).
 
 ### Requirements
 
-- The `vascular_function` repo must be available (cloned or mounted in Docker)
+- The `AutoAIF` repo must be available (cloned or mounted in Docker)
 - A pre-trained weights file is required; specify its path with `-w [path]`
 - In Docker, the default weights file is located at `/opt/vascular_function/model_weight_huber1.h5`
 
 ### How it works
 
-The network is invoked via `main_vif.py` from the vascular_function repository. It takes the 4D DCE time-series as input and produces a continuous probability mask indicating the likelihood that each voxel belongs to an artery. The probability mask is then thresholded to produce a binary AIF mask.
+The network is invoked via `main_vif.py` from the AutoAIF repository. It takes the 4D DCE time-series as input and produces a continuous probability mask indicating the likelihood that each voxel belongs to an artery. The probability mask is then thresholded to produce a binary AIF mask.
 
 The selected AIF voxels are intersected with the brain mask so that only intracranial arterial voxels are included.
 

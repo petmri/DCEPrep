@@ -39,7 +39,7 @@ DCEPrep is part of the **petmri** processing ecosystem. It sits downstream of DI
 ```mermaid
 flowchart TD
     A[DICOM acquisition]
-    B["BIDS conversion\nsort_dicom.py + dcm2bids"]
+    B["BIDS conversion\ndce2bids (or sort_dicom.py)"]
     G[Group-level statistics]
 
     subgraph DCEPrep["DCEPrep"]
@@ -61,10 +61,16 @@ flowchart TD
 | Color | Meaning |
 |---|---|
 | Blue | Handled by DCEPrep |
-| Amber | Partially supported (`sort_dicom.py` wraps dcm2bids) |
+| Amber | Partially supported ([dce2bids](integration/dce2bids.md), or the bundled `sort_dicom.py`) |
 | Gray | Outside DCEPrep scope |
 
 See [ROCKETSHIP Integration](integration/rocketship.md) for details on the MATLAB dependency.
+
+---
+
+## The petmri Software Family
+
+DCEPrep is one of several tools maintained by the petmri group for DCE-MRI processing, including [ROCKETSHIP](integration/rocketship.md), [AutoAIF](integration/auto-aif.md), and [dce2bids](integration/dce2bids.md). See [petmri.github.io](https://petmri.github.io/) for an overview of the full software family.
 
 ---
 
