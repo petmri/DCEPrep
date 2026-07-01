@@ -35,7 +35,7 @@ while getopts ":d:C:fhl:sST:" options; do
 				DATA_DIR=${DATA_DIR::-1}
 			fi
 			date=$(date +%Y-%m-%d)
-			DERIV_DIR=$(dirname $DATA_DIR)/derivatives
+			DERIV_DIR=$(dirname $(dirname $DATA_DIR))/derivatives
 			LOG_FILE=$DERIV_DIR/logs/dce_log_$date.txt
 			if [ ! -d "$DATA_DIR/logs" ]
 				then
