@@ -283,7 +283,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	if [ $SKIP_IF_SUCCESS -eq 1 ]
 		then
 		if [ -f "dce/${PREFIX}_desc-bfcz_DCE.nii.gz" ] && [ -f "anat/${PREFIX}_space-DCEref_desc-brain_mask.nii.gz" ] && \
-			[ -f "dce/${PREFIX}_desc-AIF_T1map.nii.gz" ] && [ -f "anat/${PREFIX}_space-DCEref_T1map.nii" ] #&& [ -f "reports/${PREFIX}_desc-casereport.html" ]
+			[ -f "dce/${PREFIX}_desc-AIF_T1map.nii.gz" ] && [ -f "anat/${PREFIX}_space-DCEref_T1map.nii.gz" ] #&& [ -f "reports/${PREFIX}_desc-casereport.html" ]
 			then
 			echo "Skipping ${source_dir} because it has already been processed." >> $LOG_FILE
 			let successes++
