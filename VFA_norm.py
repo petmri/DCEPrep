@@ -89,7 +89,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
             amp_guess = 0
             params = 0
             # check if slice is empty
-            if area == 0 or pstdev(wm_data[:,:,i][a]) == 0:
+            if area < 1000 or pstdev(wm_data[:,:,i][a]) == 0:
                 # just get from next slice
                 # if i == slice_num - 1:
                 #     a = np.where(wm_data[:,:,i-1] > 0)
