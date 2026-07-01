@@ -2297,9 +2297,12 @@ with open(dir + '/reports/' + run_folder + '/population_report_exclude' + output
 print('Report generated in ' + dir + '/reports/' + run_folder + '/population_report' + output_dir + "_" + date_filename + '.html')
 print('Excluded report generated in ' + dir + '/reports/' + run_folder + '/population_report_exclude' + output_dir + "_" + date_filename + '.html')
 
-if os.path.exists(os.path.join(dir, '../dce_available_3524_ac.xlsx')):
+apoe_file = os.path.join(dir, '../dce_available_3524_ac.xlsx')
+apoe_exists = os.path.exists(apoe_file)
+
+if apoe_exists:
     # add apoe and cdr fields to population_data
-    df = pd.read_excel(os.path.join(dir, '../dce_available_3524_ac.xlsx'), sheet_name="main")
+    df = pd.read_excel(apoe_file, sheet_name="main")
 
     # get apoe and cdr values for each subject
     for subject in population_data.keys():
@@ -2509,7 +2512,11 @@ writer = pd.ExcelWriter(
 df_success = pd.DataFrame(population_data)
 # df_exclude = pd.DataFrame(population_data_exclude)
 
-order = ["Date", "APOE", "Sex", "Age", "Machine", "Institution", "Coil", "TR", "Time_resolution", "TE", "Flip_angle", "n_reps",
+order = ["Date"]
+if apoe_exists:
+    order.append("APOE")
+order.extend([
+        "Sex", "Age", "Machine", "Institution", "Coil", "TR", "Time_resolution", "TE", "Flip_angle", "n_reps",
         "Approximate SNR", "AIFitness", "aif_fitted_r2", "manual_aif_status", "max_disp", "T1_blood", "T1_wm_median", "T1_gm_median",
         "Ktrans_wm_median", "Ktrans_gm_median", "Ktrans_Hippo_median", "Ktrans_PhG_median", "Ktrans_Putamen_median", "Ktrans_Pallidum_median",
         "Ktrans_Thalamus_median", "Ktrans_Caudate_median", "Ktrans_Amygdala_median", "Ktrans_Entorhinal_cortex_median",
@@ -2539,10 +2546,10 @@ order = ["Date", "APOE", "Sex", "Age", "Machine", "Institution", "Coil", "TR", "
         "superiorparietal_thickness_avg", "superiorparietal_thickness_std", "superiortemporal_thickness_avg", "superiortemporal_thickness_std",
         "supramarginal_thickness_avg", "supramarginal_thickness_std", "frontalpole_thickness_avg", "frontalpole_thickness_std",
         "temporalpole_thickness_avg", "temporalpole_thickness_std", "transversetemporal_thickness_avg", "transversetemporal_thickness_std",
-        "insula_thickness_avg", "insula_thickness_std"]
+        "insula_thickness_avg", "insula_thickness_std"])
 
 df_success = df_success.T
-df_success = df_success[order]
+df_success = df_success.reindex(columns=order)
 
 
 order_exclude = order.copy()
