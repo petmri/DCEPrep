@@ -92,6 +92,9 @@ nav:
     - Contributing: about/contributing.md
 
 extra:
+  analytics:
+    provider: google
+    property: G-QGP3ETP28Q
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/petmri/DCEPrep
