@@ -29,7 +29,7 @@ prog=0
 successes=0
 
 # options
-while getopts ":d:bBa:A:ZfhcC:mMsS:tl:T:w:" options; do
+while getopts ":d:bBa:A:ZfhcC:mMsS:tl:T:w:p" options; do
 	case "${options}" in
 		a)
 			AIF_SUFFIX=${OPTARG}
