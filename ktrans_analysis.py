@@ -19,9 +19,9 @@ def analyze(tp_dir):
     files = ['anat/' + prefix + '_space-DCEref_label-WM_T1map.nii.gz',
              'anat/' + prefix + '_space-DCEref_label-GM_T1map.nii.gz',
              'anat/' + prefix + '_space-DCEref_label-CSF_T1map.nii.gz',
-             'dce/' + prefix + '_seg-WM_Ktrans.nii.gz',
-             'dce/' + prefix + '_seg-GM_Ktrans.nii.gz',
-             'dce/' + prefix + '_seg-CSF_Ktrans.nii.gz',
+             'dce/' + prefix + '_label-WM_Ktrans.nii.gz',
+             'dce/' + prefix + '_label-GM_Ktrans.nii.gz',
+             'dce/' + prefix + '_label-CSF_Ktrans.nii.gz',
              'anat/' + prefix + '_space-DCEref_label-WM_mask.nii.gz',
              'anat/' + prefix + '_space-DCEref_label-GM_mask.nii.gz']
     # for i, file in enumerate(files):

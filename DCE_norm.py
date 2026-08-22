@@ -202,7 +202,7 @@ for file in files_in_dir:
     if str(file).endswith('desc-bfc_DCE.nii') or str(file).endswith('desc-bfc_DCE.nii.gz'):
         file1 = str(file)
         mask_file = file1.split('desc-bfc_DCE', 1)[0]
-        mask_file = mask_file + 'seg-WM_DCE.nii'
+        mask_file = mask_file + 'label-WM_DCE.nii'
 
         if Path(mask_file + ".gz").exists():
             mask_file += ".gz"
