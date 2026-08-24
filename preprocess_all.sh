@@ -16,6 +16,9 @@ SKIP_IF_SUCCESS=0
 SCRIPT_LOOP_DIRS=sub-*/ses-*
 AUTOAIF_WEIGHT_PATH="docker/files/model_weight_huber1.h5"
 AUTOAIF_MODEL="best"
+HD_BET_COMMAND="${HD_BET_COMMAND:-hd-bet}"
+AUTO_AIF_PYTHON="${AUTO_AIF_PYTHON:-python3}"
+MAX_PARALLEL_JOBS=0
 
 # internal vars (don't change)
 fail=0
@@ -29,7 +32,7 @@ prog=0
 successes=0
 
 # options
-while getopts ":d:bBa:A:ZfhcC:mMsS:tl:T:w:p" options; do
+while getopts ":d:bBa:A:ZfhcC:j:mMsS:tl:T:w:p" options; do
 	case "${options}" in
 		a)
 			AIF_SUFFIX=${OPTARG}
@@ -99,6 +102,7 @@ while getopts ":d:bBa:A:ZfhcC:mMsS:tl:T:w:p" options; do
 			echo "-C [name]: enable comparison mode, which will output all files to the specified directory within each timepoint"
 			echo "-d [dir_path]: specify BIDS compliant data directory containing all subject folders (sub-*/ses-*/anat|dce/*.nii|*.json)"
 			echo "-h: display this message"
+			echo "-j [count]: limit concurrent VFA registration and FAST jobs (default is unlimited)"
 			echo "-m: enable motion correction"
 			echo "-s: skip preprocessing if DCE input file already exists"
 			echo "-T [dir_path]: target the subject(s)/session(s) to run (default is 'sub-*/ses-*/')"
@@ -110,6 +114,13 @@ while getopts ":d:bBa:A:ZfhcC:mMsS:tl:T:w:p" options; do
 			;;
 		l)
 			INPUT_LIST=$DATA_DIR/../code/${OPTARG}
+			;;
+		j)
+			if [[ ! "$OPTARG" =~ ^[1-9][0-9]*$ ]]; then
+				echo "Invalid argument for -j. Use a positive integer."
+				exit 1
+			fi
+			MAX_PARALLEL_JOBS=$OPTARG
 			;;
 		m)
 			EN_MOTION_CORR=1
@@ -148,15 +159,63 @@ if [ -z "$DATA_DIR" ]
 		exit 1
 fi
 
+if ! "$HD_BET_COMMAND" --help &> /dev/null; then
+	echo "ERROR: HD-BET command '$HD_BET_COMMAND' is unavailable or cannot start. Set HD_BET_COMMAND to a working hd-bet executable." >&2
+	exit 1
+fi
+
+resolve_tool_path() {
+	local configured_path=$1
+	local marker_file=$2
+	shift 2
+	local candidate_path
+
+	if [ -n "$configured_path" ]; then
+		if [ -f "$configured_path/$marker_file" ]; then
+			printf '%s\n' "$configured_path"
+			return 0
+		fi
+		echo "ERROR: Configured path $configured_path does not contain $marker_file." >&2
+		return 1
+	fi
+
+	for candidate_path in "$@"; do
+		if [ -f "$candidate_path/$marker_file" ]; then
+			printf '%s\n' "$candidate_path"
+			return 0
+		fi
+	done
+
+	find "$HOME" \
+		\( -path "$HOME/.local/share/Trash" -o -path "$HOME/.local/share/Trash/*" -o -path "$HOME/.Trash" -o -path "$HOME/.Trash/*" \) -prune -o \
+		-type f -name "$marker_file" -printf '%h\n' -quit 2> /dev/null
+}
+
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_cli.m' -printf '%h\n' -quit || find / -name '*run_dce_cli.m' -printf '%h\n' -quit) &> /dev/null
+	ROCKETSHIP_PATH=$(resolve_tool_path "${ROCKETSHIP_PATH:-}" "run_dce_cli.m" "/opt/ROCKETSHIP/ROCKETSHIP-dev")
 	SCRIPT_PATH=$(dirname "$(realpath $0)")
-	GPUFIT_PATH=$(find $HOME -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit || find / -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit) &> /dev/null
-	GPUFIT_M_PATH=$(find $HOME -name 'ModelID.m' -printf '%h\n' -quit || find / -name 'ModelID.m' -printf '%h\n' -quit) &> /dev/null
+	GPUFIT_PATH=$(resolve_tool_path "${GPUFIT_PATH:-}" "GpufitCudaAvailableMex.mexa64" "/opt/Gpufit/matlab64")
+	GPUFIT_M_PATH=$(resolve_tool_path "${GPUFIT_M_PATH:-}" "ModelID.m" "/opt/Gpufit/matlab")
+	if [ -z "$ROCKETSHIP_PATH" ] || [ -z "$GPUFIT_PATH" ] || [ -z "$GPUFIT_M_PATH" ]; then
+		echo "ERROR: Unable to locate ROCKETSHIP or GPUfit. Set ROCKETSHIP_PATH, GPUFIT_PATH, and GPUFIT_M_PATH to directories containing their required MATLAB files." >&2
+		exit 1
+	fi
 else
 	ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 	SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
 	GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
+fi
+
+if [ $USE_AUTO_AIF -eq 1 ]; then
+	AUTO_AIF_PATH=$(resolve_tool_path "${AUTO_AIF_PATH:-}" "main_vif.py" "/opt/vascular_function")
+	if [ -z "$AUTO_AIF_PATH" ]; then
+		echo "ERROR: Unable to locate AutoAIF. Set AUTO_AIF_PATH to the directory containing main_vif.py." >&2
+		exit 1
+	fi
+	if ! "$AUTO_AIF_PYTHON" -c 'import tensorflow' &> /dev/null; then
+		echo "ERROR: AutoAIF Python '$AUTO_AIF_PYTHON' cannot import TensorFlow. Set AUTO_AIF_PYTHON to a TensorFlow-capable interpreter." >&2
+		exit 1
+	fi
 fi
 cd $DATA_DIR || exit 1
 
@@ -337,7 +396,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	SECONDS=0
 	echo -ne "HD-BET MP-RAGE [                                                  ] $prog% ($current/$count) Calculating runtime...   \r"
 
-	if [ ! -f "anat/${PREFIX}_desc-brain_mask.nii.gz" ] && [ -f "$source_dir/anat/${PREFIX}_T1w.nii.gz" ]
+	if [ ! -f "anat/${PREFIX}_label-brain_mask.nii.gz" ] && [ -f "$source_dir/anat/${PREFIX}_T1w.nii.gz" ]
 		then
 		if [ nvidia-smi ]
 			then
@@ -505,7 +564,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		# VFA_NUM=$(echo $VFA | grep -o '[0-9]*')
 		# FAST documentation recommends brain masking first
 		# fslmaths $VFA -mas T1_bet_mask.nii.gz ${VFA_NUM}_masked.nii
-		cp anat/${PREFIX}_${VFA}_${REF_SPACE}_VFA.nii.gz anat/${PREFIX}_${VFA}_${REF_SPACE}_desc-brain_VFA.nii.gz
+		cp anat/${PREFIX}_${VFA}_${REF_SPACE}_VFA.nii.gz anat/${PREFIX}_${VFA}_${REF_SPACE}_label-brain_VFA.nii.gz
 	done
 	# gzip -f *_masked.nii
 
@@ -514,15 +573,15 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 			VFA_FAST () {
 				local VFA=$1
 				# VFA_NUM=$(echo $VFA | grep -o '[0-9]*')
-				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o anat/${PREFIX}_${VFA}_${REF_SPACE}_desc-brain_VFA.nii.gz
+				fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o anat/${PREFIX}_${VFA}_${REF_SPACE}_label-brain_VFA.nii.gz
 				# ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 				# prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 				# echo -ne "BFC FAST VFA${VFA_NUM}  [=======>                                          ] $prog% ($current/$count) ~$ETA min remaining \r"
-				mv anat/${PREFIX}_${VFA}_${REF_SPACE}_desc-brain_VFA_restore* anat/${PREFIX}_${VFA}_${REF_SPACE}_desc-bfc_VFA.nii.gz
+				mv anat/${PREFIX}_${VFA}_${REF_SPACE}_label-brain_VFA_restore* anat/${PREFIX}_${VFA}_${REF_SPACE}_desc-bfc_VFA.nii.gz
 				# rm ${VFA}_masked_[mps]*
 
 				# apply wm mask to all VFAs
-				fslmaths anat/${PREFIX}_${VFA}_${REF_SPACE}_desc-bfc_VFA.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz anat/${PREFIX}_${VFA}_${REF_SPACE}_seg-WM_VFA.nii.gz
+				fslmaths anat/${PREFIX}_${VFA}_${REF_SPACE}_desc-bfc_VFA.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz anat/${PREFIX}_${VFA}_${REF_SPACE}_label-WM_VFA.nii.gz
 			}
 
 			#echo "Bias field correction with FAST"
@@ -694,10 +753,16 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		# run AutoAIF
 		if [ $EN_MOTION_CORR -eq 1 ]
 			then
-			python3 $AUTO_AIF_PATH/main_vif.py --mode inference --input_path dce/${PREFIX}_desc-hmc_DCE.nii.gz --save_output_path $PWD/dce \
+			"$AUTO_AIF_PYTHON" $AUTO_AIF_PATH/main_vif.py --mode inference --input_path dce/${PREFIX}_desc-hmc_DCE.nii.gz --save_output_path $PWD/dce \
 				--model_weight_path $SCRIPT_PATH/$AUTOAIF_WEIGHT_PATH \
 				--model_name $AUTOAIF_MODEL \
-				--save_image 1 &> /dev/null
+				--save_image 1 &> dce/${PREFIX}_desc-autoaif.log
+			if [ ! -f "dce/${PREFIX}_desc-hmc_DCE_float_mask.nii" ] || [ ! -f "dce/${PREFIX}_desc-hmc_DCE_mask.nii" ]; then
+				echo "$source_dir AutoAIF failed. See dce/${PREFIX}_desc-autoaif.log. Skipping timepoint..." >> "$LOG_FILE"
+				cd "$DATA_DIR"
+				fail=1
+				continue
+			fi
 			# rename output
 			mv dce/${PREFIX}_desc-hmc_DCE_float_mask.nii dce/${PREFIX}_label-AIF_desc-float_mask.nii
 			mv dce/${PREFIX}_desc-hmc_DCE_mask.nii dce/${PREFIX}_label-AIF_desc-topvoxels_mask.nii
@@ -706,7 +771,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 			# fslmaths aif_floats.nii -thr 0.95 aif_mask.nii
 			fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_label-AIF_desc-topvoxels_mask.nii dce/${PREFIX}_label-AIF_T1map.nii
 		else
-			python3 $AUTO_AIF_PATH/main_vif.py --mode inference --input_path $source_dir/dce/${PREFIX}_DCE.nii.gz --save_output_path $PWD/dce \
+			"$AUTO_AIF_PYTHON" $AUTO_AIF_PATH/main_vif.py --mode inference --input_path $source_dir/dce/${PREFIX}_DCE.nii.gz --save_output_path $PWD/dce \
 				--model_weight_path $SCRIPT_PATH/$AUTOAIF_WEIGHT_PATH \
 				--model_name $AUTOAIF_MODEL \
 				--save_image 1 &> dce/${PREFIX}_desc-autoaif.log
