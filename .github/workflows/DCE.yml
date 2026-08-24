@@ -52,7 +52,7 @@ jobs:
     #  uses: matlab-actions/setup-matlab@v1
         
     - name: Preprocess the data
-      run:  ./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA/sourcedata/raw -b -Z -m -c
+      run:  ./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA/sourcedata/raw -b -Z -m -c -A A
       
     - name: Run DCE
       run:  ./DCE_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA/sourcedata/raw -f
@@ -120,7 +120,7 @@ jobs:
     #  uses: matlab-actions/setup-matlab@v1
         
     - name: Preprocess the data
-      run:  ./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA/sourcedata/raw -b -Z -m -c -p
+      run:  ./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA/sourcedata/raw -b -Z -m -c -p -A A
       
     - name: Run DCE
       run:  ./DCE_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA/sourcedata/raw -f -p
