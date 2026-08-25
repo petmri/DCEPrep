@@ -134,7 +134,7 @@ The spreadsheet contains the following column groups:
 | **Demographics** | Date, APOE, Sex, Age |
 | **Scanner** | Machine, Institution, Coil |
 | **Acquisition** | TR, Time_resolution, TE, Flip_angle, n_reps |
-| **QC** | Approximate SNR, AIFitness, aif_fitted_r2, manual_aif_status, max_disp |
+| **QC** | Approximate_SNR, AIFitness, aif_fitted_r2, manual_aif_status, max_disp |
 | **T1** | T1_blood, T1_wm_median, T1_gm_median |
 | **Ktrans** | Ktrans_wm_median, Ktrans_gm_median, plus per-region medians (Hippo, PhG, Putamen, Pallidum, Thalamus, Caudate, Amygdala, Entorhinal cortex, Fusiform gyrus cortex/WM, Insula WM, Superior/Inferior temporal cortex, Posterior cingulate cortex, Medial temporal cortex) |
 | **Vp** | Per-region Vp medians (same regions as Ktrans) |

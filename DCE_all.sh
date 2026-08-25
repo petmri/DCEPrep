@@ -99,10 +99,11 @@ if [ -z "$DATA_DIR" ]
 		exit 1
 fi
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_cli.m' -printf '%h\n' -quit || find / -name '*run_dce_cli.m' -printf '%h\n' -quit) &> /dev/null
+	# respect a pre-set path (e.g. from CI) instead of searching the whole filesystem
+	ROCKETSHIP_PATH=${ROCKETSHIP_PATH:-$(find $HOME -name '*run_dce_cli.m' -printf '%h\n' -quit || find / -name '*run_dce_cli.m' -printf '%h\n' -quit) 2> /dev/null}
 	SCRIPT_PATH=$(dirname "$(realpath $0)")
-	GPUFIT_PATH=$(find $HOME -name 'GpufitConstrainedMex.mexa64' -printf '%h\n' -quit || find / -name 'GpufitConstrainedMex.mexa64' -printf '%h\n' -quit)
-	GPUFIT_M_PATH=$(find $HOME -name 'ModelID.m' -printf '%h\n' -quit || find / -name 'ModelID.m' -printf '%h\n' -quit)
+	GPUFIT_PATH=${GPUFIT_PATH:-$(find $HOME -name 'GpufitConstrainedMex.mexa64' -printf '%h\n' -quit || find / -name 'GpufitConstrainedMex.mexa64' -printf '%h\n' -quit)}
+	GPUFIT_M_PATH=${GPUFIT_M_PATH:-$(find $HOME -name 'ModelID.m' -printf '%h\n' -quit || find / -name 'ModelID.m' -printf '%h\n' -quit)}
 else
 	ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 	SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
@@ -223,14 +224,14 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	fi
 	if [ $SKIP_IF_SUCCESS -eq 1 ]
 		then
-		if [ -f "reports/${PREFIX}_desc-casereport.html" ] && [ -f "anat/${PREFIX}_space-DCEref_desc-wmparc.nii.gz" ]
+		if [ -f "reports/${PREFIX}_desc-casereport.html" ] && [ -f "anat/${PREFIX}_space-DCEref_seg-wmparc_dseg.nii.gz" ]
 			then
 			echo "Skipping $dir because it has already been processed." >> $LOG_FILE
 			((successes++))
 			if [ $PURGE_INTERMEDIATES -eq 1 ] # && [ $COMPARISON_MODE -eq 1 ]
 				then
 				cd anat
-				rm -f !(${PREFIX}*bfczunified_VFA.nii|${PREFIX}_space-DCEref_T1map*|${PREFIX}*label-*_T1map*|*.mat|*wmparc.nii.gz|*space-DCEref_desc-brain_mask.nii.gz)
+				rm -f !(${PREFIX}*bfczunified_VFA.nii|${PREFIX}_space-DCEref_T1map*|${PREFIX}*label-*_T1map*|*.mat|*wmparc.nii.gz|*space-DCEref_label-brain_mask.nii.gz)
 				cd ../dce
 				rm -f !(${PREFIX}*Ktrans*|${PREFIX}*bfcz_DCE*|${PREFIX}*AIFincluded*|${PREFIX}*AIF_T1map*|figures|*.log|*.txt|*.par)
 			fi

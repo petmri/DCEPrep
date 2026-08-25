@@ -33,11 +33,20 @@ vascular_function produces the following files per subject:
 
 ## How DCEPrep Locates vascular_function
 
-At runtime DCEPrep searches for `main_vif.py`:
+For automatic AIF selection, `preprocess_all.sh` first uses `AUTO_AIF_PATH`
+when set, then the Docker location `/opt/vascular_function`, and finally
+searches `$HOME` for `main_vif.py`. Set the variable explicitly for a
+nonstandard installation:
 
 ```bash
-AUTO_AIF_PATH=$(find $HOME -wholename '*main_vif.py' -printf '%h\n' -quit \
-  || find / -name '*main_vif.py' -printf '%h\n' -quit)
+export AUTO_AIF_PATH=/path/to/vascular_function
+```
+
+`main_vif.py` requires TensorFlow. `preprocess_all.sh` uses `python3` by default;
+set `AUTO_AIF_PYTHON` when TensorFlow is installed in a dedicated environment:
+
+```bash
+export AUTO_AIF_PYTHON=/path/to/tensorflow-environment/bin/python
 ```
 
 In Docker, vascular_function is installed at `/opt/vascular_function` and the pre-trained model weights are mounted at:

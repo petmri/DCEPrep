@@ -38,7 +38,6 @@ while getopts ":d:bBa:A:ZfhcC:j:mMsS:tl:T:w:p" options; do
 			AIF_SUFFIX=${OPTARG}
 			;;
 		A)
-			AUTO_AIF_PATH=$(find $HOME -wholename '*main_vif.py' -printf '%h\n' -quit || find / -name '*main_vif.py' -printf '%h\n' -quit) &> /dev/null
 			case "${OPTARG}" in
 				M)
 					USE_AUTO_AIF=0

@@ -34,19 +34,14 @@ GPUfit (petmri fork) includes GPU-optimised implementations of:
 
 ## How DCEPrep Locates GPUfit
 
-DCEPrep searches for GPUfit's MEX files and MATLAB model definitions at startup:
+On Linux, `preprocess_all.sh` first uses `GPUFIT_PATH` and `GPUFIT_M_PATH` when
+set, then the Docker locations `/opt/Gpufit/matlab64` and `/opt/Gpufit/matlab`,
+and finally searches `$HOME` for the required files. Set both variables for a
+nonstandard installation:
 
 ```bash
-# T1 mapping MEX (preprocess_all.sh)
-GPUFIT_PATH=$(find $HOME -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit \
-  || find / -name 'GpufitCudaAvailableMex.mexa64' -printf '%h\n' -quit)
-
-# DCE analysis MEX (DCE_all.sh)
-GPUFIT_PATH=$(find $HOME -name 'GpufitConstrainedMex.mexa64' -printf '%h\n' -quit \
-  || find / -name 'GpufitConstrainedMex.mexa64' -printf '%h\n' -quit)
-
-# MATLAB model ID definitions (both scripts)
-GPUFIT_M_PATH=$(find $HOME -name 'ModelID.m' -printf '%h\n' -quit)
+export GPUFIT_PATH=/path/to/Gpufit/matlab64
+export GPUFIT_M_PATH=/path/to/Gpufit/matlab
 ```
 
 Both `GPUFIT_PATH` and `GPUFIT_M_PATH` are then passed to MATLAB via `addpath`:
