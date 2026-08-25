@@ -68,6 +68,12 @@ jobs:
       run:  wkhtmltopdf --enable-local-file-access /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.html /media/network_mriphysics/USC-PPG/RUNNER_DATA/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.pdf
       continue-on-error: true
 
+    - name: Validate analysis results
+      run: |
+        test -f /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.html
+        test -f /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.pdf
+        test -n "$(find /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/figures/ -type f -print -quit)"
+
     - name: Upload analysis results
       uses: actions/upload-artifact@v7
       with:
@@ -136,6 +142,12 @@ jobs:
     - name: Convert HTML to PDF
       run:  wkhtmltopdf --enable-local-file-access /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.html /media/network_mriphysics/USC-PPG/RUNNER_DATA/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.pdf
       continue-on-error: true
+
+    - name: Validate analysis results
+      run: |
+        test -f /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.html
+        test -f /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.pdf
+        test -n "$(find /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/figures/ -type f -print -quit)"
 
     - name: Upload analysis results
       uses: actions/upload-artifact@v7
