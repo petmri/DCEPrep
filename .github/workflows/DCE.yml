@@ -17,6 +17,9 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v7
+      with:
+        clean: true
+        fetch-depth: 0
 
     - name: Checkout ROCKETSHIP repo
       uses: actions/checkout@v7
@@ -24,6 +27,8 @@ jobs:
         repository: petmri/ROCKETSHIP
         ref: dev
         path: ROCKETSHIP
+        clean: true
+        fetch-depth: 0
 
     #- name: Set up Python 3.10
     #  uses: actions/setup-python@v3
