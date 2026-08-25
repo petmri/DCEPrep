@@ -398,16 +398,22 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 
 	if [ ! -f "anat/${PREFIX}_label-brain_mask.nii.gz" ] && [ -f "$source_dir/anat/${PREFIX}_T1w.nii.gz" ]
 		then
-		if [ nvidia-smi ]
+		if command -v nvidia-smi &> /dev/null && nvidia-smi &> /dev/null
 			then
-			hd-bet -i $source_dir/anat/${PREFIX}_T1w.nii.gz -o anat/${PREFIX}_desc-brain.nii.gz --save_bet_mask &> /dev/null
+			"$HD_BET_COMMAND" -i $source_dir/anat/${PREFIX}_T1w.nii.gz -o anat/${PREFIX}_label-brain.nii.gz --save_bet_mask &> /dev/null
 			mETA=$(echo "scale=0;  $SECONDS * 34 * ($count - $current + 1) / 60" | bc -l)
 		else
-			hd-bet -i $source_dir/anat/${PREFIX}_T1w.nii.gz -o anat/${PREFIX}_desc-brain.nii.gz -device cpu --save_bet_mask &> /dev/null
+			"$HD_BET_COMMAND" -i $source_dir/anat/${PREFIX}_T1w.nii.gz -o anat/${PREFIX}_label-brain.nii.gz -device cpu --save_bet_mask &> /dev/null
 			mETA=$(echo "scale=0;  $SECONDS * 2 * ($count - $current + 1) / 60" | bc -l)
 		fi
-		mv anat/${PREFIX}_desc-brain_bet.nii.gz anat/${PREFIX}_desc-brain_mask.nii.gz
-		mv anat/${PREFIX}_desc-brain.nii.gz anat/${PREFIX}_desc-brain_T1w.nii.gz
+		if [ ! -f "anat/${PREFIX}_label-brain_bet.nii.gz" ] || [ ! -f "anat/${PREFIX}_label-brain.nii.gz" ]; then
+			echo "$source_dir HD-BET did not create expected output files. Skipping timepoint..." >> "$LOG_FILE"
+			cd "$DATA_DIR"
+			fail=1
+			continue
+		fi
+		mv anat/${PREFIX}_label-brain_bet.nii.gz anat/${PREFIX}_label-brain_mask.nii.gz
+		mv anat/${PREFIX}_label-brain.nii.gz anat/${PREFIX}_label-brain_T1w.nii.gz
 	elif [ -f "$source_dir/anat/${PREFIX}_T2w.nii.gz" ]
 		then
 		# assume mouse
