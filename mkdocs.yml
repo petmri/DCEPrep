@@ -1,100 +1,55 @@
+# Shared DCEasy theme: palette, fonts, features, social, analytics, extensions.
+# Source of truth is petmri/petmri.github.io › theme/. Do NOT redeclare
+# theme.features here — lists replace rather than merge, and the site would
+# silently lose every feature not listed. theme.icon below is safe: dicts merge.
+INHERIT: ./dceasy-base.yml
+
 site_name: DCEPrep
 site_description: A preprocessing and analysis pipeline for Dynamic Contrast-Enhanced (DCE) MRI data
-site_url: https://petmri.github.io/DCEPrep
+site_url: https://dceasy.org/DCEPrep/
 repo_url: https://github.com/petmri/DCEPrep
 repo_name: petmri/DCEPrep
 edit_uri: edit/main/docs/
 
 theme:
-  name: material
-  palette:
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: teal
-      accent: cyan
-      toggle:
-        icon: material/brightness-7
-        name: Switch to dark mode
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      primary: teal
-      accent: cyan
-      toggle:
-        icon: material/brightness-4
-        name: Switch to light mode
-  features:
-    - navigation.tabs
-    - navigation.tabs.sticky
-    - navigation.sections
-    - navigation.expand
-    - navigation.top
-    - navigation.footer
-    - toc.integrate
-    - search.suggest
-    - search.highlight
-    - content.code.copy
-    - content.code.annotate
   icon:
-    repo: fontawesome/brands/github
+    logo: material/transit-connection-variant
 
+# Site-specific: HTML minification on top of the inherited search plugin.
 plugins:
-  - search
-  - minify:
-      minify_html: true
-
-markdown_extensions:
-  - admonition
-  - pymdownx.details
-  - pymdownx.superfences:
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
-  - pymdownx.tabbed:
-      alternate_style: true
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - attr_list
-  - md_in_html
-  - tables
-  - toc:
-      permalink: true
+  minify:
+    minify_html: true
 
 nav:
   - Home: index.md
   - Getting Started:
-    - Installation: getting-started/installation.md
-    - BIDS Data Setup: getting-started/bids-setup.md
-    - Process Data: getting-started/process-data.md
+      - Installation: getting-started/installation.md
+      - BIDS Data Setup: getting-started/bids-setup.md
+      - Process Data: getting-started/process-data.md
   - User Guide:
-    - Preprocessing: user-guide/preprocessing.md
-    - Analysis: user-guide/analysis.md
-    - AIF Selection: user-guide/aif-selection.md
-    - Pipeline Outputs: user-guide/outputs.md
+      - Preprocessing: user-guide/preprocessing.md
+      - Analysis: user-guide/analysis.md
+      - AIF Selection: user-guide/aif-selection.md
+      - Pipeline Outputs: user-guide/outputs.md
   - How-To Guides:
-    - DICOM to BIDS Conversion: how-to/dicom-to-bids.md
-    - Using Docker: how-to/docker-usage.md
-    - Comparison Mode: how-to/comparison-mode.md
-    - FreeSurfer Parcellation: how-to/freesurfer-parcellation.md
+      - DICOM to BIDS Conversion: how-to/dicom-to-bids.md
+      - Using Docker: how-to/docker-usage.md
+      - Comparison Mode: how-to/comparison-mode.md
+      - FreeSurfer Parcellation: how-to/freesurfer-parcellation.md
   - CLI Reference:
-    - Preprocessing CLI: reference/preprocessing-cli.md
-    - Analysis CLI: reference/analysis-cli.md
-    - Pipeline Steps: reference/pipeline-steps.md
+      - Preprocessing CLI: reference/preprocessing-cli.md
+      - Analysis CLI: reference/analysis-cli.md
+      - Pipeline Steps: reference/pipeline-steps.md
   - Integration:
-    - ROCKETSHIP: integration/rocketship.md
-    - AutoAIF: integration/auto-aif.md
-    - dce2bids: integration/dce2bids.md
-    - GPUfit: integration/gpufit.md
+      - ROCKETSHIP: integration/rocketship.md
+      - AutoAIF: integration/auto-aif.md
+      - dce2bids: integration/dce2bids.md
+      - GPUfit: integration/gpufit.md
   - About:
     - Citation: about/citation.md
     - Contributing: about/contributing.md
-
+  - DCEasy family: https://dceasy.org/
 extra:
-  analytics:
-    provider: google
-    property: G-QGP3ETP28Q
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/petmri/DCEPrep

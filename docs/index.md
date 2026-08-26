@@ -51,11 +51,15 @@ flowchart TD
     A --> B --> PRE
     ANA --> G
 
-    style A fill:#757575,stroke:#555,color:#fff
-    style B fill:#F9A825,stroke:#F57F17,color:#000
-    style G fill:#757575,stroke:#555,color:#fff
-    style PRE fill:#C8DCEE,stroke:#7AAAC8,color:#1a2a3a
-    style ANA fill:#C8DCEE,stroke:#7AAAC8,color:#1a2a3a
+    %% Categories are carried by border colour and weight, not fill.
+    %% Fill and text colour are left to the theme so the diagram stays
+    %% legible in both light and dark mode — a fixed light fill cannot
+    %% work against both a near-black and a near-white theme text colour.
+    style A stroke:#9E9E9E,stroke-width:2px
+    style B stroke:#F9A825,stroke-width:3px
+    style G stroke:#9E9E9E,stroke-width:2px
+    style PRE stroke:#7AAAC8,stroke-width:3px
+    style ANA stroke:#7AAAC8,stroke-width:3px
 ```
 
 | Color | Meaning |

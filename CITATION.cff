@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: "If you use DCEPrep in your research, please cite this software."
+title: DCEPrep
+abstract: >-
+  An end-to-end preprocessing and analysis pipeline for brain DCE-MRI. Wraps
+  FSL, ANTs, FreeSurfer, ROCKETSHIP and AutoAIF into a single configurable
+  workflow covering VFA-based T1 mapping, bias field correction, z-axis
+  normalization, head motion correction, AIF selection, Ktrans fitting and
+  automated QC reporting. A Docker image is provided for reproducible
+  deployment.
+type: software
+authors:
+  - family-names: Saca
+    given-names: Lucas
+    orcid: "https://orcid.org/0009-0008-3291-0750"
+    affiliation: Loma Linda University
+  - family-names: Barnes
+    given-names: Samuel R.
+    orcid: "https://orcid.org/0000-0002-1065-8442"
+    affiliation: Loma Linda University
+  - family-names: Gaggar
+    given-names: Raghav
+  - family-names: Chakhoyan
+    given-names: Ararat
+license: MIT
+repository-code: "https://github.com/petmri/DCEPrep"
+url: "https://petmri.github.io/DCEPrep/"
+keywords:
+  - DCE-MRI
+  - preprocessing
+  - BIDS
+  - blood-brain barrier
+  - Ktrans
+  - MRI
+# A methods paper is in preparation:
+#   Barnes S, et al. Automated DCE-MRI processing with DCEPrep for Blood-Brain
+#   Barrier permeability in a multi-site aging study. 2026.
+# Add it here as `preferred-citation:` once it has a DOI.
