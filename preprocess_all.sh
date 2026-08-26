@@ -76,7 +76,6 @@ while getopts ":d:bBa:A:ZfhcC:j:mMsS:tl:T:w:p" options; do
 			DATE=$(date +%Y-%m-%d)
 			# derivatives dir is up 2 levels from data dir
 			DERIV_DIR=$(dirname $(dirname $DATA_DIR))/derivatives
-			echo $DERIV_DIR
 			if [ ! -d "$DERIV_DIR" ]
 				then
 				mkdir -p "$DERIV_DIR"

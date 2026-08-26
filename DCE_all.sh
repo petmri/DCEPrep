@@ -100,7 +100,7 @@ if [ -z "$DATA_DIR" ]
 fi
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	# respect a pre-set path (e.g. from CI) instead of searching the whole filesystem
-	ROCKETSHIP_PATH=${ROCKETSHIP_PATH:-$(find $HOME -name '*run_dce_cli.m' -printf '%h\n' -quit || find / -name '*run_dce_cli.m' -printf '%h\n' -quit) 2> /dev/null}
+	ROCKETSHIP_PATH=${ROCKETSHIP_PATH:-$(find $HOME -name '*run_dce_cli.m' -printf '%h\n' -quit || find / -name '*run_dce_cli.m' -printf '%h\n' -quit 2> /dev/null)}
 	SCRIPT_PATH=$(dirname "$(realpath $0)")
 	GPUFIT_PATH=${GPUFIT_PATH:-$(find $HOME -name 'GpufitConstrainedMex.mexa64' -printf '%h\n' -quit || find / -name 'GpufitConstrainedMex.mexa64' -printf '%h\n' -quit)}
 	GPUFIT_M_PATH=${GPUFIT_M_PATH:-$(find $HOME -name 'ModelID.m' -printf '%h\n' -quit || find / -name 'ModelID.m' -printf '%h\n' -quit)}
@@ -259,7 +259,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	rm -f dce/dce_patlak_fit_rois.xls
 	if [ $USE_PYTHON -eq 1 ]
 		then
-		${ROCKETSHIP_PATH}/.venv/bin/python ${ROCKETSHIP_PATH}/run_dce_cli_python_case.py --subject-source $SUBJECT_TP_PATH --subject-tp $SUBJECT_TP_PATH --output-dir $SUBJECT_TP_PATH --events off
+		${ROCKETSHIP_PATH}/.venv/bin/python ${ROCKETSHIP_PATH}/run_dce_python_case.py --subject-source $SUBJECT_TP_PATH --subject-tp $SUBJECT_TP_PATH --output-dir $SUBJECT_TP_PATH --events off
 	else
 		matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; run_dce_cli('$DATA_DIR/$SUBJECT/$SESSION/', '$SUBJECT_TP_PATH/'); exit;"
 	fi
