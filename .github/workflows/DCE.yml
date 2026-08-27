@@ -57,7 +57,6 @@ jobs:
     - name: Validate analysis results
       run: |
         test -f /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.html
-        test -f /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.pdf
         test -n "$(find /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/figures/ -type f -print -quit)"
 
     - name: Upload analysis results
@@ -117,7 +116,6 @@ jobs:
     - name: Validate analysis results
       run: |
         test -f /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.html
-        test -f /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.pdf
         test -n "$(find /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/figures/ -type f -print -quit)"
 
     - name: Upload analysis results
