@@ -50,9 +50,9 @@ jobs:
         cat /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/logs/preprocessing_log_${date}.txt
         cat /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/logs/dce_log_${date}.txt
 
-    - name: Convert HTML to PDF
-      run:  wkhtmltopdf --enable-local-file-access /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.html /media/network_mriphysics/USC-PPG/RUNNER_DATA/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.pdf
-      continue-on-error: true
+    # - name: Convert HTML to PDF
+    #   run:  wkhtmltopdf --enable-local-file-access /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.html /media/network_mriphysics/USC-PPG/RUNNER_DATA/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.pdf
+    #   continue-on-error: true
 
     - name: Validate analysis results
       run: |
@@ -66,7 +66,6 @@ jobs:
         name: HTML_report
         path: |
           /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.html
-          /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.pdf
           /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/figures/
         retention-days: 7
         if-no-files-found: error
@@ -111,9 +110,9 @@ jobs:
         cat /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/logs/preprocessing_log_${date}.txt
         cat /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/logs/dce_log_${date}.txt
 
-    - name: Convert HTML to PDF
-      run:  wkhtmltopdf --enable-local-file-access /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.html /media/network_mriphysics/USC-PPG/RUNNER_DATA/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.pdf
-      continue-on-error: true
+    # - name: Convert HTML to PDF
+    #   run:  wkhtmltopdf --enable-local-file-access /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.html /media/network_mriphysics/USC-PPG/RUNNER_DATA/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.pdf
+    #   continue-on-error: true
 
     - name: Validate analysis results
       run: |
@@ -127,7 +126,6 @@ jobs:
         name: HTML_report
         path: |
           /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.html
-          /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/reports/sub-1101743_ses-01_desc-casereport.pdf
           /media/network_mriphysics/USC-PPG/RUNNER_DATA/derivatives/dceprep/sub-1101743/ses-01/figures/
         retention-days: 7
         if-no-files-found: error
