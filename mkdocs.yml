@@ -11,6 +11,11 @@ repo_url: https://github.com/petmri/DCEPrep
 repo_name: petmri/DCEPrep
 edit_uri: edit/main/docs/
 
+# Per-project favicon — the family mark is shared via the header logo, but the
+# tab icon has to tell this site apart from the other DCEasy sites.
+theme:
+  favicon: assets/favicon.svg
+
 
 # Site-specific: HTML minification on top of the inherited search plugin.
 plugins:
@@ -45,11 +50,10 @@ nav:
   - About:
     - Citation: about/citation.md
     - Contributing: about/contributing.md
-  - DCEasy family: https://dceasy.org/
 extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/petmri/DCEPrep
     - icon: material/web
-      link: https://petmri.github.io/
-      name: petmri software family
+      link: https://dceasy.org/
+      name: DCEasy family
