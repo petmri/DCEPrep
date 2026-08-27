@@ -758,7 +758,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		if [ $EN_MOTION_CORR -eq 1 ]
 			then
 			"$AUTO_AIF_PYTHON" $AUTO_AIF_PATH/main_vif.py --mode inference --input_path dce/${PREFIX}_desc-hmc_DCE.nii.gz --save_output_path $PWD/dce \
-				--model_weight_path $SCRIPT_PATH/$AUTOAIF_WEIGHT_PATH \
+				--model_weight_path $AUTOAIF_WEIGHT_PATH \
 				--model_name $AUTOAIF_MODEL \
 				--save_image 1 &> dce/${PREFIX}_desc-autoaif.log
 			if [ ! -f "dce/${PREFIX}_desc-hmc_DCE_float_mask.nii" ] || [ ! -f "dce/${PREFIX}_desc-hmc_DCE_mask.nii" ]; then
@@ -776,7 +776,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 			fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_label-AIF_desc-topvoxels_mask.nii dce/${PREFIX}_label-AIF_T1map.nii
 		else
 			"$AUTO_AIF_PYTHON" $AUTO_AIF_PATH/main_vif.py --mode inference --input_path $source_dir/dce/${PREFIX}_DCE.nii.gz --save_output_path $PWD/dce \
-				--model_weight_path $SCRIPT_PATH/$AUTOAIF_WEIGHT_PATH \
+				--model_weight_path $AUTOAIF_WEIGHT_PATH \
 				--model_name $AUTOAIF_MODEL \
 				--save_image 1 &> dce/${PREFIX}_desc-autoaif.log
 			if [ ! -f "dce/${PREFIX}_DCE_float_mask.nii" ] || [ ! -f "dce/${PREFIX}_DCE_mask.nii" ]; then
