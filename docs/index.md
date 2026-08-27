@@ -1,5 +1,45 @@
 # DCEPrep
 
+
+<!-- dceasy-pipeline -->
+## Where this fits
+
+DCEPrep automates steps 2 through 6. The full DCEasy pipeline:
+
+```mermaid
+%%{init: {"theme":"base","flowchart":{"useMaxWidth":false,"htmlLabels":true,"curve":"linear","nodeSpacing":26,"rankSpacing":38,"padding":12},"themeVariables":{"fontFamily":"IBM Plex Sans, Helvetica, sans-serif","fontSize":"17px","lineColor":"#9aa2a4"}}}%%
+flowchart LR
+  convert["<span style='font-size:17px;font-weight:600'>1 · Convert</span><br/><span style='font-size:13px;opacity:.7'>DICOM → BIDS</span><br/><span style='font-family:JetBrains Mono,monospace;font-size:12px;letter-spacing:.02em;opacity:.9'>dce2bids</span>"]
+  prep["<span style='font-size:17px;font-weight:600'>2 · Preprocess</span><br/><span style='font-size:13px;opacity:.7'>motion · bias</span><br/><span style='font-family:JetBrains Mono,monospace;font-size:12px;letter-spacing:.02em;opacity:.9'>DCEPrep</span>"]
+  aif["<span style='font-size:17px;font-weight:600'>3 · AIF</span><br/><span style='font-size:13px;opacity:.7'>input function</span><br/><span style='font-family:JetBrains Mono,monospace;font-size:12px;letter-spacing:.02em;opacity:.9'>AutoAIF / AIFArtist</span>"]
+  t1["<span style='font-size:17px;font-weight:600'>4 · T1 map</span><br/><span style='font-size:13px;opacity:.7'>VFA / IR</span><br/><span style='font-family:JetBrains Mono,monospace;font-size:12px;letter-spacing:.02em;opacity:.9'>parametric_scripts</span>"]
+  pk["<span style='font-size:17px;font-weight:600'>5 · PK fit</span><br/><span style='font-size:13px;opacity:.7'>Ktrans · ve · vp</span><br/><span style='font-family:JetBrains Mono,monospace;font-size:12px;letter-spacing:.02em;opacity:.9'>ROCKETSHIP + Gpufit</span>"]
+  analyze["<span style='font-size:17px;font-weight:600'>6 · Analyze</span><br/><span style='font-size:13px;opacity:.7'>compare · QC</span><br/><span style='font-family:JetBrains Mono,monospace;font-size:12px;letter-spacing:.02em;opacity:.9'>ROCKETSHIP</span>"]
+  convert --> prep --> aif --> t1 --> pk --> analyze
+  subgraph dceprep ["<span style='font-family:JetBrains Mono,monospace;font-size:11px;letter-spacing:.09em'>DCEPREP — AUTOMATED, STEPS 2–6</span>"]
+    direction LR
+    prep
+    aif
+    t1
+    pk
+    analyze
+  end
+  %% No fill and no color anywhere: the theme owns text colour, so labels stay
+  %% legible in light and slate alike. Emphasis is carried by border weight and
+  %% a translucent tint that reads on either ground.
+  classDef stage fill:none,stroke:#9aa2a4,stroke-width:1px
+  classDef on fill:#16707f26,stroke:#16707f,stroke-width:2.5px
+  class convert,prep,aif,t1,pk,analyze stage
+  style dceprep fill:#16707f12,stroke:#16707f,stroke-width:1.5px,stroke-dasharray:4 4
+  %% HIGHLIGHT — the only line that differs per site
+  class prep,aif,t1,pk,analyze on
+```
+
+[Explore the DCEasy family →](https://dceasy.org/){ .md-button }
+
+---
+
+
 **A preprocessing and analysis pipeline for Dynamic Contrast-Enhanced (DCE) MRI data.**
 
 DCEPrep handles the full workflow for measuring permeability (Ktrans) from DCE-MRI acquisitions — from raw DICOM to publication-ready QC reports.

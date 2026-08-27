@@ -11,9 +11,6 @@ repo_url: https://github.com/petmri/DCEPrep
 repo_name: petmri/DCEPrep
 edit_uri: edit/main/docs/
 
-theme:
-  icon:
-    logo: material/transit-connection-variant
 
 # Site-specific: HTML minification on top of the inherited search plugin.
 plugins:
