@@ -39,7 +39,7 @@ jobs:
         pip install --upgrade hd-bet
 
     - name: Preprocess the data
-      run:  ./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA/sourcedata/raw -b -Z -m -c -A A
+      run:  ./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA/sourcedata/raw -b -Z -m -c -A A -w /home/mrispec/Code/DCEPrep/docker/files/model_weight_huber1.h5
       
     - name: Run DCE
       run:  ./DCE_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA/sourcedata/raw -f
@@ -100,7 +100,7 @@ jobs:
         pip install --upgrade hd-bet
 
     - name: Preprocess the data
-      run:  ./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA/sourcedata/raw -b -Z -m -c -p -A A
+      run:  ./preprocess_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA/sourcedata/raw -b -Z -m -c -p -A A -w /home/mrispec/Code/DCEPrep/docker/files/model_weight_huber1.h5
       
     - name: Run DCE
       run:  ./DCE_all.sh -d /media/network_mriphysics/USC-PPG/RUNNER_DATA/sourcedata/raw -f -p
