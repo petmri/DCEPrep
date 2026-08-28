@@ -16,12 +16,6 @@ edit_uri: edit/main/docs/
 theme:
   favicon: assets/favicon.svg
 
-
-# Site-specific: HTML minification on top of the inherited search plugin.
-plugins:
-  minify:
-    minify_html: true
-
 nav:
   - Home: index.md
   - Getting Started:

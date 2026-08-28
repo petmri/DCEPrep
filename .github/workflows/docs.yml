@@ -1,5 +1,19 @@
 name: Deploy Docs
 
+# Builds the DCEPrep site with Zensical and publishes it to GitHub Pages.
+#
+# Zensical replaces Material for MkDocs, which reaches end of life on
+# 5 November 2026. It reads the same mkdocs.yml and inherits the shared DCEasy
+# theme from dceasy-base.yml, so the config here is unchanged by the switch.
+#
+# No CNAME file: this is a project site, and it inherits the custom domain from
+# the organization site (petmri/petmri.github.io), which is where dceasy.org is
+# configured. Adding one here would give the two copies a chance to disagree.
+#
+# Action majors are kept current because GitHub retires the Node runtime they
+# run on, not because this workflow needs new features. All four below are on
+# node24; upload-pages-artifact pins upload-artifact internally.
+
 on:
   push:
     branches:
@@ -12,6 +26,9 @@ permissions:
   pages: write
   id-token: write
 
+# Queue deploys rather than cancelling them: a cancelled run still counts as a
+# completed deployment to Pages, which silently leaves the site on the older
+# build.
 concurrency:
   group: "pages"
   cancel-in-progress: false
@@ -20,24 +37,21 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: "3.12"
 
-      - name: Install MkDocs and dependencies
-        run: |
-          pip install \
-            mkdocs-material \
-            mkdocs-minify-plugin
+      - name: Install docs dependencies
+        run: pip install -r requirements-docs.txt
 
       - name: Build docs
-        run: mkdocs build --strict
+        run: zensical build --strict
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: site/
 
@@ -50,4 +64,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

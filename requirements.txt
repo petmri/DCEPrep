@@ -15,6 +15,3 @@ scikit_learn
 scipy
 openpyxl
 xlsxwriter
-mkdocs
-mkdocs-material
-mkdocs-minify-plugin
