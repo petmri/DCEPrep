@@ -98,12 +98,43 @@ if [ -z "$DATA_DIR" ]
 		echo "ERROR: Please use '-d [dir_path]' to pass the path to your main data directory to this script."
 		exit 1
 fi
+
+resolve_tool_path() {
+	local configured_path=$1
+	local marker_file=$2
+	shift 2
+	local candidate_path
+
+	if [ -n "$configured_path" ]; then
+		if [ -f "$configured_path/$marker_file" ]; then
+			printf '%s\n' "$configured_path"
+			return 0
+		fi
+		echo "ERROR: Configured path $configured_path does not contain $marker_file." >&2
+		return 1
+	fi
+
+	for candidate_path in "$@"; do
+		if [ -f "$candidate_path/$marker_file" ]; then
+			printf '%s\n' "$candidate_path"
+			return 0
+		fi
+	done
+
+	find "$HOME" \
+		\( -path "$HOME/.local/share/Trash" -o -path "$HOME/.local/share/Trash/*" -o -path "$HOME/.Trash" -o -path "$HOME/.Trash/*" \) -prune -o \
+		-type f -name "$marker_file" -printf '%h\n' -quit 2> /dev/null
+}
+
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-	# respect a pre-set path (e.g. from CI) instead of searching the whole filesystem
-	ROCKETSHIP_PATH=${ROCKETSHIP_PATH:-$(find $HOME -name '*run_dce_cli.m' -printf '%h\n' -quit || find / -name '*run_dce_cli.m' -printf '%h\n' -quit 2> /dev/null)}
+	ROCKETSHIP_PATH=$(resolve_tool_path "${ROCKETSHIP_PATH:-}" "run_dce_cli.m" "/opt/ROCKETSHIP/ROCKETSHIP-dev")
 	SCRIPT_PATH=$(dirname "$(realpath $0)")
-	GPUFIT_PATH=${GPUFIT_PATH:-$(find $HOME -name 'GpufitConstrainedMex.mexa64' -printf '%h\n' -quit || find / -name 'GpufitConstrainedMex.mexa64' -printf '%h\n' -quit)}
-	GPUFIT_M_PATH=${GPUFIT_M_PATH:-$(find $HOME -name 'ModelID.m' -printf '%h\n' -quit || find / -name 'ModelID.m' -printf '%h\n' -quit)}
+	GPUFIT_PATH=$(resolve_tool_path "${GPUFIT_PATH:-}" "GpufitConstrainedMex.mexa64" "/opt/Gpufit/matlab64")
+	GPUFIT_M_PATH=$(resolve_tool_path "${GPUFIT_M_PATH:-}" "ModelID.m" "/opt/Gpufit/matlab")
+	if [ -z "$ROCKETSHIP_PATH" ] || [ -z "$GPUFIT_PATH" ] || [ -z "$GPUFIT_M_PATH" ]; then
+		echo "ERROR: Unable to locate ROCKETSHIP or GPUfit. Set ROCKETSHIP_PATH, GPUFIT_PATH, and GPUFIT_M_PATH to directories containing their required MATLAB files." >&2
+		exit 1
+	fi
 else
 	ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 	SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
@@ -259,17 +290,18 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	rm -f dce/dce_patlak_fit_rois.xls
 	if [ $USE_PYTHON -eq 1 ]
 		then
-		${ROCKETSHIP_PATH}/.venv/bin/python ${ROCKETSHIP_PATH}/run_dce_python_case.py --subject-source $SUBJECT_TP_PATH --subject-tp $SUBJECT_TP_PATH --output-dir $SUBJECT_TP_PATH --events off
+		${ROCKETSHIP_PATH}/.venv/bin/python ${ROCKETSHIP_PATH}/run_dce_python_case.py --subject-source "$DATA_DIR/$SUBJECT/$SESSION/" --subject-tp $SUBJECT_TP_PATH --output-dir $SUBJECT_TP_PATH --events off
 	else
 		matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; run_dce_cli('$DATA_DIR/$SUBJECT/$SESSION/', '$SUBJECT_TP_PATH/'); exit;"
 	fi
-	mv dce/dce_*_fit_Ktrans.nii dce/${PREFIX}_Ktrans.nii
-	mv dce/dce_*_fit_ktrans_ci_low.nii dce/${PREFIX}_Ktrans_ci_low.nii
-	mv dce/dce_*_fit_ktrans_ci_high.nii dce/${PREFIX}_Ktrans_ci_high.nii
-	mv dce/dce_*_fit_vp.nii dce/${PREFIX}_vp.nii
-	mv dce/dce_*_fit_vp_ci_low.nii dce/${PREFIX}_vp_ci_low.nii
-	mv dce/dce_*_fit_vp_ci_high.nii dce/${PREFIX}_vp_ci_high.nii
-	mv dce/dce_*_fit_sse.nii dce/${PREFIX}_sse.nii
+	gzip dce/*.nii
+	mv dce/*_fit_*trans.nii.gz dce/${PREFIX}_Ktrans.nii.gz
+	mv dce/*_fit_*trans_ci_low.nii.gz dce/${PREFIX}_desc-cilow_Ktrans.nii.gz
+	mv dce/*_fit_*trans_ci_high.nii.gz dce/${PREFIX}_desc-cihigh_Ktrans.nii.gz
+	mv dce/*_fit_vp.nii.gz dce/${PREFIX}_vp.nii.gz
+	mv dce/*_fit_vp_ci_low.nii.gz dce/${PREFIX}_desc-cilow_vp.nii.gz
+	mv dce/*_fit_vp_ci_high.nii.gz dce/${PREFIX}_desc-cihigh_vp.nii.gz
+	mv dce/*_fit_sse.nii.gz dce/${PREFIX}_sse.nii.gz
 	# move images into figures folder
 	mv dce/dce*.png figures/
 	rm -f dce/*.fig
