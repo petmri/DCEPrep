@@ -53,7 +53,7 @@ plt.ylabel("Displacement (mm)")
 plt.xlabel("")
 plt.ylim([-2.5, 2.5])
 plt.text(len(mc_params[:,0])/3, 2, "Max vector displacement: " + str(round(vector_max_disp,4)) + "mm")
-plt.text(len(mc_params[:,0])/3, 1.8, "Frame: " + str(vector_max_disp_i) + "/64")
+plt.text(len(mc_params[:,0])/3, 1.8, "Frame: " + str(vector_max_disp_i) + "/" + str(len(mc_params[:,0])))
 # plt.text(len(mc_params[:,0])/2, 1.8, "param: " + param_type)
 path = dir + '/../figures/displacements.svg'
 plt.savefig(path, bbox_inches='tight')

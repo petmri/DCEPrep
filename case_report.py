@@ -25,11 +25,34 @@ freesurfer = bool(int(sys.argv[3]))
 # if source_dir[-1] == '/':
 #     source_dir = source_dir[:-1]
 
-files_to_reorient = [f'anat/{prefix}_flip-01_space-DCEref_VFA.nii.gz', f'dce/{prefix}_Ktrans.nii',
+files_to_reorient = [f'anat/{prefix}_flip-01_space-DCEref_VFA.nii.gz', f'dce/{prefix}_Ktrans.nii.gz',
                      f'anat/{prefix}_space-DCEref_T1w.nii.gz', f'anat/{prefix}_space-DCEref_label-WM_mask.nii.gz',
-                     f'anat/{prefix}_space-DCEref_T1map.nii', f'anat/{prefix}_space-DCEref_desc-brain_mask.nii.gz',
-                     f'anat/{prefix}_space-DCEref_label-GM_mask.nii.gz', f'anat/{prefix}_space-DCEref_desc-wmparc.nii.gz',
+                     f'anat/{prefix}_space-DCEref_T1map.nii', f'anat/{prefix}_space-DCEref_label-brain_mask.nii.gz',
+                     f'anat/{prefix}_space-DCEref_label-GM_mask.nii.gz', f'anat/{prefix}_space-DCEref_seg-wmparc_dseg.nii.gz',
                      first_existing_nifti_path(f'dce/{prefix}_desc-hmc_DCEref.nii.gz', f'dce/{prefix}_DCEref.nii.gz')]
+
+
+def space_ras_path(path):
+    if path.endswith('.nii.gz'):
+        extension = '.nii.gz'
+        stem = path[:-7]
+    elif path.endswith('.nii'):
+        extension = '.nii'
+        stem = path[:-4]
+    else:
+        raise ValueError(f'Unsupported NIfTI path: {path}')
+
+    directory, filename = os.path.split(stem)
+    if 'space-DCEref_' in filename:
+        filename = filename.replace('space-DCEref_', 'space-RAS_', 1)
+    else:
+        filename, replacements = re.subn(r'(ses-[^_]+_)', r'\1space-RAS_', filename, count=1)
+        if replacements == 0:
+            raise ValueError(f'Could not derive space-RAS path from {path}')
+
+    return os.path.join(directory, filename + extension)
+
+
 # if c3d exists, reorient files to RAS
 dimensions = 0
 voxel_size = 0
@@ -42,12 +65,12 @@ if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
         if not os.path.exists(file):
             print(f"File does not exist, skipping: {file}")
             continue
-        file_no_extension = nifti_stem(file)
-        command = ['c3d', file, '-orient', 'RAS', '-o', file_no_extension + '_RAS.nii.gz']
+        reoriented_file = space_ras_path(file)
+        command = ['c3d', file, '-orient', 'RAS', '-o', reoriented_file]
         try:
             subprocess.run(command, check=True)
             if nifti_stem(file) == f'dce/{prefix}_Ktrans':
-                ktrans = nib.load(resolve_nifti_path(f'dce/{prefix}_Ktrans_RAS.nii.gz'))
+                ktrans = nib.load(resolve_nifti_path(space_ras_path(f'dce/{prefix}_Ktrans.nii.gz')))
                 ktrans_data = ktrans.get_fdata()
                 ktrans_flipped = np.flip(ktrans_data, axis=1)
                 ktrans_flipped = nib.Nifti1Image(ktrans_flipped, ktrans.affine, ktrans.header)
@@ -61,8 +84,10 @@ if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
                 ktrans_z_slices = min(dimensions)
                 midpt = int(ktrans_coords-5*ktrans_z_slices/2)
                 max_coord = int(ktrans_coords-5*ktrans_z_slices)
-                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(ktrans_coords, midpt, -5), axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
-                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(midpt, max_coord, -5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
+                coords1 = list(range(ktrans_coords, midpt, -5))
+                coords2 = list(range(midpt, max_coord, -5))
+                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=coords1, axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
+                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=coords2, axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
                 plt.savefig('figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
                 plt.close()
         except Exception as e:
@@ -75,22 +100,24 @@ else:
         if not os.path.exists(file):
             print(f"File does not exist, skipping: {file}")
             continue
-        file_no_extension = nifti_stem(file)
-        command = ['mri_convert', '--in_orientation', 'LPI', file, file_no_extension + '_RAS.nii.gz']
+        reoriented_file = space_ras_path(file)
+        command = ['mri_convert', '--in_orientation', 'LPI', file, reoriented_file]
         try:
             subprocess.run(command, check=True)
             if nifti_stem(file) == f'dce/{prefix}_Ktrans':
-                ktrans = nib.load(resolve_nifti_path(f'dce/{prefix}_Ktrans_RAS.nii.gz'))
+                ktrans = nib.load(resolve_nifti_path(space_ras_path(f'dce/{prefix}_Ktrans.nii.gz')))
                 ktrans_data = ktrans.get_fdata()
                 ktrans_flipped = np.flip(ktrans_data, axis=1)
                 ktrans_flipped = nib.Nifti1Image(ktrans_flipped, ktrans.affine, ktrans.header)
                 dimensions = ktrans.header.get_data_shape()
                 voxel_size = ktrans.header.get_zooms()
+                range1 = list(range(-56, -21, 5))
+                range2 = list(range(-21, 13, 5))
 
                 # plot Ktrans, different coords
                 fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(15, 5), gridspec_kw={'hspace': -.1, 'wspace': -.1}, dpi=300)
-                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-56, -21, 5), axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
-                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-21, 13, 5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
+                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range1, axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
+                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range2, axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
                 plt.savefig('figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
                 plt.close()
         except Exception as e:
@@ -158,7 +185,7 @@ except Exception as e:
 
 try:
     t1w_native = load_nifti_float32(f'{source_dir}/anat/{prefix}_T1w.nii.gz')
-    brain_mask_native = load_nifti_float32(f'anat/{prefix}_desc-brain_mask.nii.gz')
+    brain_mask_native = load_nifti_float32(f'anat/{prefix}_label-brain_mask.nii.gz')
     wm_mask_native = load_nifti_float32(f'anat/{prefix}_label-WM_mask.nii.gz')
     gm_mask_native = load_nifti_float32(f'anat/{prefix}_label-GM_mask.nii.gz')
 
@@ -175,33 +202,33 @@ except Exception as e:
 
 try:
     # T1w to VFA
-    # plotting.plot_anat(f'anat/{prefix}_label-WM_mask_RAS.nii.gz', cmap='gray', output_file='figures/t1w_to_dceref.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w to DCEref')
+    # plotting.plot_anat(space_ras_path(f'anat/{prefix}_label-WM_mask.nii.gz'), cmap='gray', output_file='figures/t1w_to_dceref.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w to DCEref')
 
     # T1w to dyn
-    t1w_dceref = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_T1w_RAS.nii.gz'))
+    t1w_dceref = nib.load(resolve_nifti_path(space_ras_path(f'anat/{prefix}_space-DCEref_T1w.nii.gz')))
     t1w_dceref_data = t1w_dceref.get_fdata()
     t1w_dceref_flipped = np.flip(t1w_dceref_data, axis=1)
     t1w_dceref_flipped = nib.Nifti1Image(t1w_dceref_flipped, t1w_dceref.affine, t1w_dceref.header)
     plotting.plot_anat(t1w_dceref_flipped, cmap='gray', output_file=f'figures/{prefix}_space-DCEref_T1w.svg', cut_coords=7, display_mode='z', annotate=False, colorbar=False, draw_cross=False, title='T1w to dyn')
 
     # flip T1w masks
-    t1w_mask = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_desc-brain_mask_RAS.nii.gz'))
+    t1w_mask = nib.load(resolve_nifti_path(space_ras_path(f'anat/{prefix}_space-DCEref_label-brain_mask.nii.gz')))
     t1w_mask_data = t1w_mask.get_fdata()
     t1w_mask_flipped = np.flip(t1w_mask_data, axis=1)
     t1w_mask_flipped = nib.Nifti1Image(t1w_mask_flipped, t1w_mask.affine, t1w_mask.header)
-    # nib.save(t1w_mask_flipped, str(tp_dir) + '/T1_bet_mask_RAS.nii')
+    # nib.save(t1w_mask_flipped, space_ras_path(str(tp_dir) + '/T1_bet_mask.nii'))
 
-    t1w_wm_mask = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_label-WM_mask_RAS.nii.gz'))
+    t1w_wm_mask = nib.load(resolve_nifti_path(space_ras_path(f'anat/{prefix}_space-DCEref_label-WM_mask.nii.gz')))
     t1w_wm_mask_data = t1w_wm_mask.get_fdata()
     t1w_wm_mask_flipped = np.flip(t1w_wm_mask_data, axis=1)
     t1w_wm_mask_flipped = nib.Nifti1Image(t1w_wm_mask_flipped, t1w_wm_mask.affine, t1w_wm_mask.header)
-    # nib.save(t1w_wm_mask_flipped, str(tp_dir) + '/T1_wm_mask_RAS.nii')
+    # nib.save(t1w_wm_mask_flipped, space_ras_path(str(tp_dir) + '/T1_wm_mask.nii'))
 
-    t1w_gm_mask = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_label-GM_mask_RAS.nii.gz'))
+    t1w_gm_mask = nib.load(resolve_nifti_path(space_ras_path(f'anat/{prefix}_space-DCEref_label-GM_mask.nii.gz')))
     t1w_gm_mask_data = t1w_gm_mask.get_fdata()
     t1w_gm_mask_flipped = np.flip(t1w_gm_mask_data, axis=1)
     t1w_gm_mask_flipped = nib.Nifti1Image(t1w_gm_mask_flipped, t1w_gm_mask.affine, t1w_gm_mask.header)
-    # nib.save(t1w_gm_mask_flipped, str(tp_dir) + '/T1_gm_mask_RAS.nii')
+    # nib.save(t1w_gm_mask_flipped, space_ras_path(str(tp_dir) + '/T1_gm_mask.nii'))
 
     plotting.plot_roi(t1w_mask_flipped, cmap='gray', bg_img=t1w_dceref_flipped, output_file='figures/t1bet_to_dyn.svg', display_mode='z', vmin=0, vmax=1, dim=0, annotate=True, colorbar=False, draw_cross=False, title='T1w brain mask to DCEref')
     plotting.plot_roi(t1w_wm_mask_flipped, cmap='gray', bg_img=t1w_dceref_flipped, output_file='figures/t1wm_to_dyn.svg', display_mode='z', vmin=0, vmax=1, dim=0, annotate=True, colorbar=False, draw_cross=False, title='T1w wm to DCEref')
@@ -277,7 +304,7 @@ except Exception as e:
 try:
     # T1 map
     # flip T1 map
-    img = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_T1map_RAS.nii.gz'))
+    img = nib.load(resolve_nifti_path(space_ras_path(f'anat/{prefix}_space-DCEref_T1map.nii.gz')))
     img_data = img.get_fdata()
     img_data = np.flip(img_data, axis=0)
     img_data = np.flip(img_data, axis=1)
@@ -289,8 +316,7 @@ except Exception as e:
 
 # try:
 # AIF
-# plot graph of AIF region
-aif = nib.load(resolve_nifti_path(f'dce/{prefix}_desc-AIFpos_T1map.nii.gz'))
+aif = nib.load(resolve_nifti_path(f'dce/{prefix}_label-AIF_T1map.nii.gz'))
 aif_data = aif.get_fdata()
 # img = nib.load(str(tp_dir) + '/DCE_mc.nii.gz')
 try:
@@ -300,15 +326,17 @@ except FileNotFoundError:
     img = nib.load(resolve_nifti_path(f'{source_dir}/dce/{prefix}_DCE.nii.gz'))
     img_data = img.get_fdata()
 # binarize AIF
-aif_data[aif_data > 0] = 1
-aif_data[aif_data < 0] = 0
+aif_data = np.where(np.isfinite(aif_data) & (aif_data > 0), 1.0, 0.0)
 # mask DCE where AIF is 1
 # but first ensure that DCE and AIF have same number of dimensions
 if len(aif_data.shape) < len(img_data.shape):
     aif_data = np.expand_dims(aif_data, axis=-1)
 aif_data_roi = img_data * aif_data
 # sum AIF data for each time point, z-slice independent
-aif_curve = np.sum(aif_data_roi, axis=(0, 1, 2)) / np.sum(aif_data[aif_data > 0])
+aif_voxel_count = np.count_nonzero(aif_data)
+if aif_voxel_count == 0:
+    raise ValueError(f'AIF mask is empty after removing NaNs for {prefix}')
+aif_curve = np.sum(aif_data_roi, axis=(0, 1, 2)) / aif_voxel_count
 # divide by AIF mean of timepoints before contrast agent arrival
 baseline = get_baseline_from_curve(aif_curve)
 aif_curve_ratio = aif_curve / baseline
@@ -353,15 +381,15 @@ plt.close()
 
 if freesurfer:
     # wmparc overlay on DCE
-    wmparc = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_desc-wmparc_RAS.nii.gz'))
+    wmparc = nib.load(resolve_nifti_path(space_ras_path(f'anat/{prefix}_space-DCEref_seg-wmparc_dseg.nii.gz')))
     wmparc_data = wmparc.get_fdata()
     wmparc_flipped = np.flip(wmparc_data, axis=1)
     wmparc_flipped = nib.Nifti1Image(wmparc_flipped, wmparc.affine, wmparc.header)
 
     try:
-        dce = nib.load(resolve_nifti_path(f'dce/{prefix}_desc-hmc_DCEref_RAS.nii.gz'))
+        dce = nib.load(resolve_nifti_path(space_ras_path(f'dce/{prefix}_desc-hmc_DCEref.nii.gz')))
     except FileNotFoundError:
-        dce = nib.load(resolve_nifti_path(f'dce/{prefix}_DCEref_RAS.nii.gz'))
+        dce = nib.load(resolve_nifti_path(space_ras_path(f'dce/{prefix}_DCEref.nii.gz')))
     dce_data = dce.get_fdata()
     dce_flipped = np.flip(dce_data, axis=1)
     dce_flipped = nib.Nifti1Image(dce_flipped, dce.affine, dce.header)
@@ -579,7 +607,7 @@ else:
 # Ktrans
 
 # get Ktrans mean wm and gm
-ktrans_wm = nib.load(resolve_nifti_path(f'dce/{prefix}_seg-WM_Ktrans.nii.gz'))
+ktrans_wm = nib.load(resolve_nifti_path(f'dce/{prefix}_label-WM_Ktrans.nii.gz'))
 ktrans_wm_data = ktrans_wm.get_fdata()
 ktrans_wm_mask = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_label-WM_mask.nii.gz'))
 ktrans_wm_mask_data = ktrans_wm_mask.get_fdata()
@@ -587,7 +615,7 @@ ktrans_wm_mask_data = ktrans_wm_mask.get_fdata()
 ktrans_median_wm = np.nanmedian(ktrans_wm_data[np.logical_and(ktrans_wm_mask_data > 0, ktrans_wm_data > KTRANS_MIN_THRESHOLD)])*1000
 ktrans_std_wm = np.nanstd(ktrans_wm_data[np.logical_and(ktrans_wm_mask_data > 0, ktrans_wm_data > KTRANS_MIN_THRESHOLD)])*1000
 
-ktrans_gm = nib.load(resolve_nifti_path(f'dce/{prefix}_seg-GM_Ktrans.nii.gz'))
+ktrans_gm = nib.load(resolve_nifti_path(f'dce/{prefix}_label-GM_Ktrans.nii.gz'))
 ktrans_gm_data = ktrans_gm.get_fdata()
 ktrans_gm_mask = nib.load(resolve_nifti_path(f'anat/{prefix}_space-DCEref_label-GM_mask.nii.gz'))
 ktrans_gm_mask_data = ktrans_gm_mask.get_fdata()
