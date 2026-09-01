@@ -38,7 +38,7 @@ The registration pipeline:
 1. `mri_label2vol` converts `wmparc.mgz` from FreeSurfer conformed space to the subject's native T1w space (`rawavg`)
 2. `mri_convert` converts the result to NIfTI format
 3. `antsApplyTransforms` applies the T1w → DCE rigid transform (with nearest-neighbor interpolation) to bring the parcellation into DCE space
-4. The result is saved as `anat/sub-##_ses-##_space-DCEref_desc-wmparc.nii.gz`
+4. The result is saved as `anat/sub-##_ses-##_space-DCEref_seg-wmparc_dseg.nii.gz`
 
 ---
 

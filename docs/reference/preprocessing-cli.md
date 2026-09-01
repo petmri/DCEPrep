@@ -21,12 +21,20 @@ Full reference for `preprocess_all.sh`.
 | `-B` | — | No | Enable **second round** of bias field correction (applied after z-normalization). Only relevant when `-Z` is also set. |
 | `-c` | — | No | Clean the case's derivatives folder before processing. Ensures a fresh run; disables skip behavior. |
 | `-C` | `name` | No | Enable [comparison mode](../how-to/comparison-mode.md). Writes outputs to `derivatives/sub-##/ses-##/<name>/`. |
+| `-j` | `count` | No | Limit concurrent VFA registration and FAST jobs. Defaults to unlimited to preserve existing behavior. Start with `2` when running multiple cases on one host. |
 | `-m` | — | No | Enable head motion correction using FSL `mcflirt`. |
 | `-s` | — | No | Skip preprocessing if the final DCE output file already exists. |
 | `-t` | — | No | Run only up to T1 map generation (skip DCE processing). Useful for T1-only protocols. |
 | `-T` | `dir_path` | No | Target specific subject(s)/session(s). Default: `sub-*/ses-*/`. Accepts glob patterns or explicit paths. |
 | `-w` | `path` | No | Path to the AutoAIF neural network weights file. |
 | `-Z` | — | No | Enable z-axis slice normalization on VFA and DCE images. |
+
+### Environment variables
+
+| Variable | Description |
+|---|---|
+| `HD_BET_COMMAND` | HD-BET executable to use. Defaults to `hd-bet`; set it when the default launcher is not associated with a working HD-BET environment. |
+| `AUTO_AIF_PYTHON` | Python interpreter for AutoAIF. Defaults to `python3` and must be able to import TensorFlow when `-A A` is used. |
 
 ---
 

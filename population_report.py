@@ -168,7 +168,7 @@ def get_case_stats(subject_id, timepoint):
             total_timepoints.append(subject_id + '/' + timepoint)
             # Check for missing data in rawdata folder
             prefix = f"{subject_id}_{timepoint}"
-            rawdata_dir = os.path.join(dir, "../rawdata", subject_id, timepoint)
+            rawdata_dir = os.path.join(dir, "../sourcedata/raw", subject_id, timepoint)
             missing_files = []
             # Check for anat/prefix_T1w.nii.gz
             t1w_path = os.path.join(rawdata_dir, f"anat/{prefix}_T1w.nii.gz")
@@ -195,7 +195,7 @@ def get_case_stats(subject_id, timepoint):
             # read AIF curve by applying aif.nii to dce.nii
             try:
                 dce = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-bfcz_DCE.nii.gz")
-                aif = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-AIF_T1map.nii.gz")
+                aif = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_label-AIF_T1map.nii.gz")
                 if os.path.exists(dce) and os.path.exists(aif):
                     # load files
                     dce_img = nib.load(dce)
@@ -257,7 +257,7 @@ def get_case_stats(subject_id, timepoint):
             else:
                 manual_aif_status = "AUTO"
             # get fields we want from json
-            json_file = os.path.join(dir, "../rawdata", subject_id, timepoint, f"dce/{subject_id}_{timepoint}_DCE.json")
+            json_file = os.path.join(dir, "../sourcedata/raw", subject_id, timepoint, f"dce/{subject_id}_{timepoint}_DCE.json")
             try:
                 with open(json_file, 'r') as f:
                     data = json.load(f)
@@ -465,7 +465,7 @@ def get_case_stats(subject_id, timepoint):
                 return
             # read ktrans map
             try:
-                ktrans_map = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_Ktrans.nii")
+                ktrans_map = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_Ktrans.nii.gz")
                 ktrans_map = nib.load(ktrans_map)
                 ktrans_map = ktrans_map.get_fdata()
             except:
@@ -513,7 +513,7 @@ def get_case_stats(subject_id, timepoint):
             error = ""
             try:
                 prefix = f"{subject_id}_{timepoint}"
-                wmparc_path = os.path.join(dceprep_dir, subject_id, timepoint, f"anat/{prefix}_space-DCEref_desc-wmparc.nii.gz")
+                wmparc_path = os.path.join(dceprep_dir, subject_id, timepoint, f"anat/{prefix}_space-DCEref_seg-wmparc_dseg.nii.gz")
                 if os.path.isfile(wmparc_path):
                     wmparc = nib.load(wmparc_path)
                     wmparc = wmparc.get_fdata()
@@ -2297,9 +2297,12 @@ with open(dir + '/reports/' + run_folder + '/population_report_exclude' + output
 print('Report generated in ' + dir + '/reports/' + run_folder + '/population_report' + output_dir + "_" + date_filename + '.html')
 print('Excluded report generated in ' + dir + '/reports/' + run_folder + '/population_report_exclude' + output_dir + "_" + date_filename + '.html')
 
-if os.path.exists(os.path.join(dir, '../dce_available_3524_ac.xlsx')):
+apoe_file = os.path.join(dir, '../dce_available_3524_ac.xlsx')
+apoe_exists = os.path.exists(apoe_file)
+
+if apoe_exists:
     # add apoe and cdr fields to population_data
-    df = pd.read_excel(os.path.join(dir, '../dce_available_3524_ac.xlsx'), sheet_name="main")
+    df = pd.read_excel(apoe_file, sheet_name="main")
 
     # get apoe and cdr values for each subject
     for subject in population_data.keys():
@@ -2509,7 +2512,11 @@ writer = pd.ExcelWriter(
 df_success = pd.DataFrame(population_data)
 # df_exclude = pd.DataFrame(population_data_exclude)
 
-order = ["Date", "APOE", "Sex", "Age", "Machine", "Institution", "Coil", "TR", "Time_resolution", "TE", "Flip_angle", "n_reps",
+order = ["Date"]
+if apoe_exists:
+    order.append("APOE")
+order.extend([
+        "Sex", "Age", "Machine", "Institution", "Coil", "TR", "Time_resolution", "TE", "Flip_angle", "n_reps",
         "Approximate SNR", "AIFitness", "aif_fitted_r2", "manual_aif_status", "max_disp", "T1_blood", "T1_wm_median", "T1_gm_median",
         "Ktrans_wm_median", "Ktrans_gm_median", "Ktrans_Hippo_median", "Ktrans_PhG_median", "Ktrans_Putamen_median", "Ktrans_Pallidum_median",
         "Ktrans_Thalamus_median", "Ktrans_Caudate_median", "Ktrans_Amygdala_median", "Ktrans_Entorhinal_cortex_median",
@@ -2539,10 +2546,10 @@ order = ["Date", "APOE", "Sex", "Age", "Machine", "Institution", "Coil", "TR", "
         "superiorparietal_thickness_avg", "superiorparietal_thickness_std", "superiortemporal_thickness_avg", "superiortemporal_thickness_std",
         "supramarginal_thickness_avg", "supramarginal_thickness_std", "frontalpole_thickness_avg", "frontalpole_thickness_std",
         "temporalpole_thickness_avg", "temporalpole_thickness_std", "transversetemporal_thickness_avg", "transversetemporal_thickness_std",
-        "insula_thickness_avg", "insula_thickness_std"]
+        "insula_thickness_avg", "insula_thickness_std"])
 
 df_success = df_success.T
-df_success = df_success[order]
+df_success = df_success.reindex(columns=order)
 
 
 order_exclude = order.copy()
@@ -2566,7 +2573,7 @@ index_cell_format.set_bold(False)
 if len(population_data_exclude) > 0:
     df_exclude = pd.DataFrame(population_data_exclude)
     df_exclude = df_exclude.T
-    df_exclude = df_exclude[order_exclude]
+    df_exclude = df_exclude.reindex(columns=order_exclude)
     df_exclude.index.name = "Subject_ID"
     df_exclude.to_excel(writer, sheet_name='Pre-Exclude')
     for column in df_exclude.columns:

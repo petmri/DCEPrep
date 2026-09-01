@@ -89,7 +89,7 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
             amp_guess = 0
             params = 0
             # check if slice is empty
-            if area == 0 or pstdev(wm_data[:,:,i][a]) == 0:
+            if area < 1000 or pstdev(wm_data[:,:,i][a]) == 0:
                 # just get from next slice
                 # if i == slice_num - 1:
                 #     a = np.where(wm_data[:,:,i-1] > 0)
@@ -267,10 +267,10 @@ if __name__ == "__main__":
     dir = Path(sys.argv[1])     # takes timepoint directory as argument
     prefix = sys.argv[2]
     BFC = sys.argv[3]
-    file_pattern = r'.*flip-\d+_space-DCEref_desc-bfc_VFA.nii.*' if BFC else r'.*flip-\d+_space-DCEref_desc-brain_VFA.nii.*'
+    file_pattern = r'.*flip-\d+_space-DCEref_desc-bfc_VFA.nii.*' if BFC else r'.*flip-\d+_space-DCEref_label-brain_VFA.nii.*'
     files_in_dir = dir.iterdir()
-    file_list = [file for file in files_in_dir if re.search(r'.*flip-\d+_space-DCEref_desc-brain_VFA.nii.*', str(file))]
+    file_list = [file for file in files_in_dir if re.search(r'.*flip-\d+_space-DCEref_label-brain_VFA.nii.*', str(file))]
     num_processes = len(file_list)
 
     with multiprocessing.Pool(processes=num_processes) as pool:
-        pool.starmap(normalize, [(str(file), str(file).split('_desc-brain', 1)[0] + '_seg-WM_VFA.nii.gz', str(dir)) for file in file_list])
+        pool.starmap(normalize, [(str(file), str(file).split('_label-brain', 1)[0] + '_label-WM_VFA.nii.gz', str(dir)) for file in file_list])

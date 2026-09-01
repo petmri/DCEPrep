@@ -15,10 +15,12 @@ DCEPrep uses [ROCKETSHIP](https://github.com/petmri/ROCKETSHIP) (version 1.2+), 
 
 ## How DCEPrep Locates ROCKETSHIP
 
-DCEPrep finds the ROCKETSHIP installation at runtime by searching for `run_dce_cli.m`:
+On Linux, `preprocess_all.sh` first uses `ROCKETSHIP_PATH` when set, then the
+Docker location `/opt/ROCKETSHIP/ROCKETSHIP-dev`, and finally searches `$HOME`
+for `run_dce_cli.m`. Set the variable explicitly for a nonstandard installation:
 
 ```bash
-find / -name '*run_dce_cli.m' 2>/dev/null
+export ROCKETSHIP_PATH=/path/to/ROCKETSHIP
 ```
 
 In Docker, ROCKETSHIP is installed at a fixed path and the script preferences are mounted at:

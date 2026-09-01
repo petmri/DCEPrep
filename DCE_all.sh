@@ -16,9 +16,10 @@ PURGE_INTERMEDIATES=0
 GIGA_PURGE=0
 TARGET_FLAG=0
 SCRIPT_LOOP_DIR=dceprep/sub-*/ses-*
+USE_PYTHON=0
 
 # options
-while getopts ":d:C:fhl:sST:" options; do
+while getopts ":d:C:fhl:sST:p" options; do
 	case "${options}" in
 		b)
 			EN_BIAS1=1
@@ -35,7 +36,7 @@ while getopts ":d:C:fhl:sST:" options; do
 				DATA_DIR=${DATA_DIR::-1}
 			fi
 			date=$(date +%Y-%m-%d)
-			DERIV_DIR=$(dirname $DATA_DIR)/derivatives
+			DERIV_DIR=$(dirname $(dirname $DATA_DIR))/derivatives
 			LOG_FILE=$DERIV_DIR/logs/dce_log_$date.txt
 			if [ ! -d "$DATA_DIR/logs" ]
 				then
@@ -56,6 +57,7 @@ while getopts ":d:C:fhl:sST:" options; do
 			echo "-d: specify main data directory containing all subject folders"
 			echo "-f: enable Freesurfer wm parcellation for subregion analysis"
 			echo "-h: display this message"
+			echo "-p: use Python for ROCKETSHIP calls"
 			# echo "-l: specify a list of subjects to process (filename only, place in code folder)"
 			echo "-s: skip subjects that have already been processed"
 			echo "-S: enable smoothing of DCE input"
@@ -64,6 +66,9 @@ while getopts ":d:C:fhl:sST:" options; do
 			;;
 		l)
 			INPUT_LIST=$DATA_DIR/../code/${OPTARG}
+			;;
+		p)
+			USE_PYTHON=1
 			;;
 		s)
 			SKIP_IF_SUCCESS=1
@@ -93,11 +98,43 @@ if [ -z "$DATA_DIR" ]
 		echo "ERROR: Please use '-d [dir_path]' to pass the path to your main data directory to this script."
 		exit 1
 fi
+
+resolve_tool_path() {
+	local configured_path=$1
+	local marker_file=$2
+	shift 2
+	local candidate_path
+
+	if [ -n "$configured_path" ]; then
+		if [ -f "$configured_path/$marker_file" ]; then
+			printf '%s\n' "$configured_path"
+			return 0
+		fi
+		echo "ERROR: Configured path $configured_path does not contain $marker_file." >&2
+		return 1
+	fi
+
+	for candidate_path in "$@"; do
+		if [ -f "$candidate_path/$marker_file" ]; then
+			printf '%s\n' "$candidate_path"
+			return 0
+		fi
+	done
+
+	find "$HOME" \
+		\( -path "$HOME/.local/share/Trash" -o -path "$HOME/.local/share/Trash/*" -o -path "$HOME/.Trash" -o -path "$HOME/.Trash/*" \) -prune -o \
+		-type f -name "$marker_file" -printf '%h\n' -quit 2> /dev/null
+}
+
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-	ROCKETSHIP_PATH=$(find $HOME -name '*run_dce_cli.m' -printf '%h\n' -quit || find / -name '*run_dce_cli.m' -printf '%h\n' -quit) &> /dev/null
+	ROCKETSHIP_PATH=$(resolve_tool_path "${ROCKETSHIP_PATH:-}" "run_dce_cli.m" "/opt/ROCKETSHIP/ROCKETSHIP-dev")
 	SCRIPT_PATH=$(dirname "$(realpath $0)")
-	GPUFIT_PATH=$(find $HOME -name 'GpufitConstrainedMex.mexa64' -printf '%h\n' -quit || find / -name 'GpufitConstrainedMex.mexa64' -printf '%h\n' -quit)
-	GPUFIT_M_PATH=$(find $HOME -name 'ModelID.m' -printf '%h\n' -quit || find / -name 'ModelID.m' -printf '%h\n' -quit)
+	GPUFIT_PATH=$(resolve_tool_path "${GPUFIT_PATH:-}" "GpufitConstrainedMex.mexa64" "/opt/Gpufit/matlab64")
+	GPUFIT_M_PATH=$(resolve_tool_path "${GPUFIT_M_PATH:-}" "ModelID.m" "/opt/Gpufit/matlab")
+	if [ -z "$ROCKETSHIP_PATH" ] || [ -z "$GPUFIT_PATH" ] || [ -z "$GPUFIT_M_PATH" ]; then
+		echo "ERROR: Unable to locate ROCKETSHIP or GPUfit. Set ROCKETSHIP_PATH, GPUFIT_PATH, and GPUFIT_M_PATH to directories containing their required MATLAB files." >&2
+		exit 1
+	fi
 else
 	ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 	SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
@@ -194,9 +231,9 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 		cd $der_dir || echo "ERROR: $der_dir does not exist. Preprocess first or check the name and try again." >> $LOG_FILE
 	fi
 	SUBJECT_TP_PATH=$(pwd)
-	if [ ! -f anat/${PREFIX}_desc-brain_T1w.nii.gz ]
+	if [ ! -f anat/${PREFIX}_label-brain_T1w.nii.gz ]
 		then
-		cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/anat/${PREFIX}_desc-brain_T1w.nii.gz $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
+		cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/anat/${PREFIX}_label-brain_T1w.nii.gz $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
 	fi
 	# Locking mechanism to prevent concurrent processing from other machines
 	LOCKFILE="lock.txt"
@@ -218,14 +255,14 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	fi
 	if [ $SKIP_IF_SUCCESS -eq 1 ]
 		then
-		if [ -f "reports/${PREFIX}_desc-casereport.html" ] && [ -f "anat/${PREFIX}_space-DCEref_desc-wmparc.nii.gz" ]
+		if [ -f "reports/${PREFIX}_desc-casereport.html" ] && [ -f "anat/${PREFIX}_space-DCEref_seg-wmparc_dseg.nii.gz" ]
 			then
 			echo "Skipping $dir because it has already been processed." >> $LOG_FILE
 			((successes++))
 			if [ $PURGE_INTERMEDIATES -eq 1 ] # && [ $COMPARISON_MODE -eq 1 ]
 				then
 				cd anat
-				rm -f !(${PREFIX}*bfczunified_VFA.nii|${PREFIX}_space-DCEref_T1map*|${PREFIX}*label-*_T1map*|*.mat|*wmparc.nii.gz|*space-DCEref_desc-brain_mask.nii.gz)
+				rm -f !(${PREFIX}*bfczunified_VFA.nii|${PREFIX}_space-DCEref_T1map*|${PREFIX}*label-*_T1map*|*.mat|*wmparc.nii.gz|*space-DCEref_label-brain_mask.nii.gz)
 				cd ../dce
 				rm -f !(${PREFIX}*Ktrans*|${PREFIX}*bfcz_DCE*|${PREFIX}*AIFincluded*|${PREFIX}*AIF_T1map*|figures|*.log|*.txt|*.par)
 			fi
@@ -249,22 +286,35 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	
 	# DCE
 	# ------------------------------
-	echo Begin DCE processing...
-	matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; run_dce_cli('$DATA_DIR/$SUBJECT/$SESSION/', '$SUBJECT_TP_PATH/'); exit;"
-	mv dce/dce_*_fit_Ktrans.nii dce/${PREFIX}_Ktrans.nii
-	mv dce/dce_*_fit_ktrans_ci_low.nii dce/${PREFIX}_Ktrans_ci_low.nii
-	mv dce/dce_*_fit_ktrans_ci_high.nii dce/${PREFIX}_Ktrans_ci_high.nii
-	mv dce/dce_*_fit_vp.nii dce/${PREFIX}_vp.nii
-	mv dce/dce_*_fit_vp_ci_low.nii dce/${PREFIX}_vp_ci_low.nii
-	mv dce/dce_*_fit_vp_ci_high.nii dce/${PREFIX}_vp_ci_high.nii
-	mv dce/dce_*_fit_sse.nii dce/${PREFIX}_sse.nii
+	# echo Begin DCE processing...
+	rm -f dce/dce_patlak_fit_rois.xls
+	if [ $USE_PYTHON -eq 1 ]
+		then
+		${ROCKETSHIP_PATH}/.venv/bin/python ${ROCKETSHIP_PATH}/run_dce_python_case.py --subject-source "$DATA_DIR/$SUBJECT/$SESSION/" --subject-tp $SUBJECT_TP_PATH --output-dir $SUBJECT_TP_PATH --events off
+	else
+		matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; run_dce_cli('$DATA_DIR/$SUBJECT/$SESSION/', '$SUBJECT_TP_PATH/'); exit;"
+	fi
+	gzip dce/*.nii &> /dev/null
+	mv dce/*_fit_*trans.nii.gz dce/${PREFIX}_Ktrans.nii.gz
+	mv dce/*_fit_*trans_ci_low.nii.gz dce/${PREFIX}_desc-cilow_Ktrans.nii.gz
+	mv dce/*_fit_*trans_ci_high.nii.gz dce/${PREFIX}_desc-cihigh_Ktrans.nii.gz
+	mv dce/*_fit_vp.nii.gz dce/${PREFIX}_vp.nii.gz
+	mv dce/*_fit_vp_ci_low.nii.gz dce/${PREFIX}_desc-cilow_vp.nii.gz
+	mv dce/*_fit_vp_ci_high.nii.gz dce/${PREFIX}_desc-cihigh_vp.nii.gz
+	mv dce/*_fit_sse.nii.gz dce/${PREFIX}_sse.nii.gz
 	# move images into figures folder
-	mv dce/dce*.png figures/
+	mv dce/dce*.png figures/ &> /dev/null
 	rm -f dce/*.fig
-	if [ ! -f "dce/${PREFIX}_Ktrans.nii" ]
+	if [ ! -f "dce/${PREFIX}_Ktrans.nii.gz" ]
 		then
 			echo $dir "Missing Ktrans maps. DCE failed or inputs were not generated. Hopefully message below is relevant." >> $LOG_FILE
-			tail -1 dce/A_dceR1info.log >> $LOG_FILE
+			if [ $USE_PYTHON -eq 1 ] && [ -f "reports/dce_pipeline_events.jsonl" ]
+				then
+				tail -1 reports/dce_pipeline_events.jsonl >> $LOG_FILE
+			elif [ -f "dce/A_dceR1info.log" ]
+				then
+				tail -1 dce/A_dceR1info.log >> $LOG_FILE
+			fi
 			cd $DATA_DIR/../derivatives
 			fail=1
 			continue
@@ -278,25 +328,25 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	antsApplyTransforms -i anat/${PREFIX}_label-GM_mask.nii.gz -r $DCEREF_FILE -t anat/${PREFIX}_from-T1w_to-DCEref.mat -o anat/${PREFIX}_space-DCEref_label-GM_mask_pv.nii.gz &> /dev/null
 	fslmaths anat/${PREFIX}_space-DCEref_label-GM_mask_pv.nii.gz -thr 0.9 -bin anat/${PREFIX}_space-DCEref_label-GM_mask.nii.gz
 	rm anat/${PREFIX}_space-DCEref_label-GM_mask_pv.nii.gz
-	
+
 	# Align CSF mask
 	antsApplyTransforms -i anat/${PREFIX}_label-CSF_mask.nii.gz -r $DCEREF_FILE -t anat/${PREFIX}_from-T1w_to-DCEref.mat -o anat/${PREFIX}_space-DCEref_label-CSF_mask_pv.nii.gz &> /dev/null
 	fslmaths anat/${PREFIX}_space-DCEref_label-CSF_mask_pv.nii.gz -thr 0.9 -bin anat/${PREFIX}_space-DCEref_label-CSF_mask.nii.gz
 	rm anat/${PREFIX}_space-DCEref_label-CSF_mask_pv.nii.gz
-	
+
 	# Apply masks to T1 map
 	fslmaths anat/${PREFIX}_space-DCEref_T1map.nii  -mas anat/${PREFIX}_space-DCEref_label-WM_mask.nii.gz anat/${PREFIX}_space-DCEref_label-WM_T1map.nii
 	fslmaths anat/${PREFIX}_space-DCEref_T1map.nii -mas anat/${PREFIX}_space-DCEref_label-GM_mask.nii.gz anat/${PREFIX}_space-DCEref_label-GM_T1map.nii
 	fslmaths anat/${PREFIX}_space-DCEref_T1map.nii -mas anat/${PREFIX}_space-DCEref_label-CSF_mask.nii.gz anat/${PREFIX}_space-DCEref_label-CSF_T1map.nii
-	
+
 	# Apply masks to Ktrans map
-	fslmaths dce/${PREFIX}_Ktrans.nii -mas anat/${PREFIX}_space-DCEref_label-WM_mask.nii.gz dce/${PREFIX}_seg-WM_Ktrans.nii
-	fslmaths dce/${PREFIX}_Ktrans.nii -mas anat/${PREFIX}_space-DCEref_label-GM_mask.nii.gz dce/${PREFIX}_seg-GM_Ktrans.nii
-	fslmaths dce/${PREFIX}_Ktrans.nii -mas anat/${PREFIX}_space-DCEref_label-CSF_mask.nii.gz dce/${PREFIX}_seg-CSF_Ktrans.nii
-	
+	fslmaths dce/${PREFIX}_Ktrans.nii.gz -mas anat/${PREFIX}_space-DCEref_label-WM_mask.nii.gz dce/${PREFIX}_label-WM_Ktrans.nii.gz
+	fslmaths dce/${PREFIX}_Ktrans.nii.gz -mas anat/${PREFIX}_space-DCEref_label-GM_mask.nii.gz dce/${PREFIX}_label-GM_Ktrans.nii.gz
+	fslmaths dce/${PREFIX}_Ktrans.nii.gz -mas anat/${PREFIX}_space-DCEref_label-CSF_mask.nii.gz dce/${PREFIX}_label-CSF_Ktrans.nii.gz
+
 	# registration QC
 	python3 $SCRIPT_PATH/ktrans_analysis.py $dir $PREFIX
-	
+
 	fslmaths anat/${PREFIX}_space-DCEref_label-WM_mask.nii.gz -add 2000 huh.nii
 	fslmaths huh.nii.gz -thr 2001 huh.nii
 	fslmaths $DCEREF_FILE -sub huh.nii.gz bozo.nii
@@ -307,7 +357,6 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	fslmaths $DCEREF_FILE -sub huh2.nii.gz bozo2.nii
 	fslmaths bozo2.nii -thr 0 anat/${PREFIX}_space-DCEref_label-GMQC.nii.gz
 	rm huh.nii.gz huh2.nii.gz bozo.nii.gz bozo2.nii.gz
-		
 	# wm parcellation with Freesurfer
 	if [ $USE_FREESURFER -eq 1 ]
 		then
@@ -327,8 +376,8 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 			--o $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc-in-rawavg.mgz \
 			--regheader $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc.mgz &> /dev/null
         mri_convert $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc-in-rawavg.mgz wmparc.nii.gz &> /dev/null
-        antsApplyTransforms -i wmparc.nii.gz -r dce/${PREFIX}_desc-hmc_DCEref.nii.gz -t anat/${PREFIX}_from-t1w_to-DCEref.mat -n NearestNeighbor -o anat/${PREFIX}_space-DCEref_desc-wmparc.nii &> /dev/null
-        gzip -f anat/${PREFIX}_space-DCEref_desc-wmparc.nii &> /dev/null
+        antsApplyTransforms -i wmparc.nii.gz -r dce/${PREFIX}_desc-hmc_DCEref.nii.gz -t anat/${PREFIX}_from-t1w_to-DCEref.mat -n NearestNeighbor -o anat/${PREFIX}_space-DCEref_seg-wmparc_dseg.nii &> /dev/null
+        gzip -f anat/${PREFIX}_space-DCEref_seg-wmparc_dseg.nii &> /dev/null
 		rm wmparc.nii.gz
 	elif [ ! -f dce/${PREFIX}_space-MNI_Ktrans.nii.gz ]
 		then
@@ -339,8 +388,8 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 		# 	--winsorize-image-intensities [ 0.005,0.995 ] --transform Affine[ 0.1 ] \
 		# 	--metric MI[ T1_bet.nii.gz,DCE_mc.nii.gz,1,32,Regular,0.25 ] \
 		# 	--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
-		# antsRegistrationSyNQuick.sh -d 3 -f anat/${PREFIX}_desc-brain_T1w.nii.gz -m dce/${PREFIX}_desc-hmc_DCEref.nii.gz -o dce/${PREFIX}_space-MNI_DCEref -n 8
-		antsRegistrationSyNQuick.sh -d 3 -f $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -m anat/${PREFIX}_desc-brain_T1w.nii.gz -o anat/${PREFIX}_space-MNI_T1w -n 8
+		# antsRegistrationSyNQuick.sh -d 3 -f anat/${PREFIX}_label-brain_T1w.nii.gz -m dce/${PREFIX}_desc-hmc_DCEref.nii.gz -o dce/${PREFIX}_space-MNI_DCEref -n 8
+		antsRegistrationSyNQuick.sh -d 3 -f $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -m anat/${PREFIX}_label-brain_T1w.nii.gz -o anat/${PREFIX}_space-MNI_T1w -n 8
 		# antsApplyTransforms -i dce/${PREFIX}_desc-hmc_DCEref.nii.gz -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t dce/${PREFIX}_space-MNI_DCEref1Warp.nii.gz -t anat/${PREFIX}_space-MNI_T1w0GenericAffine.mat -t [ anat/${PREFIX}_from-T1w_to-DCEref.mat, 1] -o DCE_mc_MNI.nii.gz
 		antsApplyTransforms -i dce/${PREFIX}_desc-hmc_DCEref.nii.gz -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t anat/${PREFIX}_space-MNI_T1w0GenericAffine.mat -t [ anat/${PREFIX}_from-T1w_to-DCEref.mat, 1] -o dce/${PREFIX}_space-MNI_DCEref.nii.gz
 		# antsRegistration --verbose 1 --dimensionality 3 --float 0 --collapse-output-transforms 1 \
@@ -349,7 +398,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 		# 	--metric MI[ $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz,anat/${PREFIX}_space-DCEref_T1w.nii.gz,1,32,Regular,0.25 ] \
 		# 	--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
 		# antsApplyTransforms -i dce/${PREFIX}_Ktrans.nii -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t ${PREFIX}_space-MNI_T1w0Warp.nii.gz -t t1w_MNI0GenericAffine.mat -t [T1_dyn0GenericAffine.mat, 1] -o Ktrans_MNI.nii.gz
-		antsApplyTransforms -i dce/${PREFIX}_Ktrans.nii -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t anat/${PREFIX}_space-MNI_T1w0GenericAffine.mat -t [ anat/${PREFIX}_from-T1w_to-DCEref.mat, 1] -o dce/${PREFIX}_space-MNI_Ktrans.nii.gz
+		antsApplyTransforms -i dce/${PREFIX}_Ktrans.nii.gz -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t anat/${PREFIX}_space-MNI_T1w0GenericAffine.mat -t [ anat/${PREFIX}_from-T1w_to-DCEref.mat, 1] -o dce/${PREFIX}_space-MNI_Ktrans.nii.gz
 		# antsApplyTransforms -i dce_patlak_fit_vp.nii -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t t1w_MNI1Warp.nii.gz -t t1w_MNI0GenericAffine.mat -t [T1_dyn0GenericAffine.mat, 1] -o vp_MNI.nii.gz
 		# flirt -in dce_patlak_fit_Ktrans.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out ktrans_2_MNI.nii.gz -init DCE2MNI.mat -applyxfm
 	else
@@ -358,6 +407,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	mkdir reports &> /dev/null
 	python3 $SCRIPT_PATH/case_report.py $DATA_DIR/$SUBJECT/$SESSION $PREFIX $USE_FREESURFER
 	python3 $SCRIPT_PATH/ktrans_report.py $DATA_DIR/$SUBJECT/$SESSION $PREFIX
+
 	if [ $PURGE_INTERMEDIATES -eq 1 ]
 		then
 		# rm -f !(Ktrans_*|T1_gm*|T1_wm*|T1_csf*|*_patlak_fit*.nii|case_report.html|*_MNI.nii.gz|*fit_VFA.nii|figures|dce*.png|*.log)

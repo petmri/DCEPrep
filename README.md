@@ -116,7 +116,7 @@ All data is assumed to be [BIDS](https://bids-specification.readthedocs.io/) com
 
 | Flag | Description |
 |---|---|
-| `-d [rawdata_path]` | **Required.** Path to your BIDS raw data folder. |
+| `-d [rawdata_path]` | **Required.** Path to your BIDS raw data (NIFTIs) folder. |
 | `-a [suffix]` | AIF suffix (default: `desc-AIF_mask`). `.nii.gz` is appended automatically. |
 | `-A [mode]` | Enable AutoAIF: `A` (fully automatic), `M` (manual if available), or `T` (manual + training if available). Requires the [vascular_function repo and weights](https://github.com/petmri/vascular_function). |
 | `-b` | Enable first round of bias field correction. |
@@ -216,7 +216,7 @@ All data is assumed to be [BIDS](https://bids-specification.readthedocs.io/) com
 
 | Flag | Description |
 |---|---|
-| `-d [path]` | **Required.** Path to raw BIDS data directory. |
+| `-d [path]` | **Required.** Path to raw BIDS data directory. Should be something like bids_root/sourcedata/raw |
 | `-C [name]` | Enable comparison mode. Copies essential files from a standard run if a preprocessed run of the same name does not exist. |
 | `-f` | Enable FreeSurfer WM parcellation for subregion analysis. |
 | `-s` | Skip cases already processed. |
