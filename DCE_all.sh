@@ -294,7 +294,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	else
 		matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; run_dce_cli('$DATA_DIR/$SUBJECT/$SESSION/', '$SUBJECT_TP_PATH/'); exit;"
 	fi
-	gzip dce/*.nii
+	gzip dce/*.nii &> /dev/null
 	mv dce/*_fit_*trans.nii.gz dce/${PREFIX}_Ktrans.nii.gz
 	mv dce/*_fit_*trans_ci_low.nii.gz dce/${PREFIX}_desc-cilow_Ktrans.nii.gz
 	mv dce/*_fit_*trans_ci_high.nii.gz dce/${PREFIX}_desc-cihigh_Ktrans.nii.gz
@@ -303,12 +303,18 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	mv dce/*_fit_vp_ci_high.nii.gz dce/${PREFIX}_desc-cihigh_vp.nii.gz
 	mv dce/*_fit_sse.nii.gz dce/${PREFIX}_sse.nii.gz
 	# move images into figures folder
-	mv dce/dce*.png figures/
+	mv dce/dce*.png figures/ &> /dev/null
 	rm -f dce/*.fig
-	if [ ! -f "dce/${PREFIX}_Ktrans.nii" ]
+	if [ ! -f "dce/${PREFIX}_Ktrans.nii.gz" ]
 		then
 			echo $dir "Missing Ktrans maps. DCE failed or inputs were not generated. Hopefully message below is relevant." >> $LOG_FILE
-			tail -1 dce/A_dceR1info.log >> $LOG_FILE
+			if [ $USE_PYTHON -eq 1 ] && [ -f "reports/dce_pipeline_events.jsonl" ]
+				then
+				tail -1 reports/dce_pipeline_events.jsonl >> $LOG_FILE
+			elif [ -f "dce/A_dceR1info.log" ]
+				then
+				tail -1 dce/A_dceR1info.log >> $LOG_FILE
+			fi
 			cd $DATA_DIR/../derivatives
 			fail=1
 			continue
@@ -334,9 +340,9 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	fslmaths anat/${PREFIX}_space-DCEref_T1map.nii -mas anat/${PREFIX}_space-DCEref_label-CSF_mask.nii.gz anat/${PREFIX}_space-DCEref_label-CSF_T1map.nii
 
 	# Apply masks to Ktrans map
-	fslmaths dce/${PREFIX}_Ktrans.nii -mas anat/${PREFIX}_space-DCEref_label-WM_mask.nii.gz dce/${PREFIX}_label-WM_Ktrans.nii
-	fslmaths dce/${PREFIX}_Ktrans.nii -mas anat/${PREFIX}_space-DCEref_label-GM_mask.nii.gz dce/${PREFIX}_label-GM_Ktrans.nii
-	fslmaths dce/${PREFIX}_Ktrans.nii -mas anat/${PREFIX}_space-DCEref_label-CSF_mask.nii.gz dce/${PREFIX}_label-CSF_Ktrans.nii
+	fslmaths dce/${PREFIX}_Ktrans.nii.gz -mas anat/${PREFIX}_space-DCEref_label-WM_mask.nii.gz dce/${PREFIX}_label-WM_Ktrans.nii.gz
+	fslmaths dce/${PREFIX}_Ktrans.nii.gz -mas anat/${PREFIX}_space-DCEref_label-GM_mask.nii.gz dce/${PREFIX}_label-GM_Ktrans.nii.gz
+	fslmaths dce/${PREFIX}_Ktrans.nii.gz -mas anat/${PREFIX}_space-DCEref_label-CSF_mask.nii.gz dce/${PREFIX}_label-CSF_Ktrans.nii.gz
 
 	# registration QC
 	python3 $SCRIPT_PATH/ktrans_analysis.py $dir $PREFIX
@@ -392,7 +398,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 		# 	--metric MI[ $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz,anat/${PREFIX}_space-DCEref_T1w.nii.gz,1,32,Regular,0.25 ] \
 		# 	--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
 		# antsApplyTransforms -i dce/${PREFIX}_Ktrans.nii -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t ${PREFIX}_space-MNI_T1w0Warp.nii.gz -t t1w_MNI0GenericAffine.mat -t [T1_dyn0GenericAffine.mat, 1] -o Ktrans_MNI.nii.gz
-		antsApplyTransforms -i dce/${PREFIX}_Ktrans.nii -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t anat/${PREFIX}_space-MNI_T1w0GenericAffine.mat -t [ anat/${PREFIX}_from-T1w_to-DCEref.mat, 1] -o dce/${PREFIX}_space-MNI_Ktrans.nii.gz
+		antsApplyTransforms -i dce/${PREFIX}_Ktrans.nii.gz -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t anat/${PREFIX}_space-MNI_T1w0GenericAffine.mat -t [ anat/${PREFIX}_from-T1w_to-DCEref.mat, 1] -o dce/${PREFIX}_space-MNI_Ktrans.nii.gz
 		# antsApplyTransforms -i dce_patlak_fit_vp.nii -r $FSLDIR/data/standard/MNI152_T1_1mm_brain.nii.gz -t t1w_MNI1Warp.nii.gz -t t1w_MNI0GenericAffine.mat -t [T1_dyn0GenericAffine.mat, 1] -o vp_MNI.nii.gz
 		# flirt -in dce_patlak_fit_Ktrans.nii -ref $FSLDIR/data/standard/MNI152_T1_1mm.nii.gz -out ktrans_2_MNI.nii.gz -init DCE2MNI.mat -applyxfm
 	else

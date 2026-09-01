@@ -168,7 +168,7 @@ def get_case_stats(subject_id, timepoint):
             total_timepoints.append(subject_id + '/' + timepoint)
             # Check for missing data in rawdata folder
             prefix = f"{subject_id}_{timepoint}"
-            rawdata_dir = os.path.join(dir, "../rawdata", subject_id, timepoint)
+            rawdata_dir = os.path.join(dir, "../sourcedata/raw", subject_id, timepoint)
             missing_files = []
             # Check for anat/prefix_T1w.nii.gz
             t1w_path = os.path.join(rawdata_dir, f"anat/{prefix}_T1w.nii.gz")
@@ -195,7 +195,7 @@ def get_case_stats(subject_id, timepoint):
             # read AIF curve by applying aif.nii to dce.nii
             try:
                 dce = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-bfcz_DCE.nii.gz")
-                aif = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-AIF_T1map.nii.gz")
+                aif = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_label-AIF_T1map.nii.gz")
                 if os.path.exists(dce) and os.path.exists(aif):
                     # load files
                     dce_img = nib.load(dce)
@@ -257,7 +257,7 @@ def get_case_stats(subject_id, timepoint):
             else:
                 manual_aif_status = "AUTO"
             # get fields we want from json
-            json_file = os.path.join(dir, "../rawdata", subject_id, timepoint, f"dce/{subject_id}_{timepoint}_DCE.json")
+            json_file = os.path.join(dir, "../sourcedata/raw", subject_id, timepoint, f"dce/{subject_id}_{timepoint}_DCE.json")
             try:
                 with open(json_file, 'r') as f:
                     data = json.load(f)
@@ -465,7 +465,7 @@ def get_case_stats(subject_id, timepoint):
                 return
             # read ktrans map
             try:
-                ktrans_map = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_Ktrans.nii")
+                ktrans_map = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_Ktrans.nii.gz")
                 ktrans_map = nib.load(ktrans_map)
                 ktrans_map = ktrans_map.get_fdata()
             except:
@@ -513,7 +513,7 @@ def get_case_stats(subject_id, timepoint):
             error = ""
             try:
                 prefix = f"{subject_id}_{timepoint}"
-                wmparc_path = os.path.join(dceprep_dir, subject_id, timepoint, f"anat/{prefix}_space-DCEref_desc-wmparc.nii.gz")
+                wmparc_path = os.path.join(dceprep_dir, subject_id, timepoint, f"anat/{prefix}_space-DCEref_seg-wmparc_dseg.nii.gz")
                 if os.path.isfile(wmparc_path):
                     wmparc = nib.load(wmparc_path)
                     wmparc = wmparc.get_fdata()
@@ -2573,7 +2573,7 @@ index_cell_format.set_bold(False)
 if len(population_data_exclude) > 0:
     df_exclude = pd.DataFrame(population_data_exclude)
     df_exclude = df_exclude.T
-    df_exclude = df_exclude[order_exclude]
+    df_exclude = df_exclude.reindex(columns=order_exclude)
     df_exclude.index.name = "Subject_ID"
     df_exclude.to_excel(writer, sheet_name='Pre-Exclude')
     for column in df_exclude.columns:

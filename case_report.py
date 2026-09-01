@@ -25,7 +25,7 @@ freesurfer = bool(int(sys.argv[3]))
 # if source_dir[-1] == '/':
 #     source_dir = source_dir[:-1]
 
-files_to_reorient = [f'anat/{prefix}_flip-01_space-DCEref_VFA.nii.gz', f'dce/{prefix}_Ktrans.nii',
+files_to_reorient = [f'anat/{prefix}_flip-01_space-DCEref_VFA.nii.gz', f'dce/{prefix}_Ktrans.nii.gz',
                      f'anat/{prefix}_space-DCEref_T1w.nii.gz', f'anat/{prefix}_space-DCEref_label-WM_mask.nii.gz',
                      f'anat/{prefix}_space-DCEref_T1map.nii', f'anat/{prefix}_space-DCEref_label-brain_mask.nii.gz',
                      f'anat/{prefix}_space-DCEref_label-GM_mask.nii.gz', f'anat/{prefix}_space-DCEref_seg-wmparc_dseg.nii.gz',
@@ -70,7 +70,7 @@ if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
         try:
             subprocess.run(command, check=True)
             if nifti_stem(file) == f'dce/{prefix}_Ktrans':
-                ktrans = nib.load(resolve_nifti_path(space_ras_path(f'dce/{prefix}_Ktrans.nii')))
+                ktrans = nib.load(resolve_nifti_path(space_ras_path(f'dce/{prefix}_Ktrans.nii.gz')))
                 ktrans_data = ktrans.get_fdata()
                 ktrans_flipped = np.flip(ktrans_data, axis=1)
                 ktrans_flipped = nib.Nifti1Image(ktrans_flipped, ktrans.affine, ktrans.header)
@@ -84,8 +84,10 @@ if subprocess.run(['which', 'c3d'], stdout=subprocess.PIPE).returncode == 0:
                 ktrans_z_slices = min(dimensions)
                 midpt = int(ktrans_coords-5*ktrans_z_slices/2)
                 max_coord = int(ktrans_coords-5*ktrans_z_slices)
-                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(ktrans_coords, midpt, -5), axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
-                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(midpt, max_coord, -5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
+                coords1 = list(range(ktrans_coords, midpt, -5))
+                coords2 = list(range(midpt, max_coord, -5))
+                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=coords1, axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
+                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=coords2, axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
                 plt.savefig('figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
                 plt.close()
         except Exception as e:
@@ -103,17 +105,19 @@ else:
         try:
             subprocess.run(command, check=True)
             if nifti_stem(file) == f'dce/{prefix}_Ktrans':
-                ktrans = nib.load(resolve_nifti_path(space_ras_path(f'dce/{prefix}_Ktrans.nii')))
+                ktrans = nib.load(resolve_nifti_path(space_ras_path(f'dce/{prefix}_Ktrans.nii.gz')))
                 ktrans_data = ktrans.get_fdata()
                 ktrans_flipped = np.flip(ktrans_data, axis=1)
                 ktrans_flipped = nib.Nifti1Image(ktrans_flipped, ktrans.affine, ktrans.header)
                 dimensions = ktrans.header.get_data_shape()
                 voxel_size = ktrans.header.get_zooms()
+                range1 = list(range(-56, -21, 5))
+                range2 = list(range(-21, 13, 5))
 
                 # plot Ktrans, different coords
                 fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(15, 5), gridspec_kw={'hspace': -.1, 'wspace': -.1}, dpi=300)
-                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-56, -21, 5), axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
-                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range(-21, 13, 5), axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
+                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range1, axes=axes[0], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False, colorbar=True)
+                plotting.plot_anat(ktrans_flipped, display_mode='z', cut_coords=range2, axes=axes[1], vmin=0, vmax=expected_ktrans_vmax, cmap='gnuplot', annotate=False)
                 plt.savefig('figures/ktrans.svg', bbox_inches='tight', pad_inches = 0)
                 plt.close()
         except Exception as e:
@@ -322,15 +326,17 @@ except FileNotFoundError:
     img = nib.load(resolve_nifti_path(f'{source_dir}/dce/{prefix}_DCE.nii.gz'))
     img_data = img.get_fdata()
 # binarize AIF
-aif_data[aif_data > 0] = 1
-aif_data[aif_data < 0] = 0
+aif_data = np.where(np.isfinite(aif_data) & (aif_data > 0), 1.0, 0.0)
 # mask DCE where AIF is 1
 # but first ensure that DCE and AIF have same number of dimensions
 if len(aif_data.shape) < len(img_data.shape):
     aif_data = np.expand_dims(aif_data, axis=-1)
 aif_data_roi = img_data * aif_data
 # sum AIF data for each time point, z-slice independent
-aif_curve = np.sum(aif_data_roi, axis=(0, 1, 2)) / np.sum(aif_data[aif_data > 0])
+aif_voxel_count = np.count_nonzero(aif_data)
+if aif_voxel_count == 0:
+    raise ValueError(f'AIF mask is empty after removing NaNs for {prefix}')
+aif_curve = np.sum(aif_data_roi, axis=(0, 1, 2)) / aif_voxel_count
 # divide by AIF mean of timepoints before contrast agent arrival
 baseline = get_baseline_from_curve(aif_curve)
 aif_curve_ratio = aif_curve / baseline
