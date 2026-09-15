@@ -119,7 +119,21 @@ def summarize_population_values(data_dict, key, cast=None, use_nan=False, percen
     if len(values) == 0:
         return tuple([-1] * (3 + len(percentiles)))
 
-    values = np.asarray(values, dtype=float)
+    try:
+        values = np.asarray(values, dtype=float).reshape(-1)
+    except (TypeError, ValueError):
+        flattened_values = []
+        for value in values:
+            value_array = np.asarray(value, dtype=float).reshape(-1)
+            if value_array.size == 0:
+                continue
+            flattened_values.extend(value_array.tolist())
+        values = np.asarray(flattened_values, dtype=float)
+
+    values = values[np.isfinite(values)]
+    if values.size == 0:
+        return tuple([-1] * (3 + len(percentiles)))
+
     mean_func = np.nanmean if use_nan else np.mean
     median_func = np.nanmedian if use_nan else np.median
     std_func = np.nanstd if use_nan else np.std
@@ -128,6 +142,55 @@ def summarize_population_values(data_dict, key, cast=None, use_nan=False, percen
     for percentile in percentiles:
         results.append(np.nanpercentile(values, percentile) if use_nan else np.percentile(values, percentile))
     return tuple(results)
+
+
+def read_case_demographics(subject_id, timepoint):
+    metadata = {
+        "Manufacturer": "json read error",
+        "Field_strength": "json read error",
+        "Machine": "json read error",
+        "Institution": "json read error",
+        "Scan_Date": "json read error",
+        "Sex": "json read error",
+        "Age": "json read error",
+        "Coil": "json read error",
+        "TE": "json read error",
+    }
+
+    json_candidates = [
+        os.path.join(dir, "../sourcedata/raw", subject_id, timepoint, f"dce/{subject_id}_{timepoint}_DCE.json"),
+        os.path.join(dir, "../sourcedata/raw", subject_id, timepoint, f"anat/{subject_id}_{timepoint}_T1w.json"),
+    ]
+
+    json_file = next((path for path in json_candidates if os.path.exists(path)), None)
+    if json_file is None:
+        return metadata
+
+    try:
+        with open(json_file, 'r') as f:
+            data = json.load(f)
+        metadata["Manufacturer"] = data.get("Manufacturer", "json field error")
+        metadata["Field_strength"] = data.get("MagneticFieldStrength", "json field error")
+        metadata["Machine"] = data.get("ManufacturersModelName", "json field error")
+        metadata["Institution"] = data.get("InstitutionName", "json field error")
+        date = data.get("AcquisitionDateTime", "json field error")
+        if date != "json field error":
+            date = date.split("T")[0]
+            date = datetime.datetime.strptime(date, "%Y-%m-%d").strftime("%m/%d/%Y")
+            date = datetime.datetime.strptime(date, "%m/%d/%Y")
+        metadata["Scan_Date"] = date
+        metadata["Sex"] = data.get("PatientSex", "json field error")
+        metadata["Age"] = data.get("PatientAge", "json field error")
+        if "ReceiveCoilName" in data:
+            metadata["Coil"] = data.get("ReceiveCoilName", "json field error")
+        else:
+            metadata["Coil"] = data.get("CoilString", "json field error")
+        metadata["TE"] = data.get("EchoTime", "json field error")
+    except Exception as e:
+        print("Error reading demographics JSON for " + subject_id + " " + timepoint)
+        print(e)
+
+    return metadata
 
 
 def get_case_stats(subject_id, timepoint):
@@ -164,6 +227,18 @@ def get_case_stats(subject_id, timepoint):
         frontalpole_thickness_avg = frontalpole_thickness_std = supramarginal_thickness_avg = supramarginal_thickness_std = -1
         temporalpole_thickness_avg = temporalpole_thickness_std = transversetemporal_thickness_avg = transversetemporal_thickness_std = -1
 
+        demographics = read_case_demographics(subject_id, timepoint)
+        manufacturer = demographics["Manufacturer"]
+        field_strength = demographics["Field_strength"]
+        machine = demographics["Machine"]
+        institution = demographics["Institution"]
+        date = demographics["Scan_Date"]
+        sex = demographics["Sex"]
+        age = demographics["Age"]
+        coil = demographics["Coil"]
+        TE = demographics["TE"]
+        flip_angle = TR = time_resolution = n_reps = "not available"
+
         if timepoint.startswith("ses-"):
             total_timepoints.append(subject_id + '/' + timepoint)
             # Check for missing data in rawdata folder
@@ -187,7 +262,22 @@ def get_case_stats(subject_id, timepoint):
                 missing_files.append("dce/" + os.path.basename(dce_path))
             if missing_files:
                 print(f"Missing rawdata for {subject_id} {timepoint}: {', '.join(missing_files)}")
-                population_data_missing[subject_id + "_" + timepoint] = {"Missing_files": missing_files}
+                population_data_missing[subject_id + "_" + timepoint] = {
+                    "Scan_Date": date,
+                    "Sex": sex,
+                    "Age": age,
+                    "Machine": machine,
+                    "Institution": institution,
+                    "Coil": coil,
+                    "TR": TR,
+                    "Time_resolution": time_resolution,
+                    "TE": TE,
+                    "Flip_angle": flip_angle,
+                    "n_reps": n_reps,
+                    "Manufacturer": manufacturer,
+                    "Field_strength": field_strength,
+                    "Missing_files": missing_files,
+                }
                 missing = True
                 return
             else:
@@ -215,9 +305,16 @@ def get_case_stats(subject_id, timepoint):
                     den = np.sum(aif, axis = (0, 1, 2), keepdims=False)
 
                     # normalize to baseline
-                    intensities = num/(den+1e-8)
-                    intensities = np.asarray(intensities)
-                    intensities = intensities/intensities[0]
+                    intensities = np.asarray(num / (den + 1e-8), dtype=float).reshape(-1)
+                    if intensities.size == 0 or not np.isfinite(intensities[0]) or intensities[0] == 0:
+                        print(f"Empty or invalid AIF curve for {subject_id} {timepoint}")
+                        return
+
+                    intensities = intensities / intensities[0]
+                    if not np.isfinite(intensities).all():
+                        print(f"Non-finite AIF curve for {subject_id} {timepoint}")
+                        return
+
                     if intensities[0] != 1:
                         print("error")
                     # if intensities[1] < 3 and intensities[2] < 3:
@@ -249,7 +346,7 @@ def get_case_stats(subject_id, timepoint):
                 return
 
             # if use manual AIF and file exists, mark as manual
-            manual_aif_path = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_desc-AIF_mask.nii.gz")
+            manual_aif_path = os.path.join(dceprep_dir, subject_id, timepoint, f"dce/{subject_id}_{timepoint}_label-AIF_mask.nii.gz")
             if use_manual_aif and os.path.isfile(manual_aif_path):
                 manual_aif_status = "MANUAL"
             elif not use_manual_aif and os.path.isfile(manual_aif_path):
@@ -909,17 +1006,16 @@ def get_case_stats(subject_id, timepoint):
                 "Field_strength": field_strength,
                 "Machine": machine,
                 "Institution": institution,
-                "Date": date,
+                "Scan_Date": date,
                 "Sex": sex,
                 "Age": age,
                 "Coil": coil,
-                "Scan_options": scan_options,
                 "TE": TE,
                 "Time_resolution": time_resolution,
                 "Flip_angle": flip_angle,
                 "TR": TR,
                 "n_reps": n_reps,
-                "Approximate SNR": SNR,
+                "Approximate_SNR": SNR,
                 "Ktrans_Hippo_median": Ktrans_Hippo_median,
                 "Ktrans_PhG_median": Ktrans_PhG_median,
                 "Ktrans_Putamen_median": Ktrans_Putamen_median,
@@ -1041,7 +1137,7 @@ def get_case_stats(subject_id, timepoint):
                 successful_timepoints.append(entry.replace("_", "/"))
                 population_data[entry] = case_data
             else:
-                case_data["Reason"] = error
+                case_data["reason"] = error
                 population_data_failed[entry] = case_data
 
 # time
@@ -1089,7 +1185,7 @@ for entry in successful_timepoints:
         # put AUTO at beginning of flag_str
         flag_str = "AUTO: " + flag_str
         population_data_exclude[entry] = population_data.pop(entry)
-        population_data_exclude[entry]['Reason'] = flag_str
+        population_data_exclude[entry]['reason'] = flag_str
         # move outliers to exclude
         if entry in whole_hippo_outliers:
             whole_hippo_outliers_exclude.append(whole_hippo_outliers.pop(whole_hippo_outliers.index(entry)))
@@ -1127,12 +1223,12 @@ for entry in successful_timepoints:
 # for entry in list(population_data_exclude.keys()):
 #     if population_data_exclude[entry]["Machine"] == "Signa HDxt":
 #         population_data_exclude_signa[entry] = population_data_exclude.pop(entry)
-#         population_data_exclude_signa[entry]['Reason'] = "AUTO: Crazy GE Data"
+#         population_data_exclude_signa[entry]['reason'] = "AUTO: Crazy GE Data"
 
 # for entry in list(population_data.keys()):
 #     if population_data[entry]["Machine"] == "Signa HDxt":
 #         population_data_exclude_signa[entry] = population_data.pop(entry)
-#         population_data_exclude_signa[entry]['Reason'] = "AUTO: Crazy GE Data"
+#         population_data_exclude_signa[entry]['reason'] = "AUTO: Crazy GE Data"
 
 try:
     AIFitness_values = [float(population_data[entry]["AIFitness"]) for entry in population_data]
@@ -1992,7 +2088,7 @@ data = {
     'Subject_count': len(subjects),
     'Successes': str(len(population_data)) + '/' + str(len(total_timepoints)) + ' (' + str(round((len(population_data) / len(total_timepoints)) * 100, 2)) + '%)',
     'Excludes': str(len(population_data_exclude)) + '/' + str(len(total_timepoints)) + ' (' + str(round((len(population_data_exclude) / len(total_timepoints)) * 100, 2)) + '%)',
-    'Date': date,
+    'Scan_Date': date,
     'Commit': commit_hash,
     'ROCKETSHIP_commit': ROCKETSHIP_commit_hash,
     'Manufacturers': manufacturers,
@@ -2143,7 +2239,7 @@ data = {
     'Subject_count': len(subjects),
     'Successes': str(len(population_data)) + '/' + str(len(total_timepoints)) + ' (' + str(round((len(population_data) / len(total_timepoints)) * 100, 2)) + '%)',
     'Excludes': str(len(population_data_exclude)) + '/' + str(len(total_timepoints)) + ' (' + str(round((len(population_data_exclude) / len(total_timepoints)) * 100, 2)) + '%)',
-    'Date': date,
+    'Scan_Date': date,
     'Commit': commit_hash,
     'ROCKETSHIP_commit': ROCKETSHIP_commit_hash,
     'Manufacturers': manufacturers_exclude,
@@ -2441,30 +2537,30 @@ if apoe_exists:
             # move to population_data_exclude
             population_data_exclude[entry] = population_data.pop(entry)
             # add exclusion reason if not already there
-            if "Reason" not in population_data_exclude[entry].keys():
-                population_data_exclude[entry]["Reason"] = exclusion_reason
+            if "reason" not in population_data_exclude[entry].keys():
+                population_data_exclude[entry]["reason"] = exclusion_reason
             else:
-                population_data_exclude[entry]["Reason"] += ", " + exclusion_reason
+                population_data_exclude[entry]["reason"] += ", " + exclusion_reason
             # add date
-            # population_data_exclude[entry]["Date"] = dates_excluded[subjects_excluded == subject].values[0]
+            # population_data_exclude[entry]["Scan_Date"] = dates_excluded[subjects_excluded == subject].values[0]
             # remove from population_data
             # del population_data[entry]
         elif entry not in population_data.keys() and entry not in population_data_failed.keys() and entry not in population_data_exclude.keys():# and entry not in population_data_exclude_signa.keys():
             # read whole row from dce_available_3524_ac.xlsx
             row = df.loc[df['Subject_ID'] == subject_id]
             population_data_exclude[entry] = {}
-            population_data_exclude[entry]["Reason"] = exclusion_reason
+            population_data_exclude[entry]["reason"] = exclusion_reason
             population_data_exclude[entry]["Timepoint"] = row['Timepoint'].values[0]
             population_data_exclude[entry]["APOE"] = row['APOE'].values[0]
             population_data_exclude[entry]["Sex"] = row['Sex'].values[0]
             population_data_exclude[entry]["Age"] = row['Age'].values[0]
-            population_data_exclude[entry]["Date"] = row['Study_Date'].values[0]
+            population_data_exclude[entry]["Scan_Date"] = row['Study_Date'].values[0]
             # population_data_exclude[entry]["CDR"] = row['CDR'].values[0]
             # population_data_exclude[entry]["BMI"] = row['BMI'].values[0]
             # Fill rest of fields with default values
             # fields = [
             #     "Machine", "Institution", "Coil", "TR", "Time_resolution", "TE", "Flip_angle", "n_reps",
-            #     "Approximate SNR", "AIFitness", "aif_fitted_r2", "manual_aif_status", "max_disp", "T1_blood", "T1_wm_median", "T1_gm_median",
+            #     "Approximate_SNR", "AIFitness", "aif_fitted_r2", "manual_aif_status", "max_disp", "T1_blood", "T1_wm_median", "T1_gm_median",
             #     "Ktrans_wm_median", "Ktrans_gm_median", "Ktrans_Hippo_median", "Ktrans_PhG_median", "Ktrans_Putamen_median", "Ktrans_Pallidum_median",
             #     "Ktrans_Thalamus_median", "Ktrans_Caudate_median", "Ktrans_Amygdala_median", "Ktrans_Entorhinal_cortex_median",
             #     "Ktrans_Fusiform_gyrus_cortex_median", "Ktrans_Fusiform_gyrus_WM_median", "Ktrans_Insula_WM_median",
@@ -2512,12 +2608,12 @@ writer = pd.ExcelWriter(
 df_success = pd.DataFrame(population_data)
 # df_exclude = pd.DataFrame(population_data_exclude)
 
-order = ["Date"]
+order = ["Scan_Date"]
 if apoe_exists:
     order.append("APOE")
 order.extend([
         "Sex", "Age", "Machine", "Institution", "Coil", "TR", "Time_resolution", "TE", "Flip_angle", "n_reps",
-        "Approximate SNR", "AIFitness", "aif_fitted_r2", "manual_aif_status", "max_disp", "T1_blood", "T1_wm_median", "T1_gm_median",
+        "Approximate_SNR", "AIFitness", "aif_fitted_r2", "manual_aif_status", "max_disp", "T1_blood", "T1_wm_median", "T1_gm_median",
         "Ktrans_wm_median", "Ktrans_gm_median", "Ktrans_Hippo_median", "Ktrans_PhG_median", "Ktrans_Putamen_median", "Ktrans_Pallidum_median",
         "Ktrans_Thalamus_median", "Ktrans_Caudate_median", "Ktrans_Amygdala_median", "Ktrans_Entorhinal_cortex_median",
         "Ktrans_Fusiform_gyrus_cortex_median", "Ktrans_Fusiform_gyrus_WM_median", "Ktrans_Insula_WM_median",
@@ -2553,7 +2649,7 @@ df_success = df_success.reindex(columns=order)
 
 
 order_exclude = order.copy()
-order_exclude.insert(0, "Reason")
+order_exclude.insert(0, "reason")
 
 # name first column
 df_success.index.name = "Subject_ID"
@@ -2579,7 +2675,7 @@ if len(population_data_exclude) > 0:
     for column in df_exclude.columns:
         max_length = df_exclude[column].map(str).map(len).max()
         max_length = max(max_length, len(column))
-        if column == "Date":
+        if column == "Scan_Date":
             writer.sheets['Pre-Exclude'].set_column(df_exclude.columns.get_loc(column)+1, df_exclude.columns.get_loc(column)+1, 10, cell_format)
         else:
             writer.sheets['Pre-Exclude'].set_column(df_exclude.columns.get_loc(column)+1, df_exclude.columns.get_loc(column)+1, max_length+2, cell_format)
@@ -2597,6 +2693,11 @@ if len(population_data_failed) > 0:
 if len(population_data_missing) > 0:
     df_missing = pd.DataFrame(population_data_missing)
     df_missing = df_missing.T
+    order_missing = [
+        "Scan_Date", "Sex", "Age", "Machine", "Institution", "Coil", "TR", "Time_resolution",
+        "TE", "Flip_angle", "n_reps", "Manufacturer", "Field_strength", "Missing_files"
+    ]
+    df_missing = df_missing.reindex(columns=order_missing)
     df_missing.index.name = "Subject_ID"
     df_missing.to_excel(writer, sheet_name='Missing')
 
@@ -2610,7 +2711,7 @@ if len(population_data_missing) > 0:
 for column in df_success.columns:
     max_length = df_success[column].map(str).map(len).max()
     max_length = max(max_length, len(column))
-    if column == "Date":
+    if column == "Scan_Date":
         writer.sheets['Success'].set_column(df_success.columns.get_loc(column)+1, df_success.columns.get_loc(column)+1, 10, cell_format)
     else:
         writer.sheets['Success'].set_column(df_success.columns.get_loc(column)+1, df_success.columns.get_loc(column)+1, max_length+2, cell_format)
