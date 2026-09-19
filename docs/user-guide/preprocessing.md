@@ -155,7 +155,7 @@ Projects the HD-BET brain mask from MPRAGE space into DCE reference space.
 ---
 
 ### Step 12 — AIF Selection
-**Script:** Neural network from the [vascular_function repo](https://github.com/petmri/vascular_function) *(optional, `-A`)*
+**Script:** Neural network from the [AutoAIF repo](https://github.com/petmri/AutoAIF) *(optional, `-A`)*
 
 Automatically identifies the arterial input function (AIF) voxels within the brain mask. Three modes are available via `-A`:
 

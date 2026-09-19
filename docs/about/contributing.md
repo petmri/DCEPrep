@@ -63,9 +63,12 @@ The GitHub Actions workflow automatically clones the `petmri/ROCKETSHIP` dev bra
 
 ## Building Docs Locally
 
+The site is built with [Zensical](https://zensical.org/), the successor to
+Material for MkDocs. It reads the same `mkdocs.yml`.
+
 ```bash
-pip install mkdocs-material mkdocs-minify-plugin
-mkdocs serve
+pip install -r requirements-docs.txt
+zensical serve
 ```
 
 Then open `http://127.0.0.1:8000` in a browser.

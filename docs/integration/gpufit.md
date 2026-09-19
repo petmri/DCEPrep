@@ -21,7 +21,7 @@ DCEPrep detects whether a GPU is available at runtime and records this in the pe
 
 ## Pharmacokinetic Models Supported
 
-GPUfit (petmri fork) includes GPU-optimised implementations of:
+GPUfit (petmri fork) includes GPU-optimized implementations of:
 
 - Extended Tofts (used by DCEPrep/ROCKETSHIP)
 - Tofts

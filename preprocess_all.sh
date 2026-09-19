@@ -19,6 +19,7 @@ AUTOAIF_MODEL="best"
 HD_BET_COMMAND="${HD_BET_COMMAND:-hd-bet}"
 AUTO_AIF_PYTHON="${AUTO_AIF_PYTHON:-python3}"
 MAX_PARALLEL_JOBS=0
+WORKER_WAIT_TIMEOUT_SECONDS="${WORKER_WAIT_TIMEOUT_SECONDS:-7200}"
 
 # internal vars (don't change)
 fail=0
@@ -248,6 +249,22 @@ function show_progress {
 		echo -ne "Estimated remaining time: $(($remaining_time / 60))m $(($remaining_time % 60))s\r"
 	fi
 }
+
+wait_for_job_slot() {
+	if [ "$MAX_PARALLEL_JOBS" -le 0 ]; then
+		return 0
+	fi
+
+	while [ "$(jobs -pr | wc -l)" -ge "$MAX_PARALLEL_JOBS" ]; do
+		wait -n
+	done
+}
+
+start_background_job() {
+	wait_for_job_slot || return 1
+	"$@" &
+}
+
 # Run bias correction on VFA data
 # ------------------------------
 for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
@@ -389,6 +406,61 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		cd $SUBJECT_TP_PATH
     fi
 	mkdir anat &> /dev/null
+	WORKER_STATUS_DIR="$SUBJECT_TP_PATH/.preprocess_workers"
+	rm -rf "$WORKER_STATUS_DIR"
+	mkdir -p "$WORKER_STATUS_DIR"
+	export source_dir DATA_DIR DERIV_DIR LOG_FILE SUBJECT SESSION PREFIX SUBJECT_TP_PATH SCRIPT_PATH
+	export EN_MOTION_CORR EN_BIAS1 EN_BIAS2 EN_Z_NORM USE_AUTO_AIF USE_PYTHON T1_ONLY
+	export AIF_SUFFIX AIF_TRAINING_SUFFIX HD_BET_COMMAND AUTO_AIF_PYTHON AUTO_AIF_PATH
+	export AUTOAIF_WEIGHT_PATH AUTOAIF_MODEL ROCKETSHIP_PATH GPUFIT_PATH GPUFIT_M_PATH
+	export MAX_PARALLEL_JOBS WORKER_STATUS_DIR WORKER_WAIT_TIMEOUT_SECONDS
+	start_background_job bash "$SCRIPT_PATH/preprocess_vfa_t1.sh"
+	vfa_worker_pid=$!
+	if [ $T1_ONLY -eq 0 ]
+		then
+		start_background_job bash "$SCRIPT_PATH/preprocess_dce_series.sh"
+		dce_worker_pid=$!
+	else
+		dce_worker_pid=
+	fi
+
+	wait "$vfa_worker_pid"
+	vfa_worker_status=$?
+	if [ -n "$dce_worker_pid" ]
+		then
+		wait "$dce_worker_pid"
+		dce_worker_status=$?
+	else
+		dce_worker_status=0
+	fi
+
+	if [ $vfa_worker_status -ne 0 ] || [ $dce_worker_status -ne 0 ]
+		then
+		fail=1
+		rm -rf "$WORKER_STATUS_DIR"
+		cd "$DATA_DIR" || exit 1
+		continue
+	fi
+
+	ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
+	prog=$(echo "scale=2;  100 * $current / $count" | bc -l)
+	echo -ne "SUBJ COMPLETED [==================================================] $prog% ($current/$count) ~$ETA min remaining \r"
+	rm -rf "$WORKER_STATUS_DIR"
+	cd "$DATA_DIR" || exit 1
+	echo "$source_dir preprocessing complete!" >> "$LOG_FILE"
+	let successes++
+	continue
+	motion_corr_started=0
+	motion_corr_pid=
+	run_motion_correction() {
+		mcflirt -in $source_dir/dce/${PREFIX}_DCE.nii.gz -refvol 1 -cost mutualinfo -report -plots -o dce/${PREFIX}_desc-hmc_DCE.nii &> /dev/null
+	}
+	if [ $EN_MOTION_CORR -eq 1 ] && [ ! -f "dce/${PREFIX}_desc-hmc_DCE.nii.gz" ]
+		then
+		start_background_job run_motion_correction
+		motion_corr_pid=$!
+		motion_corr_started=1
+	fi
 
 	# HD-BET brain extraction & segmentations from MP-RAGE
 	SECONDS=0
@@ -424,16 +496,15 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	# ------------------------------
 	if [ $EN_MOTION_CORR -eq 1 ]
 		then
+		if [ $motion_corr_started -eq 1 ]; then
+			wait "$motion_corr_pid"
+		fi
 		if [ ! -f "dce/${PREFIX}_desc-hmc_DCE.nii.gz" ]
 			then
-			mcflirt -in $source_dir/dce/${PREFIX}_DCE.nii.gz -refvol 1 -cost mutualinfo -report -plots -o dce/${PREFIX}_desc-hmc_DCE.nii &> /dev/null
-			if [ ! -f "dce/${PREFIX}_desc-hmc_DCE.nii.gz" ]
-				then
-				echo $SUBJECT_TP_PATH/dce "Missing motion corrected DCE file." >> $LOG_FILE
-				cd $DATA_DIR
-				fail=1
-				continue
-			fi
+			echo $SUBJECT_TP_PATH/dce "Missing motion corrected DCE file." >> $LOG_FILE
+			cd $DATA_DIR
+			fail=1
+			continue
 		fi
 		# mkdir -p $source_dir/figures &> /dev/null
 		mkdir -p figures &> /dev/null
@@ -449,27 +520,27 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	fi
 
 	REF_SPACE=space-DCEref
+	T1w_reg() {
+		antsRegistration --verbose 0 --dimensionality 3 --float 0 \
+			--collapse-output-transforms 1 --output [ anat/${PREFIX}_${REF_SPACE}_T1w,anat/${PREFIX}_${REF_SPACE}_T1w.nii.gz ] \
+			--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
+			--transform Rigid[ 0.1 ] --metric MI[ $DCE_REF_VOL,${source_dir}/anat/${PREFIX}_T1w.nii.gz,1,32,Regular,0.25 ] \
+			--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
+		mv anat/${PREFIX}_${REF_SPACE}_T1w0GenericAffine.mat anat/${PREFIX}_from-T1w_to-DCEref.mat
+	}
+
+	t1w_reg_started=0
 	if [ ! -f anat/${PREFIX}_from-T1w_to-DCEref.mat ] && [ $EN_MOTION_CORR -eq 1 ]
 		then
-		# MPRAGE -> dynamic registration
-		antsRegistration --verbose 0 --dimensionality 3 --float 0 \
-			--collapse-output-transforms 1 --output [ anat/${PREFIX}_${REF_SPACE}_T1w,anat/${PREFIX}_${REF_SPACE}_T1w.nii.gz ] \
-			--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
-			--transform Rigid[ 0.1 ] --metric MI[ $DCE_REF_VOL,${source_dir}/anat/${PREFIX}_T1w.nii.gz,1,32,Regular,0.25 ] \
-			--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
-		mv anat/${PREFIX}_${REF_SPACE}_T1w0GenericAffine.mat anat/${PREFIX}_from-T1w_to-DCEref.mat
-		structural_to_DCEref=anat/${PREFIX}_from-T1w_to-DCEref.mat
+		start_background_job T1w_reg
+		t1w_reg_started=1
 	elif [ $EN_MOTION_CORR -eq 0 ]
 		then
-		antsRegistration --verbose 0 --dimensionality 3 --float 0 \
-			--collapse-output-transforms 1 --output [ anat/${PREFIX}_${REF_SPACE}_T1w,anat/${PREFIX}_${REF_SPACE}_T1w.nii.gz ] \
-			--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
-			--transform Rigid[ 0.1 ] --metric MI[ $DCE_REF_VOL,${source_dir}/anat/${PREFIX}_T1w.nii.gz,1,32,Regular,0.25 ] \
-			--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
-		mv anat/${PREFIX}_${REF_SPACE}_T1w0GenericAffine.mat anat/${PREFIX}_from-T1w_to-DCEref.mat
-		structural_to_DCEref=anat/${PREFIX}_from-T1w_to-DCEref.mat
+		start_background_job T1w_reg
+		t1w_reg_started=1
 	fi
 	T1w_to_DCEref=anat/${PREFIX}_from-T1w_to-DCEref.mat
+	structural_to_DCEref=$T1w_to_DCEref
 	# VFA -> dynamic registration
 	VFA_reg() {
 		local VFA=$1
@@ -486,9 +557,12 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	for VFA in "${VFA_NUMS[@]}"; do
 		if [ ! -f "anat/${PREFIX}_flip-${VFA}_VFA.nii.gz" ]
 			then
-			VFA_reg "$VFA" &
+			start_background_job VFA_reg "$VFA"
 		fi
 	done
+	if [ $t1w_reg_started -eq 1 ]; then
+		wait
+	fi
 	wait
 	# make array of VFA dynamic images
 	VFA_DYN_LIST=($(ls -1 anat/${PREFIX}_flip-*.nii*))
@@ -593,7 +667,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 			echo -ne "BFC FAST VFAS  [=======>                                          ] $prog% ($current/$count) ~$ETA min remaining \r"
 			for VFA in "${VFA_DYN_LIST[@]}"; do
 			echo "BFC FAST $VFA"
-				VFA_FAST "$VFA" &
+				start_background_job VFA_FAST "$VFA"
 			done
 			wait
 			echo -ne "Z NORM VFAS    [================>                             ] $prog% ($current/$count) ~$ETA min remaining \r"
@@ -698,6 +772,38 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 			fail=1
 			continue
 	fi
+
+	should_run_auto_aif() {
+		if [ $USE_AUTO_AIF -eq 1 ] || [ ! -f "dce/${PREFIX}_${AIF_SUFFIX}.nii.gz" ] && [ ! -f "dce/${PREFIX}_${AIF_SUFFIX}.nii" ] && [ ! -f "dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz" ]; then
+			return 0
+		fi
+
+		return 1
+	}
+
+	run_auto_aif_inference() {
+		local auto_aif_input
+
+		if [ $EN_MOTION_CORR -eq 1 ]
+			then
+			auto_aif_input=dce/${PREFIX}_desc-hmc_DCE.nii.gz
+		else
+			auto_aif_input=$source_dir/dce/${PREFIX}_DCE.nii.gz
+		fi
+
+		"$AUTO_AIF_PYTHON" $AUTO_AIF_PATH/main_vif.py --mode inference --input_path "$auto_aif_input" --save_output_path $PWD/dce \
+			--model_weight_path $AUTOAIF_WEIGHT_PATH \
+			--model_name $AUTOAIF_MODEL \
+			--save_image 1 &> dce/${PREFIX}_desc-autoaif.log
+	}
+
+	auto_aif_started=0
+	auto_aif_pid=
+	if should_run_auto_aif; then
+		start_background_job run_auto_aif_inference
+		auto_aif_pid=$!
+		auto_aif_started=1
+	fi
 	
 	prog=$(echo "scale=2;  $prog + .5 / $count" | bc -l)
 	echo -ne "MAKE T1 MAPS   [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
@@ -752,15 +858,15 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	echo -ne "FAST DCE REP 1 [========================>                         ] $prog% ($current/$count) ~$ETA min remaining \r"
 	
 	mkdir -p figures &> /dev/null
-	if [ $USE_AUTO_AIF -eq 1 ] || [ ! -f "dce/${PREFIX}_${AIF_SUFFIX}.nii.gz" ] && [ ! -f "dce/${PREFIX}_${AIF_SUFFIX}.nii" ] && [ ! -f "dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz" ]
+	if should_run_auto_aif
 		then
-		# run AutoAIF
+		if [ $auto_aif_started -eq 1 ]; then
+			wait "$auto_aif_pid"
+		else
+			run_auto_aif_inference
+		fi
 		if [ $EN_MOTION_CORR -eq 1 ]
 			then
-			"$AUTO_AIF_PYTHON" $AUTO_AIF_PATH/main_vif.py --mode inference --input_path dce/${PREFIX}_desc-hmc_DCE.nii.gz --save_output_path $PWD/dce \
-				--model_weight_path $AUTOAIF_WEIGHT_PATH \
-				--model_name $AUTOAIF_MODEL \
-				--save_image 1 &> dce/${PREFIX}_desc-autoaif.log
 			if [ ! -f "dce/${PREFIX}_desc-hmc_DCE_float_mask.nii" ] || [ ! -f "dce/${PREFIX}_desc-hmc_DCE_mask.nii" ]; then
 				echo "$source_dir AutoAIF failed. See dce/${PREFIX}_desc-autoaif.log. Skipping timepoint..." >> "$LOG_FILE"
 				cd "$DATA_DIR"
@@ -775,10 +881,6 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 			# fslmaths aif_floats.nii -thr 0.95 aif_mask.nii
 			fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_label-AIF_desc-topvoxels_mask.nii dce/${PREFIX}_label-AIF_T1map.nii
 		else
-			"$AUTO_AIF_PYTHON" $AUTO_AIF_PATH/main_vif.py --mode inference --input_path $source_dir/dce/${PREFIX}_DCE.nii.gz --save_output_path $PWD/dce \
-				--model_weight_path $AUTOAIF_WEIGHT_PATH \
-				--model_name $AUTOAIF_MODEL \
-				--save_image 1 &> dce/${PREFIX}_desc-autoaif.log
 			if [ ! -f "dce/${PREFIX}_DCE_float_mask.nii" ] || [ ! -f "dce/${PREFIX}_DCE_mask.nii" ]; then
 				echo "$source_dir AutoAIF failed. See dce/${PREFIX}_desc-autoaif.log. Skipping timepoint..." >> "$LOG_FILE"
 				cd "$DATA_DIR"
@@ -862,10 +964,10 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 			ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
 			prog=$(echo "scale=2;  $prog + 6 / $count" | bc -l)
 			echo -ne "FAST DCE 8REPS [===========================>                      ] $prog% ($current/$count) ~$ETA min remaining \r"
-			DCE_FAST "0" "$rep_interval" &
+			start_background_job DCE_FAST "0" "$rep_interval"
 			for i in {1..8}
 			do
-				DCE_FAST "$i" "$rep_interval" &
+				start_background_job DCE_FAST "$i" "$rep_interval"
 				# echo -ne "FAST DCE REP $((rep_interval*i-1)) [====================================>             ] $prog% ($current/$count) ~$ETA min remaining \r"
 			done
 			wait

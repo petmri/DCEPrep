@@ -61,7 +61,9 @@ rawdata/
 
 ## Converting from DICOM
 
-If your data is in DICOM format, use the included `sort_dicom.py` script to convert to BIDS:
+If your data is in DICOM format, the recommended tool is [dce2bids](../integration/dce2bids.md), the petmri group's DICOM-to-BIDS converter. It uses a coding agent (e.g. Claude Code) to work out scanner/protocol-specific conversion settings once, then converts subsequent participants with a plain script and no AI involved. See [dce2bids Integration](../integration/dce2bids.md) for installation and usage.
+
+DCEPrep also ships a built-in legacy converter, `sort_dicom.py`, which wraps `dcm2bids` directly:
 
 !!! note
     `sort_dicom.py` must be edited to specify local paths, and is designed to work with DICOMs organized in a specific way (see [DICOM to BIDS Conversion](../how-to/dicom-to-bids.md) for details). Ensure your DICOMs are structured correctly before running the script.
