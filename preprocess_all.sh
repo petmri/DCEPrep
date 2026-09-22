@@ -193,6 +193,7 @@ resolve_tool_path() {
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	ROCKETSHIP_PATH=$(resolve_tool_path "${ROCKETSHIP_PATH:-}" "run_dce_cli.m" "/opt/ROCKETSHIP/ROCKETSHIP-dev")
 	SCRIPT_PATH=$(dirname "$(realpath $0)")
+	PREPROCESS_WORKER_DIR="$SCRIPT_PATH/scripts/preprocess"
 	GPUFIT_PATH=$(resolve_tool_path "${GPUFIT_PATH:-}" "GpufitCudaAvailableMex.mexa64" "/opt/Gpufit/matlab64")
 	GPUFIT_M_PATH=$(resolve_tool_path "${GPUFIT_M_PATH:-}" "ModelID.m" "/opt/Gpufit/matlab")
 	if [ -z "$ROCKETSHIP_PATH" ] || [ -z "$GPUFIT_PATH" ] || [ -z "$GPUFIT_M_PATH" ]; then
@@ -202,6 +203,7 @@ if [[ "$OSTYPE" == "linux-gnu" ]]; then
 else
 	ROCKETSHIP_PATH=$(find $HOME -type d -name ROCKETSHIP)
 	SCRIPT_PATH=$(find $HOME -type d -name in-house_toolbox)
+	PREPROCESS_WORKER_DIR="$SCRIPT_PATH/scripts/preprocess"
 	GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
 fi
 
@@ -414,11 +416,11 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	export AIF_SUFFIX AIF_TRAINING_SUFFIX HD_BET_COMMAND AUTO_AIF_PYTHON AUTO_AIF_PATH
 	export AUTOAIF_WEIGHT_PATH AUTOAIF_MODEL ROCKETSHIP_PATH GPUFIT_PATH GPUFIT_M_PATH
 	export MAX_PARALLEL_JOBS WORKER_STATUS_DIR WORKER_WAIT_TIMEOUT_SECONDS
-	start_background_job bash "$SCRIPT_PATH/preprocess_vfa_t1.sh"
+	start_background_job bash "$PREPROCESS_WORKER_DIR/preprocess_vfa_t1.sh"
 	vfa_worker_pid=$!
 	if [ $T1_ONLY -eq 0 ]
 		then
-		start_background_job bash "$SCRIPT_PATH/preprocess_dce_series.sh"
+		start_background_job bash "$PREPROCESS_WORKER_DIR/preprocess_dce_series.sh"
 		dce_worker_pid=$!
 	else
 		dce_worker_pid=
@@ -508,7 +510,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		fi
 		# mkdir -p $source_dir/figures &> /dev/null
 		mkdir -p figures &> /dev/null
-		max=$(python3 $SCRIPT_PATH/max_disp.py $SUBJECT_TP_PATH/dce ${PREFIX})
+		max=$(python3 "$SCRIPT_PATH/scripts/max_disp.py" "$SUBJECT_TP_PATH/dce" "${PREFIX}")
 		echo -e "$max" > dce/${PREFIX}_desc-hmc_maxdisp.txt
 		fslmerge -n 1 dce/${PREFIX}_desc-hmc_DCEref.nii dce/${PREFIX}_desc-hmc_DCE.nii.gz &> /dev/null
 		DCE_REF_VOL=dce/${PREFIX}_desc-hmc_DCEref.nii.gz
@@ -701,7 +703,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		if [ ! -f "anat/${PREFIX}_${VFA_LIST[0]}_${REF_SPACE}_desc-bfcz_VFA.nii.gz" ]
 			then
 			#echo begin slice normalization
-			python3 $SCRIPT_PATH/VFA_norm.py $SUBJECT_TP_PATH/anat $PREFIX $EN_BIAS1 &> /dev/null
+			python3 "$SCRIPT_PATH/scripts/VFA_norm.py" "$SUBJECT_TP_PATH/anat" "$PREFIX" "$EN_BIAS1" &> /dev/null
 			prog=$(echo "scale=2;  $prog + .33 / $count" | bc -l)
 			echo -ne "VFA MOTIONCORR [===================>                              ] $prog% ($current/$count) ~$ETA min remaining \r"
 		fi
@@ -1013,7 +1015,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	#echo Normalizing dynamic images...
 	if [ $EN_Z_NORM -eq 1 ]
 		then
-		python3 $SCRIPT_PATH/DCE_norm.py $SUBJECT_TP_PATH/dce &> /dev/null
+		python3 "$SCRIPT_PATH/scripts/DCE_norm.py" "$SUBJECT_TP_PATH/dce" &> /dev/null
 	else
 		cp dce/${PREFIX}_desc-bfc_DCE.nii.gz dce/${PREFIX}_desc-bfcz_DCE.nii.gz
 	fi

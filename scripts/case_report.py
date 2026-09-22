@@ -5,6 +5,10 @@ import os
 import subprocess
 import re
 
+REPO_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
+if REPO_DIR not in sys.path:
+    sys.path.insert(0, REPO_DIR)
+
 import jinja2
 import nibabel as nib
 import numpy as np
@@ -12,7 +16,7 @@ import matplotlib.pyplot as plt
 from nilearn import plotting
 from matplotlib import colors as mcolors
 
-from aif_metric import *
+from utils.aif_metric import *
 import glob
 from utils.constants import KTRANS_MIN_THRESHOLD
 from utils.nifti import *
@@ -127,7 +131,7 @@ else:
             print(e)
 
 # use jinja2 to generate html
-env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))))
+env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.join(REPO_DIR, 'templates')))
 template = env.get_template('template.html')
 
 # get date

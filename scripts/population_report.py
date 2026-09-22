@@ -9,10 +9,16 @@ import datetime
 import subprocess
 import threading
 import time
+import sys
 from sys import argv
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+
+REPO_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
+if REPO_DIR not in sys.path:
+    sys.path.insert(0, REPO_DIR)
+
 from utils.constants import KTRANS_MIN_THRESHOLD
 from utils.nifti import first_existing_nifti_path
 from utils.run_metadata import resolve_dce_report_metadata
@@ -1943,7 +1949,7 @@ gm_median_exclude = round(gm_median_exclude, 4)
 gm_std_exclude = round(gm_std_exclude, 4)
 
 # use jinja2 to generate html
-env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))))
+env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.join(REPO_DIR, 'templates')))
 template = env.get_template('population_template.html')
 
 # get date

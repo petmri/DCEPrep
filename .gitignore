@@ -1,5 +1,7 @@
 .project
 .pydevproject
+.vscode/
 docker/files/license.txt
 __pycache__
 site/
+runs/

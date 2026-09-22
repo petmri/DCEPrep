@@ -6,7 +6,7 @@ PREFIX=${PREFIX:?PREFIX not set}
 SCRIPT_PATH=${SCRIPT_PATH:?SCRIPT_PATH not set}
 SUBJECT_TP_PATH=${SUBJECT_TP_PATH:?SUBJECT_TP_PATH not set}
 
-source "$SCRIPT_PATH/preprocess_worker_common.sh"
+source "${PREPROCESS_WORKER_DIR:-$SCRIPT_PATH/scripts/preprocess}/preprocess_worker_common.sh"
 
 REF_SPACE=space-DCEref
 
@@ -189,7 +189,7 @@ done
 
 	if [ $EN_Z_NORM -eq 1 ]; then
 		if [ ! -f "anat/${PREFIX}_${VFA_LIST[0]}_${REF_SPACE}_desc-bfcz_VFA.nii.gz" ]; then
-			python3 "$SCRIPT_PATH/VFA_norm.py" "$SUBJECT_TP_PATH/anat" "$PREFIX" "$EN_BIAS1" &> /dev/null
+			python3 "$SCRIPT_PATH/scripts/VFA_norm.py" "$SUBJECT_TP_PATH/anat" "$PREFIX" "$EN_BIAS1" &> /dev/null
 		fi
 		if [ ! -f "anat/${PREFIX}_${VFA_LIST[0]}_${REF_SPACE}_desc-bfcz_VFA.nii.gz" ]; then
 			mark_worker_failed "vfa_t1" "$source_dir Missing Z-normalized VFA files. Z-norm likely failed due to non-existent inputs."

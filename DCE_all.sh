@@ -281,7 +281,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	# iNESMA smooth DCE input (exclude AIF roi)
 	if [ $EN_SMOOTHING -eq 1 ]
 		then
-		python3 $SCRIPT_PATH/iNESMA_GPU.py $PREFIX dce/${PREFIX}_desc-bfcz_DCE.nii.gz dce/${PREFIX}_desc-AIF_T1map.nii.gz
+		python3 "$SCRIPT_PATH/scripts/iNESMA_GPU.py" "$PREFIX" "dce/${PREFIX}_desc-bfcz_DCE.nii.gz" "dce/${PREFIX}_desc-AIF_T1map.nii.gz"
 	fi
 	
 	# DCE
@@ -345,7 +345,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	fslmaths dce/${PREFIX}_Ktrans.nii.gz -mas anat/${PREFIX}_space-DCEref_label-CSF_mask.nii.gz dce/${PREFIX}_label-CSF_Ktrans.nii.gz
 
 	# registration QC
-	python3 $SCRIPT_PATH/ktrans_analysis.py $dir $PREFIX
+	python3 "$SCRIPT_PATH/scripts/ktrans_analysis.py" "$dir" "$PREFIX"
 
 	fslmaths anat/${PREFIX}_space-DCEref_label-WM_mask.nii.gz -add 2000 huh.nii
 	fslmaths huh.nii.gz -thr 2001 huh.nii
@@ -405,8 +405,8 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 		echo SKIP
 	fi
 	mkdir reports &> /dev/null
-	python3 $SCRIPT_PATH/case_report.py $DATA_DIR/$SUBJECT/$SESSION $PREFIX $USE_FREESURFER
-	python3 $SCRIPT_PATH/ktrans_report.py $DATA_DIR/$SUBJECT/$SESSION $PREFIX
+	python3 "$SCRIPT_PATH/scripts/case_report.py" "$DATA_DIR/$SUBJECT/$SESSION" "$PREFIX" "$USE_FREESURFER"
+	python3 "$SCRIPT_PATH/scripts/ktrans_report.py" "$DATA_DIR/$SUBJECT/$SESSION" "$PREFIX"
 
 	if [ $PURGE_INTERMEDIATES -eq 1 ]
 		then
@@ -425,7 +425,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 done # < $INPUT_LIST
 
 mkdir -p $DERIV_DIR/reports
-python3 $SCRIPT_PATH/population_report.py $DERIV_DIR $OUTPUT_DIR $ROCKETSHIP_PATH
+python3 "$SCRIPT_PATH/scripts/population_report.py" "$DERIV_DIR" "$OUTPUT_DIR" "$ROCKETSHIP_PATH"
 ((failures=count-successes))
 echo "Completed DCE processing for $count subjects." >> $LOG_FILE
 echo $successes subjects succeeded >> $LOG_FILE

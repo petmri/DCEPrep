@@ -6,7 +6,7 @@ PREFIX=${PREFIX:?PREFIX not set}
 SCRIPT_PATH=${SCRIPT_PATH:?SCRIPT_PATH not set}
 SUBJECT_TP_PATH=${SUBJECT_TP_PATH:?SUBJECT_TP_PATH not set}
 
-source "$SCRIPT_PATH/preprocess_worker_common.sh"
+source "${PREPROCESS_WORKER_DIR:-$SCRIPT_PATH/scripts/preprocess}/preprocess_worker_common.sh"
 
 REF_SPACE=space-DCEref
 
@@ -53,11 +53,13 @@ if [ $EN_MOTION_CORR -eq 1 ]; then
 	if [ ! -f "dce/${PREFIX}_desc-hmc_DCE.nii.gz" ]; then
 		mark_worker_failed "dce" "$SUBJECT_TP_PATH/dce Missing motion corrected DCE file."
 	fi
-	max=$(python3 "$SCRIPT_PATH/max_disp.py" "$SUBJECT_TP_PATH/dce" "${PREFIX}")
+	max=$(python3 "$SCRIPT_PATH/scripts/max_disp.py" "$SUBJECT_TP_PATH/dce" "${PREFIX}")
 	echo -e "$max" > dce/${PREFIX}_desc-hmc_maxdisp.txt
 	fslmerge -n 1 dce/${PREFIX}_desc-hmc_DCEref.nii dce/${PREFIX}_desc-hmc_DCE.nii.gz &> /dev/null
 else
-	fslmerge -n 1 dce/${PREFIX}_DCEref.nii "$source_dir/dce/${PREFIX}_DCE.nii" &> /dev/null
+	dce_input="$source_dir/dce/${PREFIX}_DCE.nii.gz"
+	[ -f "$source_dir/dce/${PREFIX}_DCE.nii" ] && dce_input="$source_dir/dce/${PREFIX}_DCE.nii"
+	fslmerge -n 1 dce/${PREFIX}_DCEref.nii "$dce_input" &> /dev/null
 fi
 
 auto_aif_started=0
@@ -168,7 +170,7 @@ else
 fi
 
 if [ $EN_Z_NORM -eq 1 ]; then
-	python3 "$SCRIPT_PATH/DCE_norm.py" "$SUBJECT_TP_PATH/dce" &> /dev/null
+	python3 "$SCRIPT_PATH/scripts/DCE_norm.py" "$SUBJECT_TP_PATH/dce" &> /dev/null
 else
 	cp dce/${PREFIX}_desc-bfc_DCE.nii.gz dce/${PREFIX}_desc-bfcz_DCE.nii.gz
 fi
