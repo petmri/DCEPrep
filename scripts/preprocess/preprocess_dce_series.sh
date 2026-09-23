@@ -120,7 +120,6 @@ if [ ! -f "$AIF_MASK_INPUT" ]; then
 	mark_worker_failed "dce" "$source_dir Missing AIF mask for DCE masking. Skipping timepoint..."
 fi
 
-stage_start "AIF-included DCE preparation"
 fslmaths anat/${PREFIX}_${REF_SPACE}_label-brain_mask.nii.gz -add "$AIF_MASK_INPUT" -thr 1 -bin anat/${PREFIX}_${REF_SPACE}_label-brainAIF_mask.nii.gz &> /dev/null
 
 if [ $EN_MOTION_CORR -eq 1 ]; then

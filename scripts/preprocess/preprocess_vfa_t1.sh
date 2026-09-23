@@ -126,9 +126,7 @@ structural_to_DCEref=$T1w_to_DCEref
 	fslmaths anat/${PREFIX}_${REF_SPACE}_label-brain_desc-pv_mask.nii.gz -thr 1 -bin anat/${PREFIX}_${REF_SPACE}_label-brain_mask.nii.gz &> /dev/null
 	rm anat/${PREFIX}_${REF_SPACE}_label-brain_desc-pv_mask.nii.gz
 	mark_worker_ready "vfa_t1.brain_mask"
-stage_end
 
-stage_start "VFA registration and T1 FAST completion"
 for vfa in "${VFA_NUMS[@]}"; do
 	if [ ! -f "anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_VFA.nii.gz" ]; then
 		start_background_job VFA_reg "$vfa"
