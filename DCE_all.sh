@@ -281,7 +281,7 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	# iNESMA smooth DCE input (exclude AIF roi)
 	if [ $EN_SMOOTHING -eq 1 ]
 		then
-		python3 "$SCRIPT_PATH/scripts/iNESMA_GPU.py" "$PREFIX" "dce/${PREFIX}_desc-bfcz_DCE.nii.gz" "dce/${PREFIX}_desc-AIF_T1map.nii.gz"
+python3 "$SCRIPT_PATH/scripts/iNESMA_GPU.py" "$PREFIX" "dce/${PREFIX}_desc-bfcz_DCE.nii.gz" "dce/${PREFIX}_label-AIF_T1map.nii.gz"
 	fi
 	
 	# DCE
