@@ -25,6 +25,10 @@ mark_worker_done() {
 	touch "$WORKER_STATUS_DIR/$1.done"
 }
 
+mark_worker_ready() {
+	touch "$WORKER_STATUS_DIR/$1.ready"
+}
+
 mark_worker_failed() {
 	local worker_name=$1
 	local message=$2

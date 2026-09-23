@@ -109,34 +109,39 @@ All data is assumed to be [BIDS](https://bids-specification.readthedocs.io/) com
 | `dce/sub-##_ses-##_desc-bfcz_DCE.nii.gz` |
 | `anat/sub-##_ses-##_space-DCEref_T1map.nii` |
 | `anat/sub-##_ses-##_space-DCEref_VFA.nii.gz` |
-| `dce/sub-##_ses-##_desc-AIF_T1map.nii.gz` |
-| `anat/sub-##_ses-##_space-DCEref_desc-brain_mask.nii.gz` |
+| `dce/sub-##_ses-##_label-AIF_T1map.nii.gz` |
+| `anat/sub-##_ses-##_space-DCEref_label-brain_mask.nii.gz` |
 
 #### Options
 
 | Flag | Description |
 |---|---|
 | `-d [rawdata_path]` | **Required.** Path to your BIDS raw data (NIFTIs) folder. |
-| `-a [suffix]` | AIF suffix (default: `desc-AIF_mask`). `.nii.gz` is appended automatically. |
+| `-a [suffix]` | AIF suffix (default: `label-AIF_mask`). `.nii.gz` is appended automatically. |
 | `-A [mode]` | Enable AutoAIF: `A` (fully automatic), `M` (manual if available), or `T` (manual + training if available). Requires the [vascular_function repo and weights](https://github.com/petmri/vascular_function). |
 | `-b` | Enable first round of bias field correction. |
 | `-B` | Enable second round of bias field correction (post-Z-norm, if enabled). |
 | `-c` | Clean the case's derivative folder before processing. Ensures fresh runs but disables skips. |
 | `-C [name]` | Enable comparison mode. Outputs all files to a named directory within each timepoint. Useful for comparing runs (e.g., no corrections vs. corrections). |
 | `-m` | Enable motion correction. |
+| `-j [count]` | Limit concurrent VFA registration and FAST jobs within each preprocessing worker. Defaults to unlimited. |
 | `-s` | Skip preprocessing if DCE input file already exists. |
 | `-t` | Only run up to T1 mapping. |
-| `-T [dir_path]` | Target specific subject(s)/session(s) (default: `sub-*/ses-*/`). |
+| `-S [pattern]` | Process only matching subject/session paths relative to the input directory (default: `sub-*/ses-*/`). |
 | `-w [path]` | Path to AutoAIF weights file. |
+| `-M [model]` | AutoAIF model name. |
+| `-p` | Use Python for ROCKETSHIP calls. |
 | `-Z` | Enable z-slice normalization. |
 
 #### Example
 
 ```bash
-./preprocess_all.sh -d /path/to/data/bids_data -b -c -Z -A -C noMC
+./preprocess_all.sh -d /path/to/data/bids_data -b -c -Z -A A -C noMC
 ```
 
 #### Step Summary
+
+The preprocessing workers overlap independent stages. The list below describes data dependencies rather than a strict wall-clock order: DCE motion correction and AutoAIF can run alongside T1 segmentation and registration; DCE bias correction begins after the DCE-space brain and AIF masks are ready, while T1 mapping and remaining VFA work continue.
 
 1. **Brain Extraction** of T1w MPRAGE using `HD-BET` with default weights (does not brain mask VFAs).
 2. <details>
@@ -166,28 +171,28 @@ All data is assumed to be [BIDS](https://bids-specification.readthedocs.io/) com
 5. <details>
     <summary><b>MPRAGE White Matter Segmentation</b> — FSL <code>fast</code></summary>
     <code>
-    fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -g -o anat/${PREFIX}_label- anat/${PREFIX}_desc-brain_T1w.nii.gz
+    fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -g -o anat/${PREFIX}_label- anat/${PREFIX}_label-brain_T1w.nii.gz
     </code>
    </details>
-6. **Apply MPRAGE → DCE transform to WM mask** — ANTs `antsApplyTransforms`
+6. **Apply MPRAGE → DCE transform to brain and WM masks** — ANTs `antsApplyTransforms`. The DCE-space brain mask is published as soon as T1 registration is complete.
 7. <details>
     <summary><b>VFA Bias Field Correction</b> — FSL <code>fast</code></summary>
     <code>
-    fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o anat/${PREFIX}_${VFA}_${REF_SPACE}_desc-brain_VFA.nii.gz
+    fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o anat/${PREFIX}_${VFA}_${REF_SPACE}_label-brain_VFA.nii.gz
     </code>
    </details>
 8. **VFA Z-axis Normalization** — double Gaussian fitting (`VFA_norm.py`)
 9. **Second VFA Bias Field Correction** — FSL `fast`
 10. **T1 Map Generation** — ROCKETSHIP
-11. **Apply MPRAGE → DCE transform to brain mask** — ANTs `antsApplyTransforms`
-12. **AIF Drawing via Neural Network** — ensures AIF is included within the brain mask
+11. **AIF Drawing via Neural Network** — runs in parallel where enabled; its mask is combined with the DCE-space brain mask.
+12. **DCE AIF masking** — create the AIF-included DCE volume once the brain and AIF masks are ready.
 13. <details>
-    <summary><b>DCE Bias Field Correction</b> — averages bias fields from the 1st + 8 evenly spaced temporal samples via FSL <code>fast</code></summary>
+    <summary><b>DCE Bias Field Correction</b> — begins once the AIF-included DCE is available and averages bias fields from the 1st + 8 evenly spaced temporal samples via FSL <code>fast</code></summary>
     <code>
     fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o rep_$((rep_interval*i-1)).nii
     </code>
     </details>
-14. **DCE Z-axis Normalization** — double Gaussian fitting (`DCE_norm.py`)
+14. **AIF T1 Map and DCE Z-axis Normalization** — create the AIF T1 map after T1 mapping completes, then run double-Gaussian DCE normalization (`DCE_norm.py`) using the WM-masked DCE output.
 
 ---
 
@@ -200,8 +205,8 @@ All data is assumed to be [BIDS](https://bids-specification.readthedocs.io/) com
 | `dce/sub-##_ses-##_desc-bfcz_DCE.nii.gz` |
 | `anat/sub-##_ses-##_space-DCEref_T1map.nii` |
 | `anat/sub-##_ses-##_space-DCEref_VFA.nii.gz` |
-| `dce/sub-##_ses-##_desc-AIF_T1map.nii.gz` |
-| `anat/sub-##_ses-##_space-DCEref_desc-brain_mask.nii.gz` |
+| `dce/sub-##_ses-##_label-AIF_T1map.nii.gz` |
+| `anat/sub-##_ses-##_space-DCEref_label-brain_mask.nii.gz` |
 
 #### Main Outputs
 
@@ -219,6 +224,8 @@ All data is assumed to be [BIDS](https://bids-specification.readthedocs.io/) com
 | `-d [path]` | **Required.** Path to raw BIDS data directory. Should be something like bids_root/sourcedata/raw |
 | `-C [name]` | Enable comparison mode. Copies essential files from a standard run if a preprocessed run of the same name does not exist. |
 | `-f` | Enable FreeSurfer WM parcellation for subregion analysis. |
+| `-h` | Display help. |
+| `-p` | Use Python for ROCKETSHIP calls. |
 | `-s` | Skip cases already processed. |
 | `-S` | Enable smoothing of DCE input. |
 | `-T [dir_path]` | Target specific subject(s)/session(s) (default: `sub-*/ses-*/`). |
