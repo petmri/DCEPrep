@@ -6,7 +6,7 @@ PREFIX=${PREFIX:?PREFIX not set}
 SCRIPT_PATH=${SCRIPT_PATH:?SCRIPT_PATH not set}
 SUBJECT_TP_PATH=${SUBJECT_TP_PATH:?SUBJECT_TP_PATH not set}
 
-source "$SCRIPT_PATH/preprocess_worker_common.sh"
+source "${PREPROCESS_WORKER_DIR:-$SCRIPT_PATH/scripts/preprocess}/preprocess_worker_common.sh"
 
 REF_SPACE=space-DCEref
 
@@ -53,11 +53,13 @@ if [ $EN_MOTION_CORR -eq 1 ]; then
 	if [ ! -f "dce/${PREFIX}_desc-hmc_DCE.nii.gz" ]; then
 		mark_worker_failed "dce" "$SUBJECT_TP_PATH/dce Missing motion corrected DCE file."
 	fi
-	max=$(python3 "$SCRIPT_PATH/max_disp.py" "$SUBJECT_TP_PATH/dce" "${PREFIX}")
+	max=$(python3 "$SCRIPT_PATH/scripts/max_disp.py" "$SUBJECT_TP_PATH/dce" "${PREFIX}")
 	echo -e "$max" > dce/${PREFIX}_desc-hmc_maxdisp.txt
 	fslmerge -n 1 dce/${PREFIX}_desc-hmc_DCEref.nii dce/${PREFIX}_desc-hmc_DCE.nii.gz &> /dev/null
 else
-	fslmerge -n 1 dce/${PREFIX}_DCEref.nii "$source_dir/dce/${PREFIX}_DCE.nii" &> /dev/null
+	dce_input="$source_dir/dce/${PREFIX}_DCE.nii.gz"
+	[ -f "$source_dir/dce/${PREFIX}_DCE.nii" ] && dce_input="$source_dir/dce/${PREFIX}_DCE.nii"
+	fslmerge -n 1 dce/${PREFIX}_DCEref.nii "$dce_input" &> /dev/null
 fi
 
 auto_aif_started=0
@@ -68,22 +70,21 @@ if should_run_auto_aif; then
 	auto_aif_started=1
 fi
 
-wait_for_file "$WORKER_STATUS_DIR/vfa_t1.done" "$WORKER_WAIT_TIMEOUT_SECONDS" "vfa_t1.failed"
+wait_for_file "$WORKER_STATUS_DIR/vfa_t1.brain_mask.ready" "$WORKER_WAIT_TIMEOUT_SECONDS" "vfa_t1.failed"
 wait_status=$?
 if [ $wait_status -eq 1 ]; then
-	mark_worker_failed "dce" "$source_dir Timed out waiting for VFA/T1 worker completion. Skipping timepoint..."
+	mark_worker_failed "dce" "$source_dir Timed out waiting for a DCE-space brain mask. Skipping timepoint..."
 elif [ $wait_status -eq 2 ]; then
-	mark_worker_failed "dce" "$source_dir VFA/T1 worker failed before completion. Skipping timepoint..."
+	mark_worker_failed "dce" "$source_dir VFA/T1 worker failed before the DCE-space brain mask was ready. Skipping timepoint..."
 fi
 
-if [ ! -f "anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz" ] || [ ! -f "anat/${PREFIX}_${REF_SPACE}_label-brain_mask.nii.gz" ] || [ ! -f "anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz" ]; then
-	mark_worker_failed "dce" "$source_dir VFA/T1 worker finished without all required DCE prerequisites. Skipping timepoint..."
+if [ $auto_aif_started -eq 1 ]; then
+	wait "$auto_aif_pid"
 fi
 
+AIF_MASK_INPUT=""
 if should_run_auto_aif; then
-	if [ $auto_aif_started -eq 1 ]; then
-		wait "$auto_aif_pid"
-	else
+	if [ $auto_aif_started -eq 0 ]; then
 		run_auto_aif_inference
 	fi
 	if [ $EN_MOTION_CORR -eq 1 ]; then
@@ -94,7 +95,7 @@ if should_run_auto_aif; then
 		mv dce/${PREFIX}_desc-hmc_DCE_mask.nii dce/${PREFIX}_label-AIF_desc-topvoxels_mask.nii
 		mv dce/${PREFIX}_desc-hmc_DCE_curve.svg figures/${PREFIX}_label-AIF_desc-resampled_mask.svg
 		mv dce/${PREFIX}_desc-hmc_DCE_mask.svg figures/${PREFIX}_label-AIF_mask.svg
-		fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_label-AIF_desc-topvoxels_mask.nii dce/${PREFIX}_label-AIF_T1map.nii
+		AIF_MASK_INPUT="dce/${PREFIX}_label-AIF_desc-topvoxels_mask.nii"
 	else
 		if [ ! -f "dce/${PREFIX}_DCE_float_mask.nii" ] || [ ! -f "dce/${PREFIX}_DCE_mask.nii" ]; then
 			mark_worker_failed "dce" "$source_dir AutoAIF failed. See dce/${PREFIX}_desc-autoaif.log. Skipping timepoint..."
@@ -103,24 +104,23 @@ if should_run_auto_aif; then
 		mv dce/${PREFIX}_DCE_mask.nii dce/${PREFIX}_label-AIF_desc-topvoxels_mask.nii
 		mv dce/${PREFIX}_DCE_curve.svg figures/${PREFIX}_label-AIF_desc-resampled_mask.svg
 		mv dce/${PREFIX}_DCE_mask.svg figures/${PREFIX}_label-AIF_mask.svg
-		fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_label-AIF_desc-topvoxels_mask.nii dce/${PREFIX}_label-AIF_T1map.nii
+		AIF_MASK_INPUT="dce/${PREFIX}_label-AIF_desc-topvoxels_mask.nii"
 	fi
 elif [ $USE_AUTO_AIF -eq 2 ]; then
 	if [ -f "dce/${PREFIX}_${AIF_SUFFIX}.nii.gz" ]; then
-		fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_${AIF_SUFFIX}.nii.gz dce/${PREFIX}_label-AIF_T1map.nii.gz
+		AIF_MASK_INPUT="dce/${PREFIX}_${AIF_SUFFIX}.nii.gz"
 	elif [ -f "dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz" ]; then
-		fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz dce/${PREFIX}_label-AIF_T1map.nii.gz
+		AIF_MASK_INPUT="dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz"
 	fi
 else
-	fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas dce/${PREFIX}_${AIF_SUFFIX}.nii.gz dce/${PREFIX}_label-AIF_T1map.nii.gz
+	AIF_MASK_INPUT="dce/${PREFIX}_${AIF_SUFFIX}.nii.gz"
 fi
 
-cp dce/${PREFIX}_label-AIF_T1map.nii.gz dce/${PREFIX}_label-AIF_desc-aligned_T1map.nii.gz
-fslcpgeom anat/${PREFIX}_${REF_SPACE}_label-brain_mask.nii.gz dce/${PREFIX}_label-AIF_desc-aligned_T1map.nii
-fslmaths dce/${PREFIX}_label-AIF_desc-aligned_T1map.nii.gz -thr 0 dce/${PREFIX}_label-AIF_desc-pos_T1map.nii &> /dev/null
-rm dce/${PREFIX}_label-AIF_desc-aligned_T1map.nii.gz
-fslmaths anat/${PREFIX}_${REF_SPACE}_label-brain_mask.nii.gz -add dce/${PREFIX}_label-AIF_desc-pos_T1map.nii -thr 1 -bin anat/${PREFIX}_${REF_SPACE}_label-brainAIF_mask.nii.gz &> /dev/null
-rm dce/${PREFIX}_label-AIF_desc-pos_T1map.nii
+if [ ! -f "$AIF_MASK_INPUT" ]; then
+	mark_worker_failed "dce" "$source_dir Missing AIF mask for DCE masking. Skipping timepoint..."
+fi
+
+fslmaths anat/${PREFIX}_${REF_SPACE}_label-brain_mask.nii.gz -add "$AIF_MASK_INPUT" -thr 1 -bin anat/${PREFIX}_${REF_SPACE}_label-brainAIF_mask.nii.gz &> /dev/null
 
 if [ $EN_MOTION_CORR -eq 1 ]; then
 	fslmaths dce/${PREFIX}_desc-hmc_DCE.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_label-brainAIF_mask.nii.gz dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz &> /dev/null
@@ -153,6 +153,27 @@ else
 	cp dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz dce/${PREFIX}_desc-bfc_DCE.nii.gz
 fi
 
+wait_for_file "$WORKER_STATUS_DIR/vfa_t1.wm_vfa.ready" "$WORKER_WAIT_TIMEOUT_SECONDS" "vfa_t1.failed"
+wait_status=$?
+if [ $wait_status -eq 1 ]; then
+	mark_worker_failed "dce" "$source_dir Timed out waiting for WM-masked VFA outputs. Skipping timepoint..."
+elif [ $wait_status -eq 2 ]; then
+	mark_worker_failed "dce" "$source_dir VFA/T1 worker failed before WM-masked VFA outputs were ready. Skipping timepoint..."
+fi
+
+wait_for_file "$WORKER_STATUS_DIR/vfa_t1.t1map.ready" "$WORKER_WAIT_TIMEOUT_SECONDS" "vfa_t1.failed"
+wait_status=$?
+if [ $wait_status -eq 1 ]; then
+	mark_worker_failed "dce" "$source_dir Timed out waiting for the T1 map. Skipping timepoint..."
+elif [ $wait_status -eq 2 ]; then
+	mark_worker_failed "dce" "$source_dir VFA/T1 worker failed before the T1 map was ready. Skipping timepoint..."
+fi
+if [ ! -f "anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz" ]; then
+	mark_worker_failed "dce" "$source_dir VFA/T1 worker reported a ready T1 map that is missing. Skipping timepoint..."
+fi
+
+fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas "$AIF_MASK_INPUT" dce/${PREFIX}_label-AIF_T1map.nii
+
 if [ $EN_BIAS1 -eq 1 ]; then
 	vfa_dyn_paths=()
 	for vfa_dyn_path in anat/${PREFIX}_flip-*_${REF_SPACE}_label-WM_VFA.nii.gz; do
@@ -168,7 +189,7 @@ else
 fi
 
 if [ $EN_Z_NORM -eq 1 ]; then
-	python3 "$SCRIPT_PATH/DCE_norm.py" "$SUBJECT_TP_PATH/dce" &> /dev/null
+	python3 "$SCRIPT_PATH/scripts/DCE_norm.py" "$SUBJECT_TP_PATH/dce" &> /dev/null
 else
 	cp dce/${PREFIX}_desc-bfc_DCE.nii.gz dce/${PREFIX}_desc-bfcz_DCE.nii.gz
 fi

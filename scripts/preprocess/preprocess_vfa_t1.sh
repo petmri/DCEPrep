@@ -6,7 +6,7 @@ PREFIX=${PREFIX:?PREFIX not set}
 SCRIPT_PATH=${SCRIPT_PATH:?SCRIPT_PATH not set}
 SUBJECT_TP_PATH=${SUBJECT_TP_PATH:?SUBJECT_TP_PATH not set}
 
-source "$SCRIPT_PATH/preprocess_worker_common.sh"
+source "${PREPROCESS_WORKER_DIR:-$SCRIPT_PATH/scripts/preprocess}/preprocess_worker_common.sh"
 
 REF_SPACE=space-DCEref
 
@@ -53,6 +53,15 @@ VFA_FAST() {
 	fslmaths anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_desc-bfc_VFA.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_label-WM_VFA.nii.gz
 }
 
+T1_FAST() {
+	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -g -o anat/${PREFIX}_label- anat/${PREFIX}_label-brain_T1w.nii.gz
+	mv anat/${PREFIX}_label-_bias.nii.gz anat/${PREFIX}_desc-bias_T1w.nii.gz
+	mv anat/${PREFIX}_label-_seg_0.nii.gz anat/${PREFIX}_label-CSF_mask.nii.gz
+	mv anat/${PREFIX}_label-_seg_1.nii.gz anat/${PREFIX}_label-GM_mask.nii.gz
+	mv anat/${PREFIX}_label-_seg_2.nii.gz anat/${PREFIX}_label-WM_mask.nii.gz
+	rm anat/${PREFIX}_label-_seg.nii.gz
+}
+
 build_vfa_lists
 if [ ${#VFA_LIST[@]} -eq 0 ]; then
 	mark_worker_failed "vfa_t1" "$source_dir No VFAs found! Skipping timepoint..."
@@ -73,13 +82,12 @@ if [ ! -f "anat/${PREFIX}_label-brain_mask.nii.gz" ] && [ -f "$source_dir/anat/$
 	mv anat/${PREFIX}_label-brain.nii.gz anat/${PREFIX}_label-brain_T1w.nii.gz
 fi
 
+t1_fast_started=0
 if [ ! -f "anat/${PREFIX}_label-WM_mask.nii.gz" ]; then
-	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -g -o anat/${PREFIX}_label- anat/${PREFIX}_label-brain_T1w.nii.gz
-	mv anat/${PREFIX}_label-_bias.nii.gz anat/${PREFIX}_desc-bias_T1w.nii.gz
-	mv anat/${PREFIX}_label-_seg_0.nii.gz anat/${PREFIX}_label-CSF_mask.nii.gz
-	mv anat/${PREFIX}_label-_seg_1.nii.gz anat/${PREFIX}_label-GM_mask.nii.gz
-	mv anat/${PREFIX}_label-_seg_2.nii.gz anat/${PREFIX}_label-WM_mask.nii.gz
-	rm anat/${PREFIX}_label-_seg.nii.gz
+	log_worker "$source_dir [T1 FAST segmentation] started"
+	t1_fast_start_seconds=$SECONDS
+	start_background_job T1_FAST
+	t1_fast_started=1
 fi
 
 if [ $EN_MOTION_CORR -eq 1 ]; then
@@ -97,23 +105,41 @@ elif [ $wait_status -eq 2 ]; then
 fi
 
 t1w_reg_started=0
+t1w_reg_pid=
 if [ ! -f "anat/${PREFIX}_from-T1w_to-DCEref.mat" ]; then
-	start_background_job T1w_reg
+	T1w_reg &
+	t1w_reg_pid=$!
 	t1w_reg_started=1
 fi
+
+if [ -n "$t1w_reg_pid" ]; then
+	wait "$t1w_reg_pid"
+fi
+
+T1w_to_DCEref=anat/${PREFIX}_from-T1w_to-DCEref.mat
+structural_to_DCEref=$T1w_to_DCEref
+	if [ $t1w_reg_started -eq 1 ] && [ ! -f "$T1w_to_DCEref" ]; then
+		mark_worker_failed "vfa_t1" "$source_dir Missing T1w-to-DCE transform after registration. Skipping timepoint..."
+	fi
+
+	antsApplyTransforms -i anat/${PREFIX}_label-brain_mask.nii.gz -r "$DCE_REF_VOL" -t "$structural_to_DCEref" -o anat/${PREFIX}_${REF_SPACE}_label-brain_desc-pv_mask.nii.gz &> /dev/null
+	fslmaths anat/${PREFIX}_${REF_SPACE}_label-brain_desc-pv_mask.nii.gz -thr 1 -bin anat/${PREFIX}_${REF_SPACE}_label-brain_mask.nii.gz &> /dev/null
+	rm anat/${PREFIX}_${REF_SPACE}_label-brain_desc-pv_mask.nii.gz
+	mark_worker_ready "vfa_t1.brain_mask"
 
 for vfa in "${VFA_NUMS[@]}"; do
 	if [ ! -f "anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_VFA.nii.gz" ]; then
 		start_background_job VFA_reg "$vfa"
 	fi
 done
-	wait
+wait
 
-	T1w_to_DCEref=anat/${PREFIX}_from-T1w_to-DCEref.mat
-	structural_to_DCEref=$T1w_to_DCEref
-	if [ $t1w_reg_started -eq 1 ] && [ ! -f "$T1w_to_DCEref" ]; then
-		mark_worker_failed "vfa_t1" "$source_dir Missing T1w-to-DCE transform after registration. Skipping timepoint..."
+if [ $t1_fast_started -eq 1 ]; then
+	log_worker "$source_dir [T1 FAST segmentation] completed in $((SECONDS - t1_fast_start_seconds))s"
+	if [ ! -f "anat/${PREFIX}_label-WM_mask.nii.gz" ]; then
+		mark_worker_failed "vfa_t1" "$source_dir T1 FAST segmentation did not create a WM mask. Skipping timepoint..."
 	fi
+fi
 
 	antsApplyTransforms -i anat/${PREFIX}_label-WM_mask.nii.gz -r "$DCE_REF_VOL" -t "$structural_to_DCEref" -o anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz &> /dev/null
 	fslmaths anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz -thr 0.9 -bin anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz &> /dev/null
@@ -175,21 +201,30 @@ done
 		cp anat/${PREFIX}_${vfa}_${REF_SPACE}_VFA.nii.gz anat/${PREFIX}_${vfa}_${REF_SPACE}_label-brain_VFA.nii.gz
 	done
 
-	if [ $EN_BIAS1 -eq 1 ] && [ ! -f "anat/${PREFIX}_${VFA_LIST[0]}_${REF_SPACE}_desc-bfc_VFA.nii.gz" ]; then
+	if [ $EN_BIAS1 -eq 1 ]; then
 		for vfa in "${VFA_NUMS[@]}"; do
-			start_background_job VFA_FAST "$vfa"
+			if [ ! -f "anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_desc-bfc_VFA.nii.gz" ]; then
+				start_background_job VFA_FAST "$vfa"
+			fi
 		done
 		wait
+		for vfa in "${VFA_NUMS[@]}"; do
+			if [ ! -f "anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_desc-bfc_VFA.nii.gz" ]; then
+				mark_worker_failed "vfa_t1" "$source_dir Missing bias-corrected VFA flip-${vfa}. Skipping timepoint..."
+			fi
+			fslmaths anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_desc-bfc_VFA.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_label-WM_VFA.nii.gz
+		done
 		rm -f "$source_dir"/[0-9]*_masked_[mps]*
 	else
 		for vfa in "${VFA_DYN_LIST[@]}"; do
 			fslmaths anat/${PREFIX}_${vfa}_${REF_SPACE}_label-brain_VFA.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz anat/${PREFIX}_${vfa}_${REF_SPACE}_label-WM_VFA.nii.gz &> /dev/null
 		done
 	fi
+	mark_worker_ready "vfa_t1.wm_vfa"
 
 	if [ $EN_Z_NORM -eq 1 ]; then
 		if [ ! -f "anat/${PREFIX}_${VFA_LIST[0]}_${REF_SPACE}_desc-bfcz_VFA.nii.gz" ]; then
-			python3 "$SCRIPT_PATH/VFA_norm.py" "$SUBJECT_TP_PATH/anat" "$PREFIX" "$EN_BIAS1" &> /dev/null
+			python3 "$SCRIPT_PATH/scripts/VFA_norm.py" "$SUBJECT_TP_PATH/anat" "$PREFIX" "$EN_BIAS1" &> /dev/null
 		fi
 		if [ ! -f "anat/${PREFIX}_${VFA_LIST[0]}_${REF_SPACE}_desc-bfcz_VFA.nii.gz" ]; then
 			mark_worker_failed "vfa_t1" "$source_dir Missing Z-normalized VFA files. Z-norm likely failed due to non-existent inputs."
@@ -247,10 +282,7 @@ done
 	if [ ! -f anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz ] && [ ! -f anat/${PREFIX}_${REF_SPACE}_T1map.nii ]; then
 		mark_worker_failed "vfa_t1" "$source_dir Missing T1 map file. T1 mapping may have failed."
 	fi
-
-	antsApplyTransforms -i anat/${PREFIX}_label-brain_mask.nii.gz -r "$DCE_REF_VOL" -t "$structural_to_DCEref" -o anat/${PREFIX}_${REF_SPACE}_label-brain_desc-pv_mask.nii.gz &> /dev/null
-	fslmaths anat/${PREFIX}_${REF_SPACE}_label-brain_desc-pv_mask.nii.gz -thr 1 -bin anat/${PREFIX}_${REF_SPACE}_label-brain_mask.nii.gz &> /dev/null
-	rm anat/${PREFIX}_${REF_SPACE}_label-brain_desc-pv_mask.nii.gz
+	mark_worker_ready "vfa_t1.t1map"
 
 	log_worker "$source_dir VFA/T1 worker complete."
 	mark_worker_done "vfa_t1"
