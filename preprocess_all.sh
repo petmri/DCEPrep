@@ -222,6 +222,9 @@ if [ $USE_AUTO_AIF -eq 1 ]; then
 fi
 cd $DATA_DIR || exit 1
 
+source "$SCRIPT_PATH/scripts/session_lock.sh"
+install_session_cleanup
+
 # count timepoints
 for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	((count++))
@@ -327,6 +330,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	if [ ${source_dir::-1} == "/" ]; then
 		source_dir=$DATA_DIR/${source_dir::-1}
 	fi
+	release_session_lock
 	record_session_time
 	show_progress $current "$(echo $source_dir | grep -o 'sub-[^/]*/ses-[^/]*')"
 	date >> $LOG_FILE
@@ -340,11 +344,27 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 
 	if [ $COMPARISON_MODE -eq 1 ]
 		then
-		if [ ! -d "$DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION" ]
+		SUBJECT_TP_PATH=$DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION
+		if [ ! -d "$SUBJECT_TP_PATH" ]
 			then
 			echo "Comparison mode enabled. Creating output directory $OUTPUT_DIR..." >> $LOG_FILE
-			mkdir -p $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
 		fi
+	else
+		SUBJECT_TP_PATH=$DERIV_DIR/dceprep/$SUBJECT/$SESSION
+	fi
+	mkdir -p "$SUBJECT_TP_PATH/dce"
+	cd "$SUBJECT_TP_PATH" || exit 1
+	SUBJECT_TP_PATH=$(pwd)
+
+	# Lock before writing anything so other machines skip this session
+	if ! acquire_session_lock "$SUBJECT_TP_PATH"
+		then
+		cd $DATA_DIR
+		continue
+	fi
+
+	if [ $COMPARISON_MODE -eq 1 ]
+		then
 		if [ ! $USE_AUTO_AIF -eq 1 ]
 			then
 			mask_copied=0
@@ -374,6 +394,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 			if [ $mask_copied -eq 0 ] && [ ! -f $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_SUFFIX}.nii.gz ] && [ ! -f $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz ] && [ $USE_AUTO_AIF -eq 2 ]
 				then
 				echo "No AIF file found for $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/. Skipping timepoint..." >> $LOG_FILE
+				release_session_lock
 				rm -rf $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION
 				if [ -z "$(ls -A $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT)" ]
 					then
@@ -383,30 +404,6 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 				continue
 			fi
 		fi
-		cd $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION || exit 1
-	else
-		mkdir -p $DERIV_DIR/dceprep/$SUBJECT/$SESSION
-		cd $DERIV_DIR/dceprep/$SUBJECT/$SESSION || exit 1
-	fi
-	SUBJECT_TP_PATH=$(pwd)
-
-	# --- LOCKING FOR MULTI-MACHINE PROCESSING ---
-	LOCKFILE="preprocessing_lock.txt"
-	LOCKDIR=$(pwd)
-	LOCKPATH="$LOCKDIR/$LOCKFILE"
-	LOCKHOST=$(hostname)
-	LOCKPID=$$
-	LOCKLIST="$DERIV_DIR/locks_${LOCKHOST}.txt"
-	echo "Attempting to lock $LOCKPATH on $LOCKHOST with PID $LOCKPID" >> $LOG_FILE
-
-	# Try to create lock file atomically
-	if ( set -o noclobber; echo "$LOCKHOST:$LOCKPID" > "$LOCKPATH" ) 2> /dev/null; then
-		echo "$LOCKPATH" >> "$LOCKLIST"
-		trap 'for f in $(cat "$LOCKLIST" 2>/dev/null); do rm -f "$f"; done; rm -f "$LOCKLIST"; exit $?' INT TERM EXIT
-	else
-		echo "Skipping $source_dir because it is currently being processed by $(cat $LOCKPATH)." >> $LOG_FILE
-		cd $DERIV_DIR
-		continue
 	fi
 
 	if [ ! -f $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_SUFFIX}.nii.gz ] && [ ! -f $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_SUFFIX}.nii ] && [ ! -f $DERIV_DIR/dceprep-manualAIF/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz ] && [ $USE_AUTO_AIF -eq 0 ]
