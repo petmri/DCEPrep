@@ -16,7 +16,7 @@ build_vfa_lists() {
 	VFA_NUMS=()
 	for vfa_path in "$source_dir"/anat/*.nii*; do
 		case "$vfa_path" in
-			*"${PREFIX}_T1w.nii"|*"${PREFIX}_T1w.nii.gz")
+			*"${PREFIX}_T1w.nii"|*"${PREFIX}_T1w.nii.gz"|*"${PREFIX}_T1map.nii"|*"${PREFIX}_T1map.nii.gz")
 				continue
 				;;
 		esac
@@ -62,32 +62,57 @@ T1_FAST() {
 	rm anat/${PREFIX}_label-_seg.nii.gz
 }
 
-build_vfa_lists
-if [ ${#VFA_LIST[@]} -eq 0 ]; then
-	mark_worker_failed "vfa_t1" "$source_dir No VFAs found! Skipping timepoint..."
-fi
-
-log_worker "$source_dir VFA/T1 worker started."
-
-if [ ! -f "anat/${PREFIX}_label-brain_mask.nii.gz" ] && [ -f "$source_dir/anat/${PREFIX}_T1w.nii.gz" ]; then
+brain_extract() {
+	local structural_img=$1
 	if command -v nvidia-smi &> /dev/null && nvidia-smi &> /dev/null; then
-		"$HD_BET_COMMAND" -i "$source_dir/anat/${PREFIX}_T1w.nii.gz" -o "anat/${PREFIX}_label-brain.nii.gz" --save_bet_mask &> /dev/null
+		"$HD_BET_COMMAND" -i "$structural_img" -o "anat/${PREFIX}_label-brain.nii.gz" --save_bet_mask &> /dev/null
 	else
-		"$HD_BET_COMMAND" -i "$source_dir/anat/${PREFIX}_T1w.nii.gz" -o "anat/${PREFIX}_label-brain.nii.gz" -device cpu --save_bet_mask &> /dev/null
+		"$HD_BET_COMMAND" -i "$structural_img" -o "anat/${PREFIX}_label-brain.nii.gz" -device cpu --save_bet_mask &> /dev/null
 	fi
 	if [ ! -f "anat/${PREFIX}_label-brain_bet.nii.gz" ] || [ ! -f "anat/${PREFIX}_label-brain.nii.gz" ]; then
 		mark_worker_failed "vfa_t1" "$source_dir HD-BET did not create expected output files. Skipping timepoint..."
 	fi
 	mv anat/${PREFIX}_label-brain_bet.nii.gz anat/${PREFIX}_label-brain_mask.nii.gz
 	mv anat/${PREFIX}_label-brain.nii.gz anat/${PREFIX}_label-brain_T1w.nii.gz
+}
+
+T1MAP_PROVIDED=${T1MAP_PROVIDED:-0}
+# Without a T1w, the pre-contrast DCE reference stands in as the structural image.
+# Its outputs keep the T1w names so downstream steps are unchanged.
+HAS_T1W=0
+[ -f "$source_dir/anat/${PREFIX}_T1w.nii.gz" ] && HAS_T1W=1
+
+T1map_reg() {
+	antsRegistration --verbose 0 --dimensionality 3 --float 0 \
+		--collapse-output-transforms 1 --output [ anat/${PREFIX}_${REF_SPACE}_T1map,anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz ] \
+		--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
+		--transform Rigid[ 0.1 ] --metric MI[ $DCE_REF_VOL,$source_dir/anat/${PREFIX}_T1map.nii.gz,1,32,Regular,0.25 ] \
+		--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
+	mv anat/${PREFIX}_${REF_SPACE}_T1map0GenericAffine.mat anat/${PREFIX}_from-T1map_to-DCEref.mat
+}
+
+build_vfa_lists
+if [ ${#VFA_LIST[@]} -eq 0 ] && [ $T1MAP_PROVIDED -eq 0 ]; then
+	mark_worker_failed "vfa_t1" "$source_dir No VFAs found! Skipping timepoint..."
 fi
 
+log_worker "$source_dir VFA/T1 worker started."
+
+start_t1_fast() {
+	if [ ! -f "anat/${PREFIX}_label-WM_mask.nii.gz" ]; then
+		log_worker "$source_dir [T1 FAST segmentation] started"
+		t1_fast_start_seconds=$SECONDS
+		start_background_job T1_FAST
+		t1_fast_started=1
+	fi
+}
+
 t1_fast_started=0
-if [ ! -f "anat/${PREFIX}_label-WM_mask.nii.gz" ]; then
-	log_worker "$source_dir [T1 FAST segmentation] started"
-	t1_fast_start_seconds=$SECONDS
-	start_background_job T1_FAST
-	t1_fast_started=1
+if [ $HAS_T1W -eq 1 ]; then
+	if [ ! -f "anat/${PREFIX}_label-brain_mask.nii.gz" ]; then
+		brain_extract "$source_dir/anat/${PREFIX}_T1w.nii.gz"
+	fi
+	start_t1_fast
 fi
 
 if [ $EN_MOTION_CORR -eq 1 ]; then
@@ -102,6 +127,18 @@ if [ $wait_status -eq 1 ]; then
 	mark_worker_failed "vfa_t1" "$source_dir Timed out waiting for $DCE_REF_VOL from DCE worker. Skipping timepoint..."
 elif [ $wait_status -eq 2 ]; then
 	mark_worker_failed "vfa_t1" "$source_dir DCE worker failed before $DCE_REF_VOL was ready. Skipping timepoint..."
+fi
+
+if [ $HAS_T1W -eq 0 ]; then
+	log_worker "$source_dir No T1w found; using $DCE_REF_VOL as the structural image."
+	if [ ! -f "anat/${PREFIX}_label-brain_mask.nii.gz" ]; then
+		brain_extract "$DCE_REF_VOL"
+	fi
+	start_t1_fast
+	if [ ! -f "anat/${PREFIX}_from-T1w_to-DCEref.mat" ]; then
+		antsApplyTransforms -d 3 -r "$DCE_REF_VOL" -t identity -o Linear[ anat/${PREFIX}_from-T1w_to-DCEref.mat ] &> /dev/null
+		cp "$DCE_REF_VOL" anat/${PREFIX}_${REF_SPACE}_T1w.nii.gz
+	fi
 fi
 
 t1w_reg_started=0
@@ -126,6 +163,35 @@ structural_to_DCEref=$T1w_to_DCEref
 	fslmaths anat/${PREFIX}_${REF_SPACE}_label-brain_desc-pv_mask.nii.gz -thr 1 -bin anat/${PREFIX}_${REF_SPACE}_label-brain_mask.nii.gz &> /dev/null
 	rm anat/${PREFIX}_${REF_SPACE}_label-brain_desc-pv_mask.nii.gz
 	mark_worker_ready "vfa_t1.brain_mask"
+
+if [ $T1MAP_PROVIDED -eq 1 ]; then
+	log_worker "$source_dir Using scanner T1 map; skipping VFA processing."
+	wait
+	if [ $t1_fast_started -eq 1 ]; then
+		log_worker "$source_dir [T1 FAST segmentation] completed in $((SECONDS - t1_fast_start_seconds))s"
+	fi
+	if [ ! -f "anat/${PREFIX}_label-WM_mask.nii.gz" ]; then
+		mark_worker_failed "vfa_t1" "$source_dir T1 FAST segmentation did not create a WM mask. Skipping timepoint..."
+	fi
+	antsApplyTransforms -i anat/${PREFIX}_label-WM_mask.nii.gz -r "$DCE_REF_VOL" -t "$structural_to_DCEref" -o anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz &> /dev/null
+	fslmaths anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz -thr 0.9 -bin anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz &> /dev/null
+	mark_worker_ready "vfa_t1.wm_vfa"
+
+	if [ ! -f "anat/${PREFIX}_from-T1map_to-DCEref.mat" ]; then
+		T1map_reg
+	fi
+	if [ -f "anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz" ]; then
+		fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -nan anat/${PREFIX}_${REF_SPACE}_T1map_fix.nii.gz &> /dev/null
+		mv anat/${PREFIX}_${REF_SPACE}_T1map_fix.nii.gz anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz
+	else
+		mark_worker_failed "vfa_t1" "$source_dir Missing T1 map file. Registration of scanner T1 map may have failed."
+	fi
+	mark_worker_ready "vfa_t1.t1map"
+
+	log_worker "$source_dir T1 worker complete."
+	mark_worker_done "vfa_t1"
+	exit 0
+fi
 
 for vfa in "${VFA_NUMS[@]}"; do
 	if [ ! -f "anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_VFA.nii.gz" ]; then

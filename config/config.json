@@ -13,7 +13,7 @@
             "criteria": {
                 "SeriesDescription": "*MPRAGE*SEL."
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
                 "ProtocolName": "T1w"
             }
         },
@@ -23,7 +23,7 @@
             "criteria": {
                 "SeriesDescription": "*FSPGR*"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
                 "ProtocolName": "T1w"
             }
         },
@@ -33,7 +33,7 @@
             "criteria": {
                 "SeriesDescription": "*mprage*"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
                 "ProtocolName": "T1w"
             }
         },
@@ -43,8 +43,28 @@
             "criteria": {
                 "SeriesDescription": "Accelerated Sagittal MPRAGE"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
                 "ProtocolName": "T1w"
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "T1map",
+            "criteria": {
+                "SeriesDescription": "*T1Map*"
+            },
+            "sidecar_changes": {
+                "ProtocolName": "T1 map"
+            }
+        },
+        {
+            "datatype": "anat",
+            "suffix": "T1map",
+            "criteria": {
+                "SeriesDescription": "*T1map*"
+            },
+            "sidecar_changes": {
+                "ProtocolName": "T1 map"
             }
         },
         {
@@ -60,7 +80,7 @@
             "criteria": {
                 "SeriesDescription": "*DCE*"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -69,7 +89,7 @@
             "criteria": {
                 "SeriesDescription": "*_dyn"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -78,7 +98,7 @@
             "criteria": {
                 "SeriesDescription": "*dynamic_waterext*"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -89,7 +109,7 @@
                 "SeriesDescription": "*FA02*",
                 "FlipAngle": "2"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -100,7 +120,7 @@
                 "SeriesDescription": "*dyn_2*",
                 "FlipAngle": "2"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -111,7 +131,7 @@
                 "SeriesDescription": "*tra_flip_2deg*",
                 "FlipAngle": "2"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -122,7 +142,7 @@
                 "SeriesDescription": "*FA05*",
                 "FlipAngle": "5"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -133,7 +153,7 @@
                 "SeriesDescription": "*dyn_5*",
                 "FlipAngle": "5"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -144,7 +164,7 @@
                 "SeriesDescription": "*tra_flip_5deg*",
                 "FlipAngle": "5"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -155,7 +175,7 @@
                 "SeriesDescription": "*FA10*",
                 "FlipAngle": "10"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -166,7 +186,7 @@
                 "SeriesDescription": "*dyn_10*",
                 "FlipAngle": "10"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -177,7 +197,7 @@
                 "SeriesDescription": "*tra_flip_10deg*",
                 "FlipAngle": "10"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -188,7 +208,7 @@
                 "SeriesDescription": "*FA12*",
                 "FlipAngle": "12"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -199,7 +219,7 @@
                 "SeriesDescription": "*dyn_12*",
                 "FlipAngle": "12"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -210,7 +230,7 @@
                 "SeriesDescription": "*tra_flip_12deg*",
                 "FlipAngle": "12"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -221,7 +241,7 @@
                 "SeriesDescription": "*FA15*",
                 "FlipAngle": "15"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -232,7 +252,7 @@
                 "SeriesDescription": "*dyn_15*",
                 "FlipAngle": "15"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -243,7 +263,7 @@
                 "SeriesDescription": "*tra_flip_15deg*",
                 "FlipAngle": "15"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -254,7 +274,7 @@
                 "SeriesDescription": "*FA20*",
                 "FlipAngle": "20"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -265,7 +285,7 @@
                 "SeriesDescription": "*FA25*",
                 "FlipAngle": "25"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -275,7 +295,7 @@
             "criteria": {
                 "SeriesDescription": "*FLIP1"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -285,7 +305,7 @@
             "criteria": {
                 "SeriesDescription": "*FLIP2"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -295,7 +315,7 @@
             "criteria": {
                 "SeriesDescription": "*FLIP3"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         },
         {
@@ -305,7 +325,7 @@
             "criteria": {
                 "SeriesDescription": "*FLIP4"
             },
-            "sidecarChanges": {
+            "sidecar_changes": {
             }
         }
     ]

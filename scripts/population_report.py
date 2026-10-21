@@ -251,16 +251,18 @@ def get_case_stats(subject_id, timepoint):
             prefix = f"{subject_id}_{timepoint}"
             rawdata_dir = os.path.join(dir, "../sourcedata/raw", subject_id, timepoint)
             missing_files = []
+            # A scanner T1 map replaces both the VFAs and (if absent) the T1w
+            t1map_provided = os.path.exists(os.path.join(rawdata_dir, f"anat/{prefix}_T1map.nii.gz"))
             # Check for anat/prefix_T1w.nii.gz
             t1w_path = os.path.join(rawdata_dir, f"anat/{prefix}_T1w.nii.gz")
-            if not os.path.exists(t1w_path):
+            if not os.path.exists(t1w_path) and not t1map_provided:
                 missing_files.append("anat/" + os.path.basename(t1w_path))
             # Check for at least one anat/prefix_*_VFA.nii.gz
             anat_dir = os.path.join(rawdata_dir, "anat")
             vfa_files = []
             if os.path.isdir(anat_dir):
                 vfa_files = [f for f in os.listdir(anat_dir) if f.startswith(prefix) and "_VFA" in f and f.endswith(".nii.gz")]
-            if len(vfa_files) == 0:
+            if len(vfa_files) == 0 and not t1map_provided:
                 missing_files.append("anat/*_VFA.nii.gz")
             # Check for dce/prefix_DCE.nii.gz
             dce_path = os.path.join(rawdata_dir, f"dce/{prefix}_DCE.nii.gz")
@@ -1150,6 +1152,19 @@ def get_case_stats(subject_id, timepoint):
 # start = time.time()
 # lock = threading.Lock()
 subject_timepoints = {subject_id: sorted(os.listdir(os.path.join(dceprep_dir, subject_id))) for subject_id in subjects}
+
+# If the dataset has a DICOM-to-session map, only report sessions it marks "include".
+# Excluded (duplicate/mislabeled) and held sessions never reach any sheet, even if old outputs exist.
+session_map_path = os.path.join(dir, "../sourcedata/dicom_session_map.tsv")
+if os.path.isfile(session_map_path):
+    session_map = pd.read_csv(session_map_path, sep="\t", dtype=str, keep_default_na=False)
+    included = set(zip(session_map.loc[session_map["status"] == "include", "participant_id"],
+                       session_map.loc[session_map["status"] == "include", "session_id"]))
+    for subject_id in list(subject_timepoints):
+        kept = [tp for tp in subject_timepoints[subject_id] if (subject_id, tp) in included]
+        for tp in sorted(set(subject_timepoints[subject_id]) - set(kept)):
+            print(f"Skipping {subject_id} {tp}: not included in {session_map_path}")
+        subject_timepoints[subject_id] = kept
 
 with ThreadPoolExecutor() as executor:
     futures = [executor.submit(get_case_stats, subject_id, timepoint) for subject_id, timepoints in subject_timepoints.items() for timepoint in timepoints]

@@ -374,24 +374,29 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		fi
 	fi
 
+	# A scanner-provided T1 map replaces the VFA fitting
+	T1MAP_PROVIDED=0
+	[ -f "$source_dir/anat/${PREFIX}_T1map.nii.gz" ] && T1MAP_PROVIDED=1
+
 	# get list of VFAs and sort them
-	VFA_LIST=($(ls $source_dir/anat/*.nii* | grep -v "$source_dir/anat/*T1w.nii*" | grep -v "$source_dir/dce/*aif.nii*"))
+	VFA_LIST=($(ls $source_dir/anat/*.nii* | grep -v "$source_dir/anat/*T1w.nii*" | grep -v "$source_dir/anat/*T1map.nii*" | grep -v "$source_dir/dce/*aif.nii*"))
 	VFA_LIST=($(printf '%s\n' "${VFA_LIST[@]}" | grep -o -E 'flip-[0-9]+' | sort -n))
 	echo "Found ${#VFA_LIST[@]} VFAs: ${VFA_LIST[@]}"
 	VFA_NUMS=($(printf '%s\n' "${VFA_LIST[@]}" | grep -o -E 'flip-[0-9]+' | grep -o -E '[0-9]+'))
 
-	if [ ${#VFA_LIST[@]} -eq 0 ]
+	if [ ${#VFA_LIST[@]} -eq 0 ] && [ $T1MAP_PROVIDED -eq 0 ]
 		then
 		echo "$source_dir No VFAs found! Skipping timepoint..." >> $LOG_FILE
 		cd $DATA_DIR
 		continue
 	fi
 
-	if [ ! -f "$source_dir/dce/${PREFIX}_DCE.nii.gz" ] || [ ! -f "$source_dir/anat/${PREFIX}_T1w.nii.gz" ]
+	# Without a T1w, a scanner T1 map session uses the DCE reference as its structural image
+	if [ ! -f "$source_dir/dce/${PREFIX}_DCE.nii.gz" ] || { [ ! -f "$source_dir/anat/${PREFIX}_T1w.nii.gz" ] && [ $T1MAP_PROVIDED -eq 0 ]; }
 	then
 		missing_files=""
 		[ ! -f "$source_dir/dce/${PREFIX}_DCE.nii.gz" ] && missing_files+=" $source_dir/dce/${PREFIX}_DCE.nii.gz"
-		[ ! -f "$source_dir/anat/${PREFIX}_T1w.nii.gz" ] && missing_files+=" $source_dir/anat/${PREFIX}_T1w.nii.gz"
+		[ ! -f "$source_dir/anat/${PREFIX}_T1w.nii.gz" ] && [ $T1MAP_PROVIDED -eq 0 ] && missing_files+=" $source_dir/anat/${PREFIX}_T1w.nii.gz"
 
 		echo "$source_dir Base file(s) missing! Missing file(s):$missing_files. Skipping timepoint..." >> "$LOG_FILE"
 		cd $DATA_DIR
@@ -413,7 +418,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	rm -rf "$WORKER_STATUS_DIR"
 	mkdir -p "$WORKER_STATUS_DIR"
 	export source_dir DATA_DIR DERIV_DIR LOG_FILE SUBJECT SESSION PREFIX SUBJECT_TP_PATH SCRIPT_PATH
-	export EN_MOTION_CORR EN_BIAS1 EN_BIAS2 EN_Z_NORM USE_AUTO_AIF USE_PYTHON T1_ONLY
+	export T1MAP_PROVIDED EN_MOTION_CORR EN_BIAS1 EN_BIAS2 EN_Z_NORM USE_AUTO_AIF USE_PYTHON T1_ONLY
 	export AIF_SUFFIX AIF_TRAINING_SUFFIX HD_BET_COMMAND AUTO_AIF_PYTHON AUTO_AIF_PATH
 	export AUTOAIF_WEIGHT_PATH AUTOAIF_MODEL ROCKETSHIP_PATH GPUFIT_PATH GPUFIT_M_PATH
 	export MAX_PARALLEL_JOBS WORKER_STATUS_DIR WORKER_WAIT_TIMEOUT_SECONDS

@@ -174,7 +174,7 @@ fi
 
 fslmaths anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz -mas "$AIF_MASK_INPUT" dce/${PREFIX}_label-AIF_T1map.nii
 
-if [ $EN_BIAS1 -eq 1 ]; then
+if [ $EN_BIAS1 -eq 1 ] && [ "${T1MAP_PROVIDED:-0}" -eq 0 ]; then
 	vfa_dyn_paths=()
 	for vfa_dyn_path in anat/${PREFIX}_flip-*_${REF_SPACE}_label-WM_VFA.nii.gz; do
 		vfa_dyn_paths+=("$vfa_dyn_path")

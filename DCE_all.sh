@@ -376,7 +376,7 @@ python3 "$SCRIPT_PATH/scripts/iNESMA_GPU.py" "$PREFIX" "dce/${PREFIX}_desc-bfcz_
 			--o $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc-in-rawavg.mgz \
 			--regheader $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc.mgz &> /dev/null
         mri_convert $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc-in-rawavg.mgz wmparc.nii.gz &> /dev/null
-        antsApplyTransforms -i wmparc.nii.gz -r dce/${PREFIX}_desc-hmc_DCEref.nii.gz -t anat/${PREFIX}_from-t1w_to-DCEref.mat -n NearestNeighbor -o anat/${PREFIX}_space-DCEref_seg-wmparc_dseg.nii &> /dev/null
+        antsApplyTransforms -i wmparc.nii.gz -r dce/${PREFIX}_desc-hmc_DCEref.nii.gz -t anat/${PREFIX}_from-T1w_to-DCEref.mat -n NearestNeighbor -o anat/${PREFIX}_space-DCEref_seg-wmparc_dseg.nii &> /dev/null
         gzip -f anat/${PREFIX}_space-DCEref_seg-wmparc_dseg.nii &> /dev/null
 		rm wmparc.nii.gz
 	elif [ ! -f dce/${PREFIX}_space-MNI_Ktrans.nii.gz ]
