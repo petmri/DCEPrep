@@ -21,6 +21,11 @@ log_worker() {
 	echo "$1" >> "$LOG_FILE"
 }
 
+# Current step label, shown on preprocess_all.sh's progress line
+set_worker_step() {
+	echo "$2" > "$WORKER_STATUS_DIR/$1.step"
+}
+
 mark_worker_done() {
 	touch "$WORKER_STATUS_DIR/$1.done"
 }

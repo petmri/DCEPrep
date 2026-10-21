@@ -27,10 +27,11 @@ failures=0
 clean=0
 count=0
 current=0
-ETA=0
-mETA=0
-prog=0
 successes=0
+processed=0
+processed_seconds=0
+session_ran=0
+session_start=0
 
 # options
 while getopts ":d:bBa:A:ZfhcC:j:mM:sS:tl:w:p" options; do
@@ -225,32 +226,84 @@ cd $DATA_DIR || exit 1
 for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	((count++))
 done
-# Function to calculate and display progress and estimated remaining time
-function show_progress {
-    local current_iteration=$1
-    local start_time=$2
-    local total_iterations=$3
-	local runtime=$4
+# Redraw the progress line in place on a terminal; print one line per update otherwise
+if [ -t 1 ]; then
+	PROGRESS_PREFIX='\r\033[K'
+	PROGRESS_SUFFIX=''
+else
+	PROGRESS_PREFIX=''
+	PROGRESS_SUFFIX='\n'
+fi
 
-    # Calculate elapsed time
-    current_time=$(date +%s)
-    elapsed_time=$((current_time - start_time))
-
-    # Calculate estimated total time
-    estimated_total_time=$((runtime * total_iterations))
-
-    # Calculate remaining time
-    remaining_time=$((estimated_total_time - elapsed_time))
-
-    # Display progress and estimated remaining time
-    echo -ne "Progress: $((elapsed_time * 100 / estimated_total_time))% - "
-    echo -ne "Elapsed time: $(($elapsed_time / 60))m $(($elapsed_time % 60))s - "
-	if [ $remaining_time -lt 0 ]
-		then
-		echo -ne "Estimated remaining time: calculating...\r"
+format_duration() {
+	local seconds=$1
+	if [ $seconds -ge 3600 ]; then
+		printf '%dh%02dm' $((seconds / 3600)) $((seconds % 3600 / 60))
 	else
-		echo -ne "Estimated remaining time: $(($remaining_time / 60))m $(($remaining_time % 60))s\r"
+		printf '%dm%02ds' $((seconds / 60)) $((seconds % 60))
 	fi
+}
+
+# Add the last session's runtime to the ETA average (only sessions whose workers ran,
+# since skipped/already-processed sessions finish instantly and would skew it)
+record_session_time() {
+	if [ $session_ran -eq 1 ]; then
+		((processed++))
+		((processed_seconds += SECONDS - session_start))
+		session_ran=0
+	fi
+}
+
+show_progress() {
+	local done=$1
+	local label=$2
+	local width=20
+	local filled=$((count > 0 ? done * width / count : width))
+	local percent=$((count > 0 ? done * 100 / count : 100))
+	local bar eta="--"
+	bar=$(printf '%*s' $filled '' | tr ' ' '=')$(printf '%*s' $((width - filled)) '')
+	if [ $processed -gt 0 ] && [ $done -lt $count ]; then
+		eta="~$(format_duration $((processed_seconds / processed * (count - done))))"
+	fi
+	local line
+	printf -v line "[%s] %d/%d (%d%%) | %s | ok %d, failed %d, skipped %d | elapsed %s | ETA %s" \
+		"$bar" $done $count $percent "$label" $successes $failures $((done - successes - failures)) \
+		"$(format_duration $SECONDS)" "$eta"
+	# A wrapped line can't be redrawn in place, so fit it to the terminal
+	if [ -t 1 ]; then
+		local cols
+		cols=$(tput cols 2> /dev/null || echo 80)
+		line=${line:0:$((cols - 1))}
+	fi
+	printf "${PROGRESS_PREFIX}%s${PROGRESS_SUFFIX}" "$line"
+}
+
+# Step label a worker last reported via set_worker_step
+worker_step() {
+	if [ -f "$WORKER_STATUS_DIR/$1.done" ]; then
+		echo "done"
+	elif [ -f "$WORKER_STATUS_DIR/$1.failed" ]; then
+		echo "FAILED"
+	else
+		cat "$WORKER_STATUS_DIR/$1.step" 2> /dev/null || echo "starting"
+	fi
+}
+
+# Redraw the progress line with each worker's step while either is running.
+# Off a terminal, only print when a step changes.
+watch_workers() {
+	local spinner='|/-\' tick=0 status last_status=""
+	while kill -0 "$vfa_worker_pid" 2> /dev/null || { [ -n "$dce_worker_pid" ] && kill -0 "$dce_worker_pid" 2> /dev/null; }; do
+		status="$SUBJECT/$SESSION | T1: $(worker_step vfa_t1)"
+		[ -n "$dce_worker_pid" ] && status+=" | DCE: $(worker_step dce)"
+		if [ -t 1 ]; then
+			show_progress $((current - 1)) "${spinner:tick++ % 4:1} $status ($(format_duration $((SECONDS - session_start))))"
+		elif [ "$status" != "$last_status" ]; then
+			show_progress $((current - 1)) "$status"
+			last_status=$status
+		fi
+		sleep 1
+	done
 }
 
 wait_for_job_slot() {
@@ -271,12 +324,13 @@ start_background_job() {
 # Run bias correction on VFA data
 # ------------------------------
 for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
-	start_time=$(date +%s)
 	if [ ${source_dir::-1} == "/" ]; then
 		source_dir=$DATA_DIR/${source_dir::-1}
 	fi
+	record_session_time
+	show_progress $current "$(echo $source_dir | grep -o 'sub-[^/]*/ses-[^/]*')"
 	date >> $LOG_FILE
-	echo "Preprocessing ${source_dir}..."
+	echo "Preprocessing ${source_dir}..." >> $LOG_FILE
 	((current++))
 
 	# get subject ID and session
@@ -343,7 +397,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	LOCKHOST=$(hostname)
 	LOCKPID=$$
 	LOCKLIST="$DERIV_DIR/locks_${LOCKHOST}.txt"
-	echo "Attempting to lock $LOCKPATH on $LOCKHOST with PID $LOCKPID"
+	echo "Attempting to lock $LOCKPATH on $LOCKHOST with PID $LOCKPID" >> $LOG_FILE
 
 	# Try to create lock file atomically
 	if ( set -o noclobber; echo "$LOCKHOST:$LOCKPID" > "$LOCKPATH" ) 2> /dev/null; then
@@ -381,7 +435,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	# get list of VFAs and sort them
 	VFA_LIST=($(ls $source_dir/anat/*.nii* | grep -v "$source_dir/anat/*T1w.nii*" | grep -v "$source_dir/anat/*T1map.nii*" | grep -v "$source_dir/dce/*aif.nii*"))
 	VFA_LIST=($(printf '%s\n' "${VFA_LIST[@]}" | grep -o -E 'flip-[0-9]+' | sort -n))
-	echo "Found ${#VFA_LIST[@]} VFAs: ${VFA_LIST[@]}"
+	echo "Found ${#VFA_LIST[@]} VFAs: ${VFA_LIST[@]}" >> $LOG_FILE
 	VFA_NUMS=($(printf '%s\n' "${VFA_LIST[@]}" | grep -o -E 'flip-[0-9]+' | grep -o -E '[0-9]+'))
 
 	if [ ${#VFA_LIST[@]} -eq 0 ] && [ $T1MAP_PROVIDED -eq 0 ]
@@ -406,7 +460,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	mkdir dce &> /dev/null
 	if [ $clean -eq 1 ]
 		then
-		echo Cleaning folder... $PWD
+		echo Cleaning folder... $PWD >> $LOG_FILE
 		# remove all files except for the AIF
 		rm -rf anat figures reports
 		cd dce
@@ -422,6 +476,8 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	export AIF_SUFFIX AIF_TRAINING_SUFFIX HD_BET_COMMAND AUTO_AIF_PYTHON AUTO_AIF_PATH
 	export AUTOAIF_WEIGHT_PATH AUTOAIF_MODEL ROCKETSHIP_PATH GPUFIT_PATH GPUFIT_M_PATH
 	export MAX_PARALLEL_JOBS WORKER_STATUS_DIR WORKER_WAIT_TIMEOUT_SECONDS
+	session_start=$SECONDS
+	session_ran=1
 	# Launch the two workers independently; MAX_PARALLEL_JOBS limits work within each worker.
 	bash "$PREPROCESS_WORKER_DIR/preprocess_vfa_t1.sh" &
 	vfa_worker_pid=$!
@@ -433,6 +489,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		dce_worker_pid=
 	fi
 
+	watch_workers
 	wait "$vfa_worker_pid"
 	vfa_worker_status=$?
 	if [ -n "$dce_worker_pid" ]
@@ -446,14 +503,12 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	if [ $vfa_worker_status -ne 0 ] || [ $dce_worker_status -ne 0 ]
 		then
 		fail=1
+		((failures++))
 		rm -rf "$WORKER_STATUS_DIR"
 		cd "$DATA_DIR" || exit 1
 		continue
 	fi
 
-	ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-	prog=$(echo "scale=2;  100 * $current / $count" | bc -l)
-	echo -ne "SUBJ COMPLETED [==================================================] $prog% ($current/$count) ~$ETA min remaining \r"
 	rm -rf "$WORKER_STATUS_DIR"
 	cd "$DATA_DIR" || exit 1
 	echo "$source_dir preprocessing complete!" >> "$LOG_FILE"
@@ -462,13 +517,14 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 
 done
 
-	prog=$(echo "scale=2;  100.00" | bc -l)
-	echo -ne "PREP COMPLETED [==================================================] $prog% ($current/$count)"
+record_session_time
+show_progress $count "complete"
+[ -t 1 ] && echo
 
-((failures=count-successes))
 echo Completed preprocessing for $count cases. >> $LOG_FILE
 echo $successes subjects succeeded >> $LOG_FILE
 echo $failures subjects failed >> $LOG_FILE
+echo $((count - successes - failures)) subjects skipped >> $LOG_FILE
 
 if [ $fail -eq 1 ]
 	then

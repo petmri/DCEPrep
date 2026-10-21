@@ -48,6 +48,7 @@ mkdir -p figures &> /dev/null
 
 if [ $EN_MOTION_CORR -eq 1 ]; then
 	if [ ! -f "dce/${PREFIX}_desc-hmc_DCE.nii.gz" ]; then
+		set_worker_step "dce" "DCE motion correction"
 		mcflirt -in "$source_dir/dce/${PREFIX}_DCE.nii.gz" -refvol 1 -cost mutualinfo -report -plots -o dce/${PREFIX}_desc-hmc_DCE.nii &> /dev/null
 	fi
 	if [ ! -f "dce/${PREFIX}_desc-hmc_DCE.nii.gz" ]; then
@@ -70,6 +71,7 @@ if should_run_auto_aif; then
 	auto_aif_started=1
 fi
 
+set_worker_step "dce" "AutoAIF / waiting for brain mask"
 wait_for_file "$WORKER_STATUS_DIR/vfa_t1.brain_mask.ready" "$WORKER_WAIT_TIMEOUT_SECONDS" "vfa_t1.failed"
 wait_status=$?
 if [ $wait_status -eq 1 ]; then
@@ -79,12 +81,14 @@ elif [ $wait_status -eq 2 ]; then
 fi
 
 if [ $auto_aif_started -eq 1 ]; then
+	set_worker_step "dce" "AutoAIF"
 	wait "$auto_aif_pid"
 fi
 
 AIF_MASK_INPUT=""
 if should_run_auto_aif; then
 	if [ $auto_aif_started -eq 0 ]; then
+		set_worker_step "dce" "AutoAIF"
 		run_auto_aif_inference
 	fi
 	if [ $EN_MOTION_CORR -eq 1 ]; then
@@ -130,6 +134,7 @@ fi
 
 if [ $EN_BIAS1 -eq 1 ]; then
 	if [ ! -f "dce/${PREFIX}_desc-bfc_DCE.nii.gz" ]; then
+		set_worker_step "dce" "DCE bias correction (FAST)"
 		reps=$(fslnvols dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz)
 		rep_interval=$((reps / 8))
 		rep_interval=$(echo "scale=0; ($rep_interval + 0.5) / 1" | bc -l)
@@ -153,6 +158,7 @@ else
 	cp dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz dce/${PREFIX}_desc-bfc_DCE.nii.gz
 fi
 
+set_worker_step "dce" "waiting for T1 worker"
 wait_for_file "$WORKER_STATUS_DIR/vfa_t1.wm_vfa.ready" "$WORKER_WAIT_TIMEOUT_SECONDS" "vfa_t1.failed"
 wait_status=$?
 if [ $wait_status -eq 1 ]; then
@@ -189,6 +195,7 @@ else
 fi
 
 if [ $EN_Z_NORM -eq 1 ]; then
+	set_worker_step "dce" "DCE Z-normalization"
 	python3 "$SCRIPT_PATH/scripts/DCE_norm.py" "$SUBJECT_TP_PATH/dce" &> /dev/null
 else
 	cp dce/${PREFIX}_desc-bfc_DCE.nii.gz dce/${PREFIX}_desc-bfcz_DCE.nii.gz

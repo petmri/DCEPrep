@@ -110,6 +110,7 @@ start_t1_fast() {
 t1_fast_started=0
 if [ $HAS_T1W -eq 1 ]; then
 	if [ ! -f "anat/${PREFIX}_label-brain_mask.nii.gz" ]; then
+		set_worker_step "vfa_t1" "HD-BET brain extraction"
 		brain_extract "$source_dir/anat/${PREFIX}_T1w.nii.gz"
 	fi
 	start_t1_fast
@@ -121,6 +122,7 @@ else
 	DCE_REF_VOL=dce/${PREFIX}_DCEref.nii.gz
 fi
 
+set_worker_step "vfa_t1" "waiting for DCE reference"
 wait_for_file "$DCE_REF_VOL" "$WORKER_WAIT_TIMEOUT_SECONDS" "dce.failed"
 wait_status=$?
 if [ $wait_status -eq 1 ]; then
@@ -132,6 +134,7 @@ fi
 if [ $HAS_T1W -eq 0 ]; then
 	log_worker "$source_dir No T1w found; using $DCE_REF_VOL as the structural image."
 	if [ ! -f "anat/${PREFIX}_label-brain_mask.nii.gz" ]; then
+		set_worker_step "vfa_t1" "HD-BET brain extraction"
 		brain_extract "$DCE_REF_VOL"
 	fi
 	start_t1_fast
@@ -144,6 +147,7 @@ fi
 t1w_reg_started=0
 t1w_reg_pid=
 if [ ! -f "anat/${PREFIX}_from-T1w_to-DCEref.mat" ]; then
+	set_worker_step "vfa_t1" "T1w registration"
 	T1w_reg &
 	t1w_reg_pid=$!
 	t1w_reg_started=1
@@ -166,6 +170,7 @@ structural_to_DCEref=$T1w_to_DCEref
 
 if [ $T1MAP_PROVIDED -eq 1 ]; then
 	log_worker "$source_dir Using scanner T1 map; skipping VFA processing."
+	set_worker_step "vfa_t1" "T1w FAST segmentation"
 	wait
 	if [ $t1_fast_started -eq 1 ]; then
 		log_worker "$source_dir [T1 FAST segmentation] completed in $((SECONDS - t1_fast_start_seconds))s"
@@ -178,6 +183,7 @@ if [ $T1MAP_PROVIDED -eq 1 ]; then
 	mark_worker_ready "vfa_t1.wm_vfa"
 
 	if [ ! -f "anat/${PREFIX}_from-T1map_to-DCEref.mat" ]; then
+		set_worker_step "vfa_t1" "scanner T1 map registration"
 		T1map_reg
 	fi
 	if [ -f "anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz" ]; then
@@ -193,6 +199,7 @@ if [ $T1MAP_PROVIDED -eq 1 ]; then
 	exit 0
 fi
 
+set_worker_step "vfa_t1" "VFA registration + T1w FAST"
 for vfa in "${VFA_NUMS[@]}"; do
 	if [ ! -f "anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_VFA.nii.gz" ]; then
 		start_background_job VFA_reg "$vfa"
@@ -221,6 +228,7 @@ fi
 		fslslice anat/${PREFIX}_${vfa}_${REF_SPACE}_VFA.nii.gz anat/${PREFIX}_${vfa}_${REF_SPACE}_VFA
 	done
 
+	set_worker_step "vfa_t1" "VFA empty slice check"
 	EMPTY_SLICES=0
 	problem_slice=0
 	for slice in anat/${PREFIX}_${VFA_DYN_LIST[0]}_${REF_SPACE}_VFA*.nii*; do
@@ -268,6 +276,7 @@ fi
 	done
 
 	if [ $EN_BIAS1 -eq 1 ]; then
+		set_worker_step "vfa_t1" "VFA bias correction (FAST)"
 		for vfa in "${VFA_NUMS[@]}"; do
 			if [ ! -f "anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_desc-bfc_VFA.nii.gz" ]; then
 				start_background_job VFA_FAST "$vfa"
@@ -289,6 +298,7 @@ fi
 	mark_worker_ready "vfa_t1.wm_vfa"
 
 	if [ $EN_Z_NORM -eq 1 ]; then
+		set_worker_step "vfa_t1" "VFA Z-normalization"
 		if [ ! -f "anat/${PREFIX}_${VFA_LIST[0]}_${REF_SPACE}_desc-bfcz_VFA.nii.gz" ]; then
 			python3 "$SCRIPT_PATH/scripts/VFA_norm.py" "$SUBJECT_TP_PATH/anat" "$PREFIX" "$EN_BIAS1" &> /dev/null
 		fi
@@ -331,6 +341,7 @@ fi
 		mark_worker_failed "vfa_t1" "$source_dir missing VFA file. Component files may have failed."
 	fi
 
+	set_worker_step "vfa_t1" "T1 mapping (ROCKETSHIP)"
 	if [ $USE_PYTHON -eq 1 ]; then
 		${ROCKETSHIP_PATH}/.venv/bin/python ${ROCKETSHIP_PATH}/run_parametric_python_case.py --subject-source "$source_dir" --subject-tp "$SUBJECT_TP_PATH" --output-dir "$SUBJECT_TP_PATH" --events off
 	else
