@@ -197,21 +197,18 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
 
 
 dir = Path(sys.argv[1])     # takes timepoint directory as argument
-files_in_dir = dir.iterdir()
-for file in files_in_dir:
-    if str(file).endswith('desc-bfc_DCE.nii') or str(file).endswith('desc-bfc_DCE.nii.gz'):
-        file1 = str(file)
-        mask_file = file1.split('desc-bfc_DCE', 1)[0]
-        mask_file = mask_file + 'label-WM_DCE.nii'
+inputs = [f for f in dir.iterdir() if str(f).endswith('desc-bfc_DCE.nii') or str(f).endswith('desc-bfc_DCE.nii.gz')]
+if not inputs:
+    sys.exit(f"ERROR: No *desc-bfc_DCE.nii[.gz] input found in {dir}")
+for file in inputs:
+    file1 = str(file)
+    mask_file = file1.split('desc-bfc_DCE', 1)[0]
+    mask_file = mask_file + 'label-WM_DCE.nii'
 
-        if Path(mask_file + ".gz").exists():
-            mask_file += ".gz"
-        elif not Path(mask_file).exists():
-            print(f"Mask file not found for {file1}")
-            continue
+    if Path(mask_file + ".gz").exists():
+        mask_file += ".gz"
+    elif not Path(mask_file).exists():
+        sys.exit(f"ERROR: WM mask {mask_file}[.gz] not found for {file1}")
 
-        try:
-            normalize(file1, mask_file, str(dir))
-        except Exception as e:
-            print(e)
-            print("Error in normalizing " + file1)
+    # Let exceptions propagate so the traceback reaches the worker log and the exit code is non-zero
+    normalize(file1, mask_file, str(dir))

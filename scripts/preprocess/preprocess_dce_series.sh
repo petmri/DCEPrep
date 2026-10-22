@@ -7,6 +7,7 @@ SCRIPT_PATH=${SCRIPT_PATH:?SCRIPT_PATH not set}
 SUBJECT_TP_PATH=${SUBJECT_TP_PATH:?SUBJECT_TP_PATH not set}
 
 source "${PREPROCESS_WORKER_DIR:-$SCRIPT_PATH/scripts/preprocess}/preprocess_worker_common.sh"
+init_worker_log "dce"
 
 REF_SPACE=space-DCEref
 
@@ -44,23 +45,23 @@ DCE_FAST() {
 }
 
 log_worker "$source_dir DCE worker started."
-mkdir -p figures &> /dev/null
+mkdir -p figures
 
 if [ $EN_MOTION_CORR -eq 1 ]; then
 	if [ ! -f "dce/${PREFIX}_desc-hmc_DCE.nii.gz" ]; then
 		set_worker_step "dce" "DCE motion correction"
-		mcflirt -in "$source_dir/dce/${PREFIX}_DCE.nii.gz" -refvol 1 -cost mutualinfo -report -plots -o dce/${PREFIX}_desc-hmc_DCE.nii &> /dev/null
+		mcflirt -in "$source_dir/dce/${PREFIX}_DCE.nii.gz" -refvol 1 -cost mutualinfo -report -plots -o dce/${PREFIX}_desc-hmc_DCE.nii
 	fi
 	if [ ! -f "dce/${PREFIX}_desc-hmc_DCE.nii.gz" ]; then
 		mark_worker_failed "dce" "$SUBJECT_TP_PATH/dce Missing motion corrected DCE file."
 	fi
 	max=$(python3 "$SCRIPT_PATH/scripts/max_disp.py" "$SUBJECT_TP_PATH/dce" "${PREFIX}")
 	echo -e "$max" > dce/${PREFIX}_desc-hmc_maxdisp.txt
-	fslmerge -n 1 dce/${PREFIX}_desc-hmc_DCEref.nii dce/${PREFIX}_desc-hmc_DCE.nii.gz &> /dev/null
+	fslmerge -n 1 dce/${PREFIX}_desc-hmc_DCEref.nii dce/${PREFIX}_desc-hmc_DCE.nii.gz
 else
 	dce_input="$source_dir/dce/${PREFIX}_DCE.nii.gz"
 	[ -f "$source_dir/dce/${PREFIX}_DCE.nii" ] && dce_input="$source_dir/dce/${PREFIX}_DCE.nii"
-	fslmerge -n 1 dce/${PREFIX}_DCEref.nii "$dce_input" &> /dev/null
+	fslmerge -n 1 dce/${PREFIX}_DCEref.nii "$dce_input"
 fi
 
 auto_aif_started=0
@@ -124,12 +125,12 @@ if [ ! -f "$AIF_MASK_INPUT" ]; then
 	mark_worker_failed "dce" "$source_dir Missing AIF mask for DCE masking. Skipping timepoint..."
 fi
 
-fslmaths anat/${PREFIX}_${REF_SPACE}_label-brain_mask.nii.gz -add "$AIF_MASK_INPUT" -thr 1 -bin anat/${PREFIX}_${REF_SPACE}_label-brainAIF_mask.nii.gz &> /dev/null
+fslmaths anat/${PREFIX}_${REF_SPACE}_label-brain_mask.nii.gz -add "$AIF_MASK_INPUT" -thr 1 -bin anat/${PREFIX}_${REF_SPACE}_label-brainAIF_mask.nii.gz
 
 if [ $EN_MOTION_CORR -eq 1 ]; then
-	fslmaths dce/${PREFIX}_desc-hmc_DCE.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_label-brainAIF_mask.nii.gz dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz &> /dev/null
+	fslmaths dce/${PREFIX}_desc-hmc_DCE.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_label-brainAIF_mask.nii.gz dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz
 else
-	fslmaths "$source_dir/dce/${PREFIX}_DCE.nii.gz" -mas anat/${PREFIX}_${REF_SPACE}_label-brainAIF_mask.nii.gz dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz &> /dev/null
+	fslmaths "$source_dir/dce/${PREFIX}_DCE.nii.gz" -mas anat/${PREFIX}_${REF_SPACE}_label-brainAIF_mask.nii.gz dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz
 fi
 
 if [ $EN_BIAS1 -eq 1 ]; then
@@ -138,18 +139,18 @@ if [ $EN_BIAS1 -eq 1 ]; then
 		reps=$(fslnvols dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz)
 		rep_interval=$((reps / 8))
 		rep_interval=$(echo "scale=0; ($rep_interval + 0.5) / 1" | bc -l)
-		fslmerge -n 0 rep_0.nii dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz &> /dev/null
+		fslmerge -n 0 rep_0.nii dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz
 		for i in {1..8}; do
-			fslmerge -n $((rep_interval*i-1)) rep_$((rep_interval*i-1)).nii dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz &> /dev/null
+			fslmerge -n $((rep_interval*i-1)) rep_$((rep_interval*i-1)).nii dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz
 		done
 		start_background_job DCE_FAST "0" "$rep_interval"
 		for i in {1..8}; do
 			start_background_job DCE_FAST "$i" "$rep_interval"
 		done
 		wait
-		fslmerge -t dce/dyn_bias.nii.gz rep_*_bias.nii.gz &> /dev/null
-		fslmaths dce/dyn_bias.nii.gz -Tmean dce/mean_dyn_bias_map.nii.gz &> /dev/null
-		fslmaths dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz -div dce/mean_dyn_bias_map.nii.gz dce/${PREFIX}_desc-bfc_DCE.nii.gz &> /dev/null
+		fslmerge -t dce/dyn_bias.nii.gz rep_*_bias.nii.gz
+		fslmaths dce/dyn_bias.nii.gz -Tmean dce/mean_dyn_bias_map.nii.gz
+		fslmaths dce/${PREFIX}_desc-AIFincluded_DCE.nii.gz -div dce/mean_dyn_bias_map.nii.gz dce/${PREFIX}_desc-bfc_DCE.nii.gz
 		mv dce/dyn_bias.nii.gz dce/${PREFIX}_desc-biases_DCE.nii.gz
 		mv dce/mean_dyn_bias_map.nii.gz dce/${PREFIX}_desc-meanbias_DCE.nii.gz
 		rm rep_*.nii.gz
@@ -189,14 +190,16 @@ if [ $EN_BIAS1 -eq 1 ] && [ "${T1MAP_PROVIDED:-0}" -eq 0 ]; then
 	if [ $last_vfa_index -lt 0 ]; then
 		mark_worker_failed "dce" "$source_dir Missing WM-masked VFA outputs for DCE masking. Skipping timepoint..."
 	fi
-	fslmaths dce/${PREFIX}_desc-bfc_DCE.nii.gz -mas "${vfa_dyn_paths[$last_vfa_index]}" dce/${PREFIX}_label-WM_DCE.nii.gz &> /dev/null
+	fslmaths dce/${PREFIX}_desc-bfc_DCE.nii.gz -mas "${vfa_dyn_paths[$last_vfa_index]}" dce/${PREFIX}_label-WM_DCE.nii.gz
 else
-	fslmaths "$source_dir/dce/${PREFIX}_DCE.nii.gz" -mas anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz dce/${PREFIX}_label-WM_DCE.nii.gz &> /dev/null
+	fslmaths "$source_dir/dce/${PREFIX}_DCE.nii.gz" -mas anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz dce/${PREFIX}_label-WM_DCE.nii.gz
 fi
 
 if [ $EN_Z_NORM -eq 1 ]; then
 	set_worker_step "dce" "DCE Z-normalization"
-	python3 "$SCRIPT_PATH/scripts/DCE_norm.py" "$SUBJECT_TP_PATH/dce" &> /dev/null
+	if ! python3 "$SCRIPT_PATH/scripts/DCE_norm.py" "$SUBJECT_TP_PATH/dce"; then
+		mark_worker_failed "dce" "$source_dir DCE Z-normalization (DCE_norm.py) failed."
+	fi
 else
 	cp dce/${PREFIX}_desc-bfc_DCE.nii.gz dce/${PREFIX}_desc-bfcz_DCE.nii.gz
 fi

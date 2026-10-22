@@ -309,6 +309,27 @@ watch_workers() {
 	done
 }
 
+# Print each failed worker's reason below the progress line so failures are visible
+# without opening the log. Workers that died without a reason point at their log.
+report_worker_failures() {
+	local worker reason status
+	[ -t 1 ] && echo
+	for worker in vfa_t1 dce; do
+		status=$vfa_worker_status
+		[ "$worker" = dce ] && status=$dce_worker_status
+		if [ -s "$WORKER_STATUS_DIR/$worker.failed" ]; then
+			reason=$(cat "$WORKER_STATUS_DIR/$worker.failed")
+		elif [ "$status" -ne 0 ]; then
+			reason="exited unexpectedly"
+			echo "$SUBJECT/$SESSION $worker worker $reason. See $SUBJECT_TP_PATH/logs/${PREFIX}_preprocess_$worker.log" >> "$LOG_FILE"
+		else
+			continue
+		fi
+		echo "FAILED $SUBJECT/$SESSION [$worker]: ${reason#$source_dir }" >&2
+		echo "  log: $SUBJECT_TP_PATH/logs/${PREFIX}_preprocess_$worker.log" >&2
+	done
+}
+
 wait_for_job_slot() {
 	if [ "$MAX_PARALLEL_JOBS" -le 0 ]; then
 		return 0
@@ -501,6 +522,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		then
 		fail=1
 		((failures++))
+		report_worker_failures
 		rm -rf "$WORKER_STATUS_DIR"
 		cd "$DATA_DIR" || exit 1
 		continue
