@@ -124,6 +124,15 @@ else
 fi
 
 set_worker_step "vfa_t1" "waiting for DCE reference"
+# T1-only mode starts no DCE worker, so make the reference volume here. mcflirt registers
+# to volume 1, so the raw frame matches the motion-corrected reference.
+if [ $T1_ONLY -eq 1 ] && [ ! -f "$DCE_REF_VOL" ]; then
+	dce_input="$source_dir/dce/${PREFIX}_DCE.nii.gz"
+	[ -f "$source_dir/dce/${PREFIX}_DCE.nii" ] && dce_input="$source_dir/dce/${PREFIX}_DCE.nii"
+	[ $EN_MOTION_CORR -eq 1 ] && [ -f "dce/${PREFIX}_desc-hmc_DCE.nii.gz" ] && dce_input=dce/${PREFIX}_desc-hmc_DCE.nii.gz
+	fslmerge -n 1 "$DCE_REF_VOL" "$dce_input" &> /dev/null
+fi
+
 wait_for_file "$DCE_REF_VOL" "$WORKER_WAIT_TIMEOUT_SECONDS" "dce.failed"
 wait_status=$?
 if [ $wait_status -eq 1 ]; then
