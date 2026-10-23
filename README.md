@@ -135,6 +135,8 @@ All data is assumed to be [BIDS](https://bids-specification.readthedocs.io/) com
 
 FSL `fast` is run through the `FAST_CMD` environment variable (default `fast`). To use the GPU build of FAST from `FSL/fast4`, set e.g. `FAST_CMD="fast_gpu --gpu --gpuraster"` (output byte-identical to FSL `fast`) or `FAST_CMD="fast_gpu --gpu"` (faster, very slightly different). The command used is recorded at the top of each worker log.
 
+The DCE worker writes its large 4D intermediates uncompressed to a local scratch directory (`$DCEPREP_SCRATCH`, default `$TMPDIR` or `/tmp`), about 2 GB per session at most, and gzips only the files it keeps into the session's `dce/` folder. Point `DCEPREP_SCRATCH` at a local disk with enough free space.
+
 #### Example
 
 ```bash
