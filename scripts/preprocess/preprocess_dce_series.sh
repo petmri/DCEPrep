@@ -38,9 +38,9 @@ DCE_FAST() {
 	local index=$1
 	local rep_interval=$2
 	if [ ! "$index" -eq 0 ]; then
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o rep_$((rep_interval*index-1)).nii
+		run_fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o rep_$((rep_interval*index-1)).nii
 	else
-		fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o rep_0.nii
+		run_fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -o rep_0.nii
 	fi
 }
 

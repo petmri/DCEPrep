@@ -133,6 +133,8 @@ All data is assumed to be [BIDS](https://bids-specification.readthedocs.io/) com
 | `-p` | Use Python for ROCKETSHIP calls. |
 | `-Z` | Enable z-slice normalization. |
 
+FSL `fast` is run through the `FAST_CMD` environment variable (default `fast`). To use the GPU build of FAST from `FSL/fast4`, set e.g. `FAST_CMD="fast_gpu --gpu --gpuraster"` (output byte-identical to FSL `fast`) or `FAST_CMD="fast_gpu --gpu"` (faster, very slightly different). The command used is recorded at the top of each worker log.
+
 #### Example
 
 ```bash

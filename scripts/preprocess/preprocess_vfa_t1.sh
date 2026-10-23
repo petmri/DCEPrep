@@ -49,13 +49,13 @@ VFA_reg() {
 
 VFA_FAST() {
 	local vfa=$1
-	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_label-brain_VFA.nii.gz
+	run_fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_label-brain_VFA.nii.gz
 	mv anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_label-brain_VFA_restore* anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_desc-bfc_VFA.nii.gz
 	fslmaths anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_desc-bfc_VFA.nii.gz -mas anat/${PREFIX}_${REF_SPACE}_label-WM_mask.nii.gz anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_label-WM_VFA.nii.gz
 }
 
 T1_FAST() {
-	fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -g -o anat/${PREFIX}_label- anat/${PREFIX}_label-brain_T1w.nii.gz
+	run_fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -b --nopve -g -o anat/${PREFIX}_label- anat/${PREFIX}_label-brain_T1w.nii.gz
 	mv anat/${PREFIX}_label-_bias.nii.gz anat/${PREFIX}_desc-bias_T1w.nii.gz
 	mv anat/${PREFIX}_label-_seg_0.nii.gz anat/${PREFIX}_label-CSF_mask.nii.gz
 	mv anat/${PREFIX}_label-_seg_1.nii.gz anat/${PREFIX}_label-GM_mask.nii.gz
@@ -322,7 +322,7 @@ fi
 	VFA_INPUT=""
 	if [ $EN_BIAS2 -eq 1 ]; then
 		for vfa in "${VFA_NUMS[@]}"; do
-			fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o ${vfa}_BFC_Z.nii ${vfa}_BFC_Z.nii
+			run_fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o ${vfa}_BFC_Z.nii ${vfa}_BFC_Z.nii
 			mv ${vfa}_BFC_Z_restore* ${vfa}_bfc2.nii.gz
 			rm -f ${vfa}_BFC_Z_[mps]*
 		done
