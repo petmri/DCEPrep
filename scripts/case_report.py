@@ -305,6 +305,13 @@ except Exception as e:
     GPU_T1 = 'Failed to load GPU info'
     print(e)
 
+# A scanner-provided T1 map replaces the VFA fit, so there are no FAs or fit info to report
+scanner_t1map = os.path.isfile(f'{source_dir}/anat/{prefix}_T1map.nii.gz')
+if scanner_t1map:
+    FAs = []
+    FA_str = 'none (scanner-calculated T1 map)'
+    GPU_T1 = 'T1 map provided by scanner; no VFA fit'
+
 try:
     # T1 map
     # flip T1 map
@@ -674,7 +681,7 @@ data = {
     'T1w_gm': '../figures/t1w_gm.svg',
     'T1w_wm': '../figures/t1w_wm.svg',
     'T1w_to_DCEref': f'../figures/{prefix}_space-DCEref_T1w.svg',
-    'T1_TR': 'TR: ' + str(TR) + 'ms',
+    'T1_TR': 'TR: n/a' if scanner_t1map else 'TR: ' + str(TR) + 'ms',
     'T1_FAs': 'FAs: ' + FA_str,
     'T1_GPU': str(GPU_T1),
     'T1_wm_median': 'T1 wm median: ' + str(round(T1_wm_median, 4)),
@@ -727,6 +734,7 @@ data = {
 flips = ['flip-01', 'flip-02', 'flip-03', 'flip-04', 'flip-05', 'flip-06', 'flip-07']
 data['FAs'] = []
 data['Zs'] = []
+data['num_FAs'] = len(FAs)
 for i in range(len(FAs)):
     data['FAs'].append('FA ' + str(FAs[i]))
     data['num_FAs'] = len(FAs)

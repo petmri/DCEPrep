@@ -21,6 +21,20 @@ log_worker() {
 	echo "$1" >> "$LOG_FILE"
 }
 
+# Send all of this worker's tool output (stdout and stderr) to a per-session log
+# instead of the terminal or /dev/null, so failures can be traced afterwards.
+init_worker_log() {
+	mkdir -p "$SUBJECT_TP_PATH/logs"
+	WORKER_LOG="$SUBJECT_TP_PATH/logs/${PREFIX}_preprocess_$1.log"
+	echo "=== $(date) $1 worker ===" > "$WORKER_LOG"
+	exec >> "$WORKER_LOG" 2>&1
+}
+
+# Current step label, shown on preprocess_all.sh's progress line
+set_worker_step() {
+	echo "$2" > "$WORKER_STATUS_DIR/$1.step"
+}
+
 mark_worker_done() {
 	touch "$WORKER_STATUS_DIR/$1.done"
 }
@@ -34,7 +48,12 @@ mark_worker_failed() {
 	local message=$2
 
 	log_worker "$message"
-	touch "$WORKER_STATUS_DIR/$worker_name.failed"
+	if [ -n "$WORKER_LOG" ]; then
+		log_worker "  Worker log: $WORKER_LOG (last 20 lines below)"
+		tail -n 20 "$WORKER_LOG" | sed 's/^/    | /' >> "$LOG_FILE"
+	fi
+	# preprocess_all.sh reads the message back to report it on the terminal
+	echo "$message" > "$WORKER_STATUS_DIR/$worker_name.failed"
 	exit 1
 }
 

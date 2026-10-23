@@ -142,6 +142,9 @@ else
 fi
 cd $DERIV_DIR || exit 1
 
+source "$SCRIPT_PATH/scripts/session_lock.sh"
+install_session_cleanup
+
 # rm dce_log.txt
 # read list of subjects
 # while IFS= read -r line; do
@@ -190,6 +193,7 @@ done
 runtime=70
 start_time=$(date +%s)
 for der_dir in $SCRIPT_LOOP_DIR; do
+	release_session_lock
 	dir=$der_dir
 	date >> $LOG_FILE
 
@@ -203,11 +207,33 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 	if [ $COMPARISON_MODE -eq 1 ]
 		then
 		echo "Comparison mode enabled. Processing in $OUTPUT_DIR..." >> $LOG_FILE
-		if [ ! -d $DERIV_DIR/dceprep-"$OUTPUT_DIR"/$SUBJECT/$SESSION ]
+		SUBJECT_TP_PATH=$DERIV_DIR/dceprep-"$OUTPUT_DIR"/$SUBJECT/$SESSION
+		new_comparison_dir=0
+		[ ! -d "$SUBJECT_TP_PATH" ] && new_comparison_dir=1
+		mkdir -p "$SUBJECT_TP_PATH/dce" "$SUBJECT_TP_PATH/anat"
+	else
+		SUBJECT_TP_PATH=$DERIV_DIR/$der_dir
+	fi
+	if ! cd "$SUBJECT_TP_PATH"
+		then
+		echo "ERROR: $SUBJECT_TP_PATH does not exist. Preprocess first or check the name and try again." >> $LOG_FILE
+		fail=1
+		cd $DERIV_DIR
+		continue
+	fi
+	SUBJECT_TP_PATH=$(pwd)
+
+	# Lock before writing anything so other machines skip this session
+	if ! acquire_session_lock "$SUBJECT_TP_PATH"
+		then
+		cd $DERIV_DIR
+		continue
+	fi
+
+	if [ $COMPARISON_MODE -eq 1 ]
+		then
+		if [ $new_comparison_dir -eq 1 ]
 			then
-			mkdir -p $DERIV_DIR/dceprep-"$OUTPUT_DIR"/$SUBJECT/$SESSION
-			mkdir -p $DERIV_DIR/dceprep-"$OUTPUT_DIR"/$SUBJECT/$SESSION/dce
-			mkdir -p $DERIV_DIR/dceprep-"$OUTPUT_DIR"/$SUBJECT/$SESSION/anat
 			cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/dce/*bfcz* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
 			cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/dce/*desc-AIF*_T1map* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
 			cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/dce/*hmc* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
@@ -220,38 +246,16 @@ for der_dir in $SCRIPT_LOOP_DIR; do
 			cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/anat/*DCEref_T1w* $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
 			cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/figures $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/figures
 		fi
-		cd $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION || echo "ERROR: $OUTPUT_DIR does not exist. Preprocess first or check the name and try again." >> $LOG_FILE
 		if [ ! -f dce/${PREFIX}_desc-hmc_DCEref.nii.gz ]
 			then
 			# probably a no motion correction run, get 2nd t-slice of DCE
 			# cp dce/${PREFIX}_desc-bfc_DCE.nii.gz dce/${PREFIX}_desc-hmc_DCE.nii.gz
 			fslmerge -n 1 dce/${PREFIX}_desc-hmc_DCEref.nii.gz dce/${PREFIX}_desc-bfc_DCE.nii.gz
 		fi
-	else
-		cd $der_dir || echo "ERROR: $der_dir does not exist. Preprocess first or check the name and try again." >> $LOG_FILE
 	fi
-	SUBJECT_TP_PATH=$(pwd)
 	if [ ! -f anat/${PREFIX}_label-brain_T1w.nii.gz ]
 		then
 		cp -r $DERIV_DIR/dceprep-multihance_fix/$SUBJECT/$SESSION/anat/${PREFIX}_label-brain_T1w.nii.gz $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/anat
-	fi
-	# Locking mechanism to prevent concurrent processing from other machines
-	LOCKFILE="lock.txt"
-	LOCKDIR=$(pwd)
-	LOCKPATH="$LOCKDIR/$LOCKFILE"
-	LOCKHOST=$(hostname)
-	LOCKPID=$$
-	LOCKLIST="$DERIV_DIR/locks_${LOCKHOST}.txt"
-	echo "Locking $LOCKPATH on $LOCKHOST with PID $LOCKPID"
-
-	# Try to create lock file atomically
-	if ( set -o noclobber; echo "$LOCKHOST:$LOCKPID" > "$LOCKPATH" ) 2> /dev/null; then
-		echo "$LOCKPATH" >> "$LOCKLIST"
-		trap 'for f in $(cat "$LOCKLIST" 2>/dev/null); do rm -f "$f"; done; rm -f "$LOCKLIST"; exit $?' INT TERM EXIT
-	else
-		echo "Skipping $dir because it is currently being processed by $(cat $LOCKPATH)." >> $LOG_FILE
-		cd $DERIV_DIR
-		continue
 	fi
 	if [ $SKIP_IF_SUCCESS -eq 1 ]
 		then
@@ -376,7 +380,7 @@ python3 "$SCRIPT_PATH/scripts/iNESMA_GPU.py" "$PREFIX" "dce/${PREFIX}_desc-bfcz_
 			--o $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc-in-rawavg.mgz \
 			--regheader $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc.mgz &> /dev/null
         mri_convert $DERIV_DIR/freesurfer/$SUBJECT/$SESSION/mri/wmparc-in-rawavg.mgz wmparc.nii.gz &> /dev/null
-        antsApplyTransforms -i wmparc.nii.gz -r dce/${PREFIX}_desc-hmc_DCEref.nii.gz -t anat/${PREFIX}_from-t1w_to-DCEref.mat -n NearestNeighbor -o anat/${PREFIX}_space-DCEref_seg-wmparc_dseg.nii &> /dev/null
+        antsApplyTransforms -i wmparc.nii.gz -r dce/${PREFIX}_desc-hmc_DCEref.nii.gz -t anat/${PREFIX}_from-T1w_to-DCEref.mat -n NearestNeighbor -o anat/${PREFIX}_space-DCEref_seg-wmparc_dseg.nii &> /dev/null
         gzip -f anat/${PREFIX}_space-DCEref_seg-wmparc_dseg.nii &> /dev/null
 		rm wmparc.nii.gz
 	elif [ ! -f dce/${PREFIX}_space-MNI_Ktrans.nii.gz ]
@@ -423,6 +427,7 @@ python3 "$SCRIPT_PATH/scripts/iNESMA_GPU.py" "$PREFIX" "dce/${PREFIX}_desc-bfcz_
 	echo $dir processing complete! >> $LOG_FILE
 	((successes++))
 done # < $INPUT_LIST
+release_session_lock
 
 mkdir -p $DERIV_DIR/reports
 python3 "$SCRIPT_PATH/scripts/population_report.py" "$DERIV_DIR" "$OUTPUT_DIR" "$ROCKETSHIP_PATH"

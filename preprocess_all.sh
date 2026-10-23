@@ -27,10 +27,11 @@ failures=0
 clean=0
 count=0
 current=0
-ETA=0
-mETA=0
-prog=0
 successes=0
+processed=0
+processed_seconds=0
+session_ran=0
+session_start=0
 
 # options
 while getopts ":d:bBa:A:ZfhcC:j:mM:sS:tl:w:p" options; do
@@ -221,36 +222,112 @@ if [ $USE_AUTO_AIF -eq 1 ]; then
 fi
 cd $DATA_DIR || exit 1
 
+source "$SCRIPT_PATH/scripts/session_lock.sh"
+install_session_cleanup
+
 # count timepoints
 for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	((count++))
 done
-# Function to calculate and display progress and estimated remaining time
-function show_progress {
-    local current_iteration=$1
-    local start_time=$2
-    local total_iterations=$3
-	local runtime=$4
+# Redraw the progress line in place on a terminal; print one line per update otherwise
+if [ -t 1 ]; then
+	PROGRESS_PREFIX='\r\033[K'
+	PROGRESS_SUFFIX=''
+else
+	PROGRESS_PREFIX=''
+	PROGRESS_SUFFIX='\n'
+fi
 
-    # Calculate elapsed time
-    current_time=$(date +%s)
-    elapsed_time=$((current_time - start_time))
-
-    # Calculate estimated total time
-    estimated_total_time=$((runtime * total_iterations))
-
-    # Calculate remaining time
-    remaining_time=$((estimated_total_time - elapsed_time))
-
-    # Display progress and estimated remaining time
-    echo -ne "Progress: $((elapsed_time * 100 / estimated_total_time))% - "
-    echo -ne "Elapsed time: $(($elapsed_time / 60))m $(($elapsed_time % 60))s - "
-	if [ $remaining_time -lt 0 ]
-		then
-		echo -ne "Estimated remaining time: calculating...\r"
+format_duration() {
+	local seconds=$1
+	if [ $seconds -ge 3600 ]; then
+		printf '%dh%02dm' $((seconds / 3600)) $((seconds % 3600 / 60))
 	else
-		echo -ne "Estimated remaining time: $(($remaining_time / 60))m $(($remaining_time % 60))s\r"
+		printf '%dm%02ds' $((seconds / 60)) $((seconds % 60))
 	fi
+}
+
+# Add the last session's runtime to the ETA average (only sessions whose workers ran,
+# since skipped/already-processed sessions finish instantly and would skew it)
+record_session_time() {
+	if [ $session_ran -eq 1 ]; then
+		((processed++))
+		((processed_seconds += SECONDS - session_start))
+		session_ran=0
+	fi
+}
+
+show_progress() {
+	local done=$1
+	local label=$2
+	local width=20
+	local filled=$((count > 0 ? done * width / count : width))
+	local percent=$((count > 0 ? done * 100 / count : 100))
+	local bar eta="--"
+	bar=$(printf '%*s' $filled '' | tr ' ' '=')$(printf '%*s' $((width - filled)) '')
+	if [ $processed -gt 0 ] && [ $done -lt $count ]; then
+		eta="~$(format_duration $((processed_seconds / processed * (count - done))))"
+	fi
+	local line
+	printf -v line "[%s] %d/%d (%d%%) | %s | ok %d, failed %d, skipped %d | elapsed %s | ETA %s" \
+		"$bar" $done $count $percent "$label" $successes $failures $((done - successes - failures)) \
+		"$(format_duration $SECONDS)" "$eta"
+	# A wrapped line can't be redrawn in place, so fit it to the terminal
+	if [ -t 1 ]; then
+		local cols
+		cols=$(tput cols 2> /dev/null || echo 80)
+		line=${line:0:$((cols - 1))}
+	fi
+	printf "${PROGRESS_PREFIX}%s${PROGRESS_SUFFIX}" "$line"
+}
+
+# Step label a worker last reported via set_worker_step
+worker_step() {
+	if [ -f "$WORKER_STATUS_DIR/$1.done" ]; then
+		echo "done"
+	elif [ -f "$WORKER_STATUS_DIR/$1.failed" ]; then
+		echo "FAILED"
+	else
+		cat "$WORKER_STATUS_DIR/$1.step" 2> /dev/null || echo "starting"
+	fi
+}
+
+# Redraw the progress line with each worker's step while either is running.
+# Off a terminal, only print when a step changes.
+watch_workers() {
+	local spinner='|/-\' tick=0 status last_status=""
+	while kill -0 "$vfa_worker_pid" 2> /dev/null || { [ -n "$dce_worker_pid" ] && kill -0 "$dce_worker_pid" 2> /dev/null; }; do
+		status="$SUBJECT/$SESSION | T1: $(worker_step vfa_t1)"
+		[ -n "$dce_worker_pid" ] && status+=" | DCE: $(worker_step dce)"
+		if [ -t 1 ]; then
+			show_progress $((current - 1)) "${spinner:tick++ % 4:1} $status ($(format_duration $((SECONDS - session_start))))"
+		elif [ "$status" != "$last_status" ]; then
+			show_progress $((current - 1)) "$status"
+			last_status=$status
+		fi
+		sleep 1
+	done
+}
+
+# Print each failed worker's reason below the progress line so failures are visible
+# without opening the log. Workers that died without a reason point at their log.
+report_worker_failures() {
+	local worker reason status
+	[ -t 1 ] && echo
+	for worker in vfa_t1 dce; do
+		status=$vfa_worker_status
+		[ "$worker" = dce ] && status=$dce_worker_status
+		if [ -s "$WORKER_STATUS_DIR/$worker.failed" ]; then
+			reason=$(cat "$WORKER_STATUS_DIR/$worker.failed")
+		elif [ "$status" -ne 0 ]; then
+			reason="exited unexpectedly"
+			echo "$SUBJECT/$SESSION $worker worker $reason. See $SUBJECT_TP_PATH/logs/${PREFIX}_preprocess_$worker.log" >> "$LOG_FILE"
+		else
+			continue
+		fi
+		echo "FAILED $SUBJECT/$SESSION [$worker]: ${reason#$source_dir }" >&2
+		echo "  log: $SUBJECT_TP_PATH/logs/${PREFIX}_preprocess_$worker.log" >&2
+	done
 }
 
 wait_for_job_slot() {
@@ -271,12 +348,14 @@ start_background_job() {
 # Run bias correction on VFA data
 # ------------------------------
 for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
-	start_time=$(date +%s)
 	if [ ${source_dir::-1} == "/" ]; then
 		source_dir=$DATA_DIR/${source_dir::-1}
 	fi
+	release_session_lock
+	record_session_time
+	show_progress $current "$(echo $source_dir | grep -o 'sub-[^/]*/ses-[^/]*')"
 	date >> $LOG_FILE
-	echo "Preprocessing ${source_dir}..."
+	echo "Preprocessing ${source_dir}..." >> $LOG_FILE
 	((current++))
 
 	# get subject ID and session
@@ -286,11 +365,27 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 
 	if [ $COMPARISON_MODE -eq 1 ]
 		then
-		if [ ! -d "$DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION" ]
+		SUBJECT_TP_PATH=$DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION
+		if [ ! -d "$SUBJECT_TP_PATH" ]
 			then
 			echo "Comparison mode enabled. Creating output directory $OUTPUT_DIR..." >> $LOG_FILE
-			mkdir -p $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce
 		fi
+	else
+		SUBJECT_TP_PATH=$DERIV_DIR/dceprep/$SUBJECT/$SESSION
+	fi
+	mkdir -p "$SUBJECT_TP_PATH/dce"
+	cd "$SUBJECT_TP_PATH" || exit 1
+	SUBJECT_TP_PATH=$(pwd)
+
+	# Lock before writing anything so other machines skip this session
+	if ! acquire_session_lock "$SUBJECT_TP_PATH"
+		then
+		cd $DATA_DIR
+		continue
+	fi
+
+	if [ $COMPARISON_MODE -eq 1 ]
+		then
 		if [ ! $USE_AUTO_AIF -eq 1 ]
 			then
 			mask_copied=0
@@ -320,6 +415,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 			if [ $mask_copied -eq 0 ] && [ ! -f $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_SUFFIX}.nii.gz ] && [ ! -f $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz ] && [ $USE_AUTO_AIF -eq 2 ]
 				then
 				echo "No AIF file found for $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION/. Skipping timepoint..." >> $LOG_FILE
+				release_session_lock
 				rm -rf $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION
 				if [ -z "$(ls -A $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT)" ]
 					then
@@ -329,30 +425,6 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 				continue
 			fi
 		fi
-		cd $DERIV_DIR/dceprep-$OUTPUT_DIR/$SUBJECT/$SESSION || exit 1
-	else
-		mkdir -p $DERIV_DIR/dceprep/$SUBJECT/$SESSION
-		cd $DERIV_DIR/dceprep/$SUBJECT/$SESSION || exit 1
-	fi
-	SUBJECT_TP_PATH=$(pwd)
-
-	# --- LOCKING FOR MULTI-MACHINE PROCESSING ---
-	LOCKFILE="preprocessing_lock.txt"
-	LOCKDIR=$(pwd)
-	LOCKPATH="$LOCKDIR/$LOCKFILE"
-	LOCKHOST=$(hostname)
-	LOCKPID=$$
-	LOCKLIST="$DERIV_DIR/locks_${LOCKHOST}.txt"
-	echo "Attempting to lock $LOCKPATH on $LOCKHOST with PID $LOCKPID"
-
-	# Try to create lock file atomically
-	if ( set -o noclobber; echo "$LOCKHOST:$LOCKPID" > "$LOCKPATH" ) 2> /dev/null; then
-		echo "$LOCKPATH" >> "$LOCKLIST"
-		trap 'for f in $(cat "$LOCKLIST" 2>/dev/null); do rm -f "$f"; done; rm -f "$LOCKLIST"; exit $?' INT TERM EXIT
-	else
-		echo "Skipping $source_dir because it is currently being processed by $(cat $LOCKPATH)." >> $LOG_FILE
-		cd $DERIV_DIR
-		continue
 	fi
 
 	if [ ! -f $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_SUFFIX}.nii.gz ] && [ ! -f $DERIV_DIR/dceprep/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_SUFFIX}.nii ] && [ ! -f $DERIV_DIR/dceprep-manualAIF/$SUBJECT/$SESSION/dce/${PREFIX}_${AIF_TRAINING_SUFFIX}.nii.gz ] && [ $USE_AUTO_AIF -eq 0 ]
@@ -374,24 +446,29 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		fi
 	fi
 
+	# A scanner-provided T1 map replaces the VFA fitting
+	T1MAP_PROVIDED=0
+	[ -f "$source_dir/anat/${PREFIX}_T1map.nii.gz" ] && T1MAP_PROVIDED=1
+
 	# get list of VFAs and sort them
-	VFA_LIST=($(ls $source_dir/anat/*.nii* | grep -v "$source_dir/anat/*T1w.nii*" | grep -v "$source_dir/dce/*aif.nii*"))
+	VFA_LIST=($(ls $source_dir/anat/*.nii* | grep -v "$source_dir/anat/*T1w.nii*" | grep -v "$source_dir/anat/*T1map.nii*" | grep -v "$source_dir/dce/*aif.nii*"))
 	VFA_LIST=($(printf '%s\n' "${VFA_LIST[@]}" | grep -o -E 'flip-[0-9]+' | sort -n))
-	echo "Found ${#VFA_LIST[@]} VFAs: ${VFA_LIST[@]}"
+	echo "Found ${#VFA_LIST[@]} VFAs: ${VFA_LIST[@]}" >> $LOG_FILE
 	VFA_NUMS=($(printf '%s\n' "${VFA_LIST[@]}" | grep -o -E 'flip-[0-9]+' | grep -o -E '[0-9]+'))
 
-	if [ ${#VFA_LIST[@]} -eq 0 ]
+	if [ ${#VFA_LIST[@]} -eq 0 ] && [ $T1MAP_PROVIDED -eq 0 ]
 		then
 		echo "$source_dir No VFAs found! Skipping timepoint..." >> $LOG_FILE
 		cd $DATA_DIR
 		continue
 	fi
 
-	if [ ! -f "$source_dir/dce/${PREFIX}_DCE.nii.gz" ] || [ ! -f "$source_dir/anat/${PREFIX}_T1w.nii.gz" ]
+	# Without a T1w, a scanner T1 map session uses the DCE reference as its structural image
+	if [ ! -f "$source_dir/dce/${PREFIX}_DCE.nii.gz" ] || { [ ! -f "$source_dir/anat/${PREFIX}_T1w.nii.gz" ] && [ $T1MAP_PROVIDED -eq 0 ]; }
 	then
 		missing_files=""
 		[ ! -f "$source_dir/dce/${PREFIX}_DCE.nii.gz" ] && missing_files+=" $source_dir/dce/${PREFIX}_DCE.nii.gz"
-		[ ! -f "$source_dir/anat/${PREFIX}_T1w.nii.gz" ] && missing_files+=" $source_dir/anat/${PREFIX}_T1w.nii.gz"
+		[ ! -f "$source_dir/anat/${PREFIX}_T1w.nii.gz" ] && [ $T1MAP_PROVIDED -eq 0 ] && missing_files+=" $source_dir/anat/${PREFIX}_T1w.nii.gz"
 
 		echo "$source_dir Base file(s) missing! Missing file(s):$missing_files. Skipping timepoint..." >> "$LOG_FILE"
 		cd $DATA_DIR
@@ -401,7 +478,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	mkdir dce &> /dev/null
 	if [ $clean -eq 1 ]
 		then
-		echo Cleaning folder... $PWD
+		echo Cleaning folder... $PWD >> $LOG_FILE
 		# remove all files except for the AIF
 		rm -rf anat figures reports
 		cd dce
@@ -413,10 +490,12 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	rm -rf "$WORKER_STATUS_DIR"
 	mkdir -p "$WORKER_STATUS_DIR"
 	export source_dir DATA_DIR DERIV_DIR LOG_FILE SUBJECT SESSION PREFIX SUBJECT_TP_PATH SCRIPT_PATH
-	export EN_MOTION_CORR EN_BIAS1 EN_BIAS2 EN_Z_NORM USE_AUTO_AIF USE_PYTHON T1_ONLY
+	export T1MAP_PROVIDED EN_MOTION_CORR EN_BIAS1 EN_BIAS2 EN_Z_NORM USE_AUTO_AIF USE_PYTHON T1_ONLY
 	export AIF_SUFFIX AIF_TRAINING_SUFFIX HD_BET_COMMAND AUTO_AIF_PYTHON AUTO_AIF_PATH
 	export AUTOAIF_WEIGHT_PATH AUTOAIF_MODEL ROCKETSHIP_PATH GPUFIT_PATH GPUFIT_M_PATH
 	export MAX_PARALLEL_JOBS WORKER_STATUS_DIR WORKER_WAIT_TIMEOUT_SECONDS
+	session_start=$SECONDS
+	session_ran=1
 	# Launch the two workers independently; MAX_PARALLEL_JOBS limits work within each worker.
 	bash "$PREPROCESS_WORKER_DIR/preprocess_vfa_t1.sh" &
 	vfa_worker_pid=$!
@@ -428,6 +507,7 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 		dce_worker_pid=
 	fi
 
+	watch_workers
 	wait "$vfa_worker_pid"
 	vfa_worker_status=$?
 	if [ -n "$dce_worker_pid" ]
@@ -441,14 +521,13 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 	if [ $vfa_worker_status -ne 0 ] || [ $dce_worker_status -ne 0 ]
 		then
 		fail=1
+		((failures++))
+		report_worker_failures
 		rm -rf "$WORKER_STATUS_DIR"
 		cd "$DATA_DIR" || exit 1
 		continue
 	fi
 
-	ETA=$(echo "scale=0;  $mETA - ($SECONDS)/60" | bc -l)
-	prog=$(echo "scale=2;  100 * $current / $count" | bc -l)
-	echo -ne "SUBJ COMPLETED [==================================================] $prog% ($current/$count) ~$ETA min remaining \r"
 	rm -rf "$WORKER_STATUS_DIR"
 	cd "$DATA_DIR" || exit 1
 	echo "$source_dir preprocessing complete!" >> "$LOG_FILE"
@@ -457,13 +536,14 @@ for source_dir in $DATA_DIR/$SCRIPT_LOOP_DIRS; do
 
 done
 
-	prog=$(echo "scale=2;  100.00" | bc -l)
-	echo -ne "PREP COMPLETED [==================================================] $prog% ($current/$count)"
+record_session_time
+show_progress $count "complete"
+[ -t 1 ] && echo
 
-((failures=count-successes))
 echo Completed preprocessing for $count cases. >> $LOG_FILE
 echo $successes subjects succeeded >> $LOG_FILE
 echo $failures subjects failed >> $LOG_FILE
+echo $((count - successes - failures)) subjects skipped >> $LOG_FILE
 
 if [ $fail -eq 1 ]
 	then
