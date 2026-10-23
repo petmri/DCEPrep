@@ -137,6 +137,8 @@ FSL `fast` is run through the `FAST_CMD` environment variable (default `fast`). 
 
 The DCE worker writes its large 4D intermediates uncompressed to a local scratch directory (`$DCEPREP_SCRATCH`, default `$TMPDIR` or `/tmp`), about 2 GB per session at most, and gzips only the files it keeps into the session's `dce/` folder. Point `DCEPREP_SCRATCH` at a local disk with enough free space.
 
+With `-p`, `DCE_all.sh` runs ROCKETSHIP with `--no-checkpoints`: its stage checkpoints are debugging files that nothing reads back, about 0.75 GB per session. Set `ROCKETSHIP_CHECKPOINTS=1` to keep writing them to `reports/checkpoints`.
+
 #### Example
 
 ```bash
