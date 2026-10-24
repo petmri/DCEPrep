@@ -234,9 +234,9 @@ fi
 		fi
 	done
 
-	for vfa in "${VFA_DYN_LIST[@]}"; do
-		fslslice anat/${PREFIX}_${vfa}_${REF_SPACE}_VFA.nii.gz anat/${PREFIX}_${vfa}_${REF_SPACE}_VFA
-	done
+	# Only the first VFA is checked; if a slice is empty, the cleanup below slices every
+	# registered image itself
+	fslslice anat/${PREFIX}_${VFA_DYN_LIST[0]}_${REF_SPACE}_VFA.nii.gz anat/${PREFIX}_${VFA_DYN_LIST[0]}_${REF_SPACE}_VFA
 
 	set_worker_step "vfa_t1" "VFA empty slice check"
 	EMPTY_SLICES=0
@@ -245,7 +245,6 @@ fi
 		if [ "$(fslstats "$slice" -V | awk '{print $1}')" -lt 100 ]; then
 			rm "$slice"
 			slice=$(echo "$slice" | grep -o -E '_[0-9]+.nii' | grep -o -E '[0-9]+')
-			rm anat/${PREFIX}_flip-*_${REF_SPACE}_VFA_slice_$slice.nii*
 			problem_slice=$slice
 			EMPTY_SLICES=1
 			log_worker "Removing empty slice $slice from all images"
@@ -253,6 +252,18 @@ fi
 	done
 
 	if [ $EMPTY_SLICES -eq 1 ]; then
+		# The reference no longer waits for motion correction, so the motion-corrected
+		# series may not be in dce/ yet; it must be, to be trimmed with the rest
+		if [ $EN_MOTION_CORR -eq 1 ] && [ $T1_ONLY -eq 0 ]; then
+			set_worker_step "vfa_t1" "waiting for motion-corrected DCE"
+			wait_for_file "$WORKER_STATUS_DIR/dce.hmc.ready" "$WORKER_WAIT_TIMEOUT_SECONDS" "dce.failed"
+			wait_status=$?
+			if [ $wait_status -eq 1 ]; then
+				mark_worker_failed "vfa_t1" "$source_dir Timed out waiting for the motion-corrected DCE series. Skipping timepoint..."
+			elif [ $wait_status -eq 2 ]; then
+				mark_worker_failed "vfa_t1" "$source_dir DCE worker failed before the motion-corrected DCE series was ready. Skipping timepoint..."
+			fi
+		fi
 		for registered_img in anat/*${REF_SPACE}*.nii*; do
 			if [[ "$registered_img" == *slice* ]]; then
 				continue
@@ -332,23 +343,21 @@ fi
 		for vfa in "${VFA_DYN_LIST[@]}"; do
 			VFA_INPUT+="anat/${PREFIX}_${vfa}_${REF_SPACE}_desc-bfcz_VFA.nii.gz "
 		done
-		fslmerge -t anat/${PREFIX}_${REF_SPACE}_desc-bfczunified_VFA.nii.gz $VFA_INPUT
+		FSLOUTPUTTYPE=NIFTI fslmerge -t anat/${PREFIX}_${REF_SPACE}_desc-bfczunified_VFA.nii $VFA_INPUT
 		VFA_INPUT="desc-bfczunified_VFA"
 	elif [ $EN_BIAS1 -eq 1 ]; then
 		for vfa in "${VFA_DYN_LIST[@]}"; do
 			VFA_INPUT+="anat/${PREFIX}_${vfa}_${REF_SPACE}_desc-bfc_VFA.nii.gz "
 		done
-		fslmerge -t anat/${PREFIX}_${REF_SPACE}_desc-bfcunified_VFA.nii.gz $VFA_INPUT
+		FSLOUTPUTTYPE=NIFTI fslmerge -t anat/${PREFIX}_${REF_SPACE}_desc-bfcunified_VFA.nii $VFA_INPUT
 		VFA_INPUT="desc-bfcunified_VFA"
 	else
 		for vfa in "${VFA_DYN_LIST[@]}"; do
 			VFA_INPUT+="anat/${PREFIX}_${vfa}_${REF_SPACE}_label-brain_VFA.nii.gz "
 		done
-		fslmerge -t anat/${PREFIX}_${REF_SPACE}_desc-unified_VFA.nii.gz $VFA_INPUT
+		FSLOUTPUTTYPE=NIFTI fslmerge -t anat/${PREFIX}_${REF_SPACE}_desc-unified_VFA.nii $VFA_INPUT
 		VFA_INPUT="desc-unified_VFA"
 	fi
-	gunzip -f "anat/${PREFIX}_${REF_SPACE}_$VFA_INPUT.nii.gz"
-
 	if [ ! -f "anat/${PREFIX}_${REF_SPACE}_$VFA_INPUT.nii" ]; then
 		mark_worker_failed "vfa_t1" "$source_dir missing VFA file. Component files may have failed."
 	fi

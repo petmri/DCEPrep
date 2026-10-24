@@ -37,7 +37,8 @@ fsl_raw() {
 	FSLOUTPUTTYPE=NIFTI "$@"
 }
 
-# Gzip scratch file $1 to $2 in the background. The partial file is hidden and has no
+# Gzip scratch file $1 to $2 in the background, multithreaded (single-threaded gzip took
+# 4 s for a 367 MB series, pgzip.py 0.6 s). The partial file is hidden and has no
 # .nii suffix, so the VFA worker's dce/*.nii* slice cleanup never sees it. The job is
 # disowned so it does not count against MAX_PARALLEL_JOBS or block a bare wait.
 publish_async() {
@@ -46,7 +47,7 @@ publish_async() {
 	partial="$(dirname "$dest")/.$(basename "$dest").partial"
 	PUBLISH_COUNT=$((PUBLISH_COUNT + 1))
 	(
-		if gzip -c "$src" > "$partial" && mv -f "$partial" "$dest"; then
+		if python3 "$SCRIPT_PATH/scripts/pgzip.py" "$src" "$partial" && mv -f "$partial" "$dest"; then
 			echo 0
 		else
 			rm -f "$partial"
@@ -104,6 +105,22 @@ log_worker "$source_dir DCE worker started."
 mkdir -p figures
 
 HMC_NAME=${PREFIX}_desc-hmc_DCE
+# The DCE reference is volume 1, the volume mcflirt registers the series to, so it is the
+# same in the raw and motion-corrected series (checked after mcflirt). Taking it from the
+# raw series lets the VFA worker start its registrations without waiting for mcflirt.
+dce_input="$source_dir/dce/${PREFIX}_DCE.nii.gz"
+if [ $EN_MOTION_CORR -eq 1 ]; then
+	DCE_REF_VOL=dce/${PREFIX}_desc-hmc_DCEref.nii.gz
+	# A resumed run reuses its motion-corrected series, which may have been trimmed
+	[ -f "dce/${HMC_NAME}.nii.gz" ] && dce_input=dce/${HMC_NAME}.nii.gz
+else
+	DCE_REF_VOL=dce/${PREFIX}_DCEref.nii.gz
+	[ -f "$source_dir/dce/${PREFIX}_DCE.nii" ] && dce_input="$source_dir/dce/${PREFIX}_DCE.nii"
+fi
+# Written under a hidden name and renamed, so the VFA worker never reads a partial file
+FSLOUTPUTTYPE=NIFTI_GZ fslmerge -n 1 "dce/.${PREFIX}_DCEref_partial" "$dce_input"
+mv "dce/.${PREFIX}_DCEref_partial.nii.gz" "$DCE_REF_VOL"
+
 hmc_made=0
 if [ $EN_MOTION_CORR -eq 1 ]; then
 	if [ ! -f "dce/${HMC_NAME}.nii.gz" ]; then
@@ -133,18 +150,18 @@ fi
 if [ $EN_MOTION_CORR -eq 1 ]; then
 	max=$(python3 "$SCRIPT_PATH/scripts/max_disp.py" "$SUBJECT_TP_PATH/dce" "${PREFIX}")
 	echo -e "$max" > dce/${PREFIX}_desc-hmc_maxdisp.txt
-	# Written before the DCE reference, which the VFA worker waits for: its empty-slice
-	# cleanup must find this file in dce/, as it always has
 	if [ $hmc_made -eq 1 ]; then
+		fsl_raw fslmerge -n 1 "$DCE_SCRATCH/hmc_ref.nii" "$DCE_HMC"
+		fsl_raw fslmaths "$DCE_SCRATCH/hmc_ref.nii" -sub "$DCE_REF_VOL" -abs "$DCE_SCRATCH/ref_diff.nii"
+		if [ "$(fslstats "$DCE_SCRATCH/ref_diff.nii" -R | awk '{print ($2 == 0)}')" != 1 ]; then
+			mark_worker_failed "dce" "$source_dir Motion correction changed the reference volume, so $DCE_REF_VOL does not match the motion-corrected series. Skipping timepoint..."
+		fi
 		publish_async "$DCE_HMC" "dce/${HMC_NAME}.nii.gz"
 		publish_wait
 	fi
-	fslmerge -n 1 dce/${PREFIX}_desc-hmc_DCEref.nii "$DCE_HMC"
-else
-	dce_input="$source_dir/dce/${PREFIX}_DCE.nii.gz"
-	[ -f "$source_dir/dce/${PREFIX}_DCE.nii" ] && dce_input="$source_dir/dce/${PREFIX}_DCE.nii"
-	fslmerge -n 1 dce/${PREFIX}_DCEref.nii "$dce_input"
 fi
+# The VFA worker's empty-slice cleanup trims every dce/*.nii*, so it waits for this
+mark_worker_ready "dce.hmc"
 
 set_worker_step "dce" "AutoAIF / waiting for brain mask"
 wait_for_file "$WORKER_STATUS_DIR/vfa_t1.brain_mask.ready" "$WORKER_WAIT_TIMEOUT_SECONDS" "vfa_t1.failed"

@@ -160,20 +160,33 @@ if [ -z "$DATA_DIR" ]
 		exit 1
 fi
 
-if ! "$HD_BET_COMMAND" --help &> /dev/null; then
-	echo "ERROR: HD-BET command '$HD_BET_COMMAND' is unavailable or cannot start. Set HD_BET_COMMAND to a working hd-bet executable." >&2
-	exit 1
+# Importing torch / TensorFlow takes ~2 s each, so these checks run alongside path discovery
+"$HD_BET_COMMAND" --help &> /dev/null &
+hd_bet_check_pid=$!
+if [ $USE_AUTO_AIF -eq 1 ]; then
+	"$AUTO_AIF_PYTHON" -c 'import tensorflow' &> /dev/null &
+	tensorflow_check_pid=$!
 fi
 
-resolve_tool_path() {
-	local configured_path=$1
-	local marker_file=$2
-	shift 2
-	local candidate_path
+# Every tool marker file under $HOME, as "name<TAB>dir" lines in find's order. Filled by
+# the first lookup that needs it: one pass serves all tools (a pass each cost ~1.3 s).
+HOME_MARKER_FILES=
+HOME_MARKER_FILES_SEARCHED=0
+HOME_MARKER_NAMES=(run_dce_cli.m GpufitCudaAvailableMex.mexa64 ModelID.m main_vif.py)
 
+# Set variable $1 to the directory holding marker file $3: configured path $2 if given,
+# else the first of the remaining default paths that has it, else the first match under $HOME
+resolve_tool_path() {
+	local -n resolved_path=$1
+	local configured_path=$2
+	local marker_file=$3
+	shift 3
+	local candidate_path name_args=() marker_name
+
+	resolved_path=
 	if [ -n "$configured_path" ]; then
 		if [ -f "$configured_path/$marker_file" ]; then
-			printf '%s\n' "$configured_path"
+			resolved_path=$configured_path
 			return 0
 		fi
 		echo "ERROR: Configured path $configured_path does not contain $marker_file." >&2
@@ -182,22 +195,29 @@ resolve_tool_path() {
 
 	for candidate_path in "$@"; do
 		if [ -f "$candidate_path/$marker_file" ]; then
-			printf '%s\n' "$candidate_path"
+			resolved_path=$candidate_path
 			return 0
 		fi
 	done
 
-	find "$HOME" \
-		\( -path "$HOME/.local/share/Trash" -o -path "$HOME/.local/share/Trash/*" -o -path "$HOME/.Trash" -o -path "$HOME/.Trash/*" \) -prune -o \
-		-type f -name "$marker_file" -printf '%h\n' -quit 2> /dev/null
+	if [ $HOME_MARKER_FILES_SEARCHED -eq 0 ]; then
+		for marker_name in "${HOME_MARKER_NAMES[@]}"; do
+			name_args+=(-o -name "$marker_name")
+		done
+		HOME_MARKER_FILES=$(find "$HOME" \
+			\( -path "$HOME/.local/share/Trash" -o -path "$HOME/.local/share/Trash/*" -o -path "$HOME/.Trash" -o -path "$HOME/.Trash/*" \) -prune -o \
+			-type f \( "${name_args[@]:1}" \) -printf '%f\t%h\n' 2> /dev/null)
+		HOME_MARKER_FILES_SEARCHED=1
+	fi
+	resolved_path=$(awk -F '\t' -v marker="$marker_file" '$1 == marker { print $2; exit }' <<< "$HOME_MARKER_FILES")
 }
 
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
-	ROCKETSHIP_PATH=$(resolve_tool_path "${ROCKETSHIP_PATH:-}" "run_dce_cli.m" "/opt/ROCKETSHIP/ROCKETSHIP-dev")
+	resolve_tool_path ROCKETSHIP_PATH "${ROCKETSHIP_PATH:-}" "run_dce_cli.m" "/opt/ROCKETSHIP/ROCKETSHIP-dev"
 	SCRIPT_PATH=$(dirname "$(realpath $0)")
 	PREPROCESS_WORKER_DIR="$SCRIPT_PATH/scripts/preprocess"
-	GPUFIT_PATH=$(resolve_tool_path "${GPUFIT_PATH:-}" "GpufitCudaAvailableMex.mexa64" "/opt/Gpufit/matlab64")
-	GPUFIT_M_PATH=$(resolve_tool_path "${GPUFIT_M_PATH:-}" "ModelID.m" "/opt/Gpufit/matlab")
+	resolve_tool_path GPUFIT_PATH "${GPUFIT_PATH:-}" "GpufitCudaAvailableMex.mexa64" "/opt/Gpufit/matlab64"
+	resolve_tool_path GPUFIT_M_PATH "${GPUFIT_M_PATH:-}" "ModelID.m" "/opt/Gpufit/matlab"
 	if [ -z "$ROCKETSHIP_PATH" ] || [ -z "$GPUFIT_PATH" ] || [ -z "$GPUFIT_M_PATH" ]; then
 		echo "ERROR: Unable to locate ROCKETSHIP or GPUfit. Set ROCKETSHIP_PATH, GPUFIT_PATH, and GPUFIT_M_PATH to directories containing their required MATLAB files." >&2
 		exit 1
@@ -209,13 +229,18 @@ else
 	GPUFIT_PATH=$(find $HOME -type d -name Gpufit-build)
 fi
 
+if ! wait "$hd_bet_check_pid"; then
+	echo "ERROR: HD-BET command '$HD_BET_COMMAND' is unavailable or cannot start. Set HD_BET_COMMAND to a working hd-bet executable." >&2
+	exit 1
+fi
+
 if [ $USE_AUTO_AIF -eq 1 ]; then
-	AUTO_AIF_PATH=$(resolve_tool_path "${AUTO_AIF_PATH:-}" "main_vif.py" "/opt/vascular_function")
+	resolve_tool_path AUTO_AIF_PATH "${AUTO_AIF_PATH:-}" "main_vif.py" "/opt/vascular_function"
 	if [ -z "$AUTO_AIF_PATH" ]; then
 		echo "ERROR: Unable to locate AutoAIF. Set AUTO_AIF_PATH to the directory containing main_vif.py." >&2
 		exit 1
 	fi
-	if ! "$AUTO_AIF_PYTHON" -c 'import tensorflow' &> /dev/null; then
+	if ! wait "$tensorflow_check_pid"; then
 		echo "ERROR: AutoAIF Python '$AUTO_AIF_PYTHON' cannot import TensorFlow. Set AUTO_AIF_PYTHON to a TensorFlow-capable interpreter." >&2
 		exit 1
 	fi
