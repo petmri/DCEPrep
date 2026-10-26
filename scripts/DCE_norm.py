@@ -197,6 +197,9 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
 
 
 dir = Path(sys.argv[1])     # takes timepoint directory as argument
+# Optional: the session directory whose figures/hist receives the histograms
+# (default: the parent of the input directory)
+figures_root = Path(sys.argv[2]) / 'dce' if len(sys.argv) > 2 else dir
 inputs = [f for f in dir.iterdir() if str(f).endswith('desc-bfc_DCE.nii') or str(f).endswith('desc-bfc_DCE.nii.gz')]
 if not inputs:
     sys.exit(f"ERROR: No *desc-bfc_DCE.nii[.gz] input found in {dir}")
@@ -211,4 +214,4 @@ for file in inputs:
         sys.exit(f"ERROR: WM mask {mask_file}[.gz] not found for {file1}")
 
     # Let exceptions propagate so the traceback reaches the worker log and the exit code is non-zero
-    normalize(file1, mask_file, str(dir))
+    normalize(file1, mask_file, str(figures_root))

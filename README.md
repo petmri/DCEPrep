@@ -133,6 +133,14 @@ All data is assumed to be [BIDS](https://bids-specification.readthedocs.io/) com
 | `-p` | Use Python for ROCKETSHIP calls. |
 | `-Z` | Enable z-slice normalization. |
 
+FSL `fast` is run through the `FAST_CMD` environment variable (default `fast`). To use the GPU build of FAST from `FSL/fast4`, set e.g. `FAST_CMD="fast_gpu --gpu --gpuraster"` (output byte-identical to FSL `fast`) or `FAST_CMD="fast_gpu --gpu"` (faster, very slightly different). The command used is recorded at the top of each worker log.
+
+The DCE worker writes its large 4D intermediates uncompressed to a local scratch directory (`$DCEPREP_SCRATCH`, default `$TMPDIR` or `/tmp`), about 2 GB per session at most, and gzips only the files it keeps into the session's `dce/` folder, using several threads (`scripts/pgzip.py`; the files are standard multi-member gzip). Point `DCEPREP_SCRATCH` at a local disk with enough free space.
+
+With `-m`, the DCE reference volume (volume 1) is taken from the raw series so T1w/VFA registration can start while motion correction runs; mcflirt registers to that volume, and the worker fails the session if the motion-corrected volume 1 ever differs from it.
+
+With `-p`, `DCE_all.sh` runs ROCKETSHIP with `--no-checkpoints`: its stage checkpoints are debugging files that nothing reads back, about 0.75 GB per session. Set `ROCKETSHIP_CHECKPOINTS=1` to keep writing them to `reports/checkpoints`.
+
 #### Example
 
 ```bash

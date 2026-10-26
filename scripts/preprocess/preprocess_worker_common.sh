@@ -2,6 +2,14 @@
 
 WORKER_POLL_INTERVAL_SECONDS="${WORKER_POLL_INTERVAL_SECONDS:-1}"
 
+# FSL FAST command, split on spaces. Set FAST_CMD to use another build, e.g.
+#   FAST_CMD="fast_gpu --gpu --gpuraster"   (GPU, output identical to FSL fast)
+read -r -a FAST_CMD_WORDS <<< "${FAST_CMD:-fast}"
+
+run_fast() {
+	"${FAST_CMD_WORDS[@]}" "$@"
+}
+
 wait_for_job_slot() {
 	if [ "$MAX_PARALLEL_JOBS" -le 0 ]; then
 		return 0
@@ -27,6 +35,7 @@ init_worker_log() {
 	mkdir -p "$SUBJECT_TP_PATH/logs"
 	WORKER_LOG="$SUBJECT_TP_PATH/logs/${PREFIX}_preprocess_$1.log"
 	echo "=== $(date) $1 worker ===" > "$WORKER_LOG"
+	echo "FAST command: ${FAST_CMD_WORDS[*]}" >> "$WORKER_LOG"
 	exec >> "$WORKER_LOG" 2>&1
 }
 
