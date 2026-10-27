@@ -216,6 +216,17 @@ if [ ! -f "$AIF_MASK_INPUT" ]; then
 	mark_worker_failed "dce" "$source_dir Missing AIF mask for DCE masking. Skipping timepoint..."
 fi
 
+# The VFA worker's empty-slice cleanup trims the brain and AIF masks after the brain
+# mask is first marked ready; reading them before it finishes mixes slice counts
+set_worker_step "dce" "waiting for empty-slice check"
+wait_for_file "$WORKER_STATUS_DIR/vfa_t1.slices_final.ready" "$WORKER_WAIT_TIMEOUT_SECONDS" "vfa_t1.failed"
+wait_status=$?
+if [ $wait_status -eq 1 ]; then
+	mark_worker_failed "dce" "$source_dir Timed out waiting for the VFA empty-slice check. Skipping timepoint..."
+elif [ $wait_status -eq 2 ]; then
+	mark_worker_failed "dce" "$source_dir VFA/T1 worker failed before the empty-slice check finished. Skipping timepoint..."
+fi
+
 fslmaths anat/${PREFIX}_${REF_SPACE}_label-brain_mask.nii.gz -add "$AIF_MASK_INPUT" -thr 1 -bin anat/${PREFIX}_${REF_SPACE}_label-brainAIF_mask.nii.gz
 
 if [ $EN_MOTION_CORR -eq 1 ]; then

@@ -180,6 +180,8 @@ structural_to_DCEref=$T1w_to_DCEref
 
 if [ $T1MAP_PROVIDED -eq 1 ]; then
 	log_worker "$source_dir Using scanner T1 map; skipping VFA processing."
+	# no empty-slice cleanup on this path, so the DCE-space masks are already final
+	mark_worker_ready "vfa_t1.slices_final"
 	set_worker_step "vfa_t1" "T1w FAST segmentation"
 	wait
 	if [ $t1_fast_started -eq 1 ]; then
@@ -291,6 +293,9 @@ fi
 	else
 		rm anat/*slice_*.nii*
 	fi
+	# The cleanup above rewrites the DCE-space brain mask and every dce/*.nii*,
+	# including the AIF mask; the DCE worker waits for this before reading them
+	mark_worker_ready "vfa_t1.slices_final"
 
 	for vfa in "${VFA_DYN_LIST[@]}"; do
 		cp anat/${PREFIX}_${vfa}_${REF_SPACE}_VFA.nii.gz anat/${PREFIX}_${vfa}_${REF_SPACE}_label-brain_VFA.nii.gz
