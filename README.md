@@ -139,7 +139,7 @@ The DCE worker writes its large 4D intermediates uncompressed to a local scratch
 
 With `-m`, the DCE reference volume (volume 1) is taken from the raw series so T1w/VFA registration can start while motion correction runs; mcflirt registers to that volume, and the worker fails the session if the motion-corrected volume 1 ever differs from it.
 
-With `-p`, `DCE_all.sh` runs ROCKETSHIP with `--no-checkpoints`: its stage checkpoints are debugging files that nothing reads back, about 0.75 GB per session. Set `ROCKETSHIP_CHECKPOINTS=1` to keep writing them to `reports/checkpoints`.
+With `-p`, `DCE_all.sh` runs ROCKETSHIP with `--no-checkpoints`: its stage checkpoints are debugging files that nothing reads back, about 0.75 GB per session. Set `ROCKETSHIP_CHECKPOINTS=1` to keep writing them to `reports/checkpoints`. Extra arguments for ROCKETSHIP's `run_dce_python_case.py` go in `ROCKETSHIP_DCE_ARGS`, e.g. `ROCKETSHIP_DCE_ARGS="--aif-mode raw"` to fit with the raw AIF curve instead of the fitted one.
 
 #### Example
 

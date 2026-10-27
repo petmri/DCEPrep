@@ -298,7 +298,9 @@ python3 "$SCRIPT_PATH/scripts/iNESMA_GPU.py" "$PREFIX" "dce/${PREFIX}_desc-bfcz_
 		# and took ~20 s per session to write; set ROCKETSHIP_CHECKPOINTS=1 to keep them
 		checkpoint_args=(--no-checkpoints)
 		[ "${ROCKETSHIP_CHECKPOINTS:-0}" = 1 ] && checkpoint_args=()
-		${ROCKETSHIP_PATH}/.venv/bin/python ${ROCKETSHIP_PATH}/run_dce_python_case.py --subject-source "$DATA_DIR/$SUBJECT/$SESSION/" --subject-tp $SUBJECT_TP_PATH --output-dir $SUBJECT_TP_PATH --events off "${checkpoint_args[@]}"
+		# extra run_dce_python_case.py arguments, e.g. ROCKETSHIP_DCE_ARGS="--aif-mode raw"
+		read -r -a extra_args <<< "${ROCKETSHIP_DCE_ARGS:-}"
+		${ROCKETSHIP_PATH}/.venv/bin/python ${ROCKETSHIP_PATH}/run_dce_python_case.py --subject-source "$DATA_DIR/$SUBJECT/$SESSION/" --subject-tp $SUBJECT_TP_PATH --output-dir $SUBJECT_TP_PATH --events off "${checkpoint_args[@]}" "${extra_args[@]}"
 	else
 		matlab -nodisplay -r "cd('$ROCKETSHIP_PATH'); addpath '$GPUFIT_PATH'; addpath '$GPUFIT_M_PATH'; run_dce_cli('$DATA_DIR/$SUBJECT/$SESSION/', '$SUBJECT_TP_PATH/'); exit;"
 	fi
