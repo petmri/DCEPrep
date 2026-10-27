@@ -129,9 +129,12 @@ resolve_tool_path() {
 if [[ "$OSTYPE" == "linux-gnu" ]]; then
 	ROCKETSHIP_PATH=$(resolve_tool_path "${ROCKETSHIP_PATH:-}" "run_dce_cli.m" "/opt/ROCKETSHIP/ROCKETSHIP-dev")
 	SCRIPT_PATH=$(dirname "$(realpath $0)")
-	GPUFIT_PATH=$(resolve_tool_path "${GPUFIT_PATH:-}" "GpufitConstrainedMex.mexa64" "/opt/Gpufit/matlab64")
-	GPUFIT_M_PATH=$(resolve_tool_path "${GPUFIT_M_PATH:-}" "ModelID.m" "/opt/Gpufit/matlab")
-	if [ -z "$ROCKETSHIP_PATH" ] || [ -z "$GPUFIT_PATH" ] || [ -z "$GPUFIT_M_PATH" ]; then
+	# the Gpufit MATLAB bindings are only used by the MATLAB ROCKETSHIP calls
+	if [ $USE_PYTHON -eq 0 ]; then
+		GPUFIT_PATH=$(resolve_tool_path "${GPUFIT_PATH:-}" "GpufitConstrainedMex.mexa64" "/opt/Gpufit/matlab64")
+		GPUFIT_M_PATH=$(resolve_tool_path "${GPUFIT_M_PATH:-}" "ModelID.m" "/opt/Gpufit/matlab")
+	fi
+	if [ -z "$ROCKETSHIP_PATH" ] || { [ $USE_PYTHON -eq 0 ] && { [ -z "$GPUFIT_PATH" ] || [ -z "$GPUFIT_M_PATH" ]; }; }; then
 		echo "ERROR: Unable to locate ROCKETSHIP or GPUfit. Set ROCKETSHIP_PATH, GPUFIT_PATH, and GPUFIT_M_PATH to directories containing their required MATLAB files." >&2
 		exit 1
 	fi
