@@ -32,8 +32,8 @@ T1w_reg() {
 	antsRegistration --verbose 0 --dimensionality 3 --float 0 \
 		--collapse-output-transforms 1 --output [ anat/${PREFIX}_${REF_SPACE}_T1w,anat/${PREFIX}_${REF_SPACE}_T1w.nii.gz ] \
 		--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
-		--transform Rigid[ 0.1 ] --metric MI[ $DCE_REF_VOL,${source_dir}/anat/${PREFIX}_T1w.nii.gz,1,32,Regular,0.25 ] \
-		--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
+		--transform Rigid[ 0.1 ] --metric MI[ $DCE_REF_VOL,${source_dir}/anat/${PREFIX}_T1w.nii.gz,1,32,None ] \
+		--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1mm
 	mv anat/${PREFIX}_${REF_SPACE}_T1w0GenericAffine.mat anat/${PREFIX}_from-T1w_to-DCEref.mat
 }
 
@@ -42,8 +42,8 @@ VFA_reg() {
 	antsRegistration --verbose 0 --dimensionality 3 --float 0 \
 		--collapse-output-transforms 1 --output [ anat/${PREFIX}_flip-${vfa}_${REF_SPACE},anat/${PREFIX}_flip-${vfa}_${REF_SPACE}_VFA.nii.gz ] \
 		--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
-		--transform Rigid[ 0.1 ] --metric MI[ $DCE_REF_VOL,$source_dir/anat/${PREFIX}_flip-${vfa}_VFA.nii.gz,1,32,Regular,0.25 ] \
-		--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
+		--transform Rigid[ 0.1 ] --metric MI[ $DCE_REF_VOL,$source_dir/anat/${PREFIX}_flip-${vfa}_VFA.nii.gz,1,32,None ] \
+		--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1mm
 	mv anat/${PREFIX}_flip-${vfa}_${REF_SPACE}0GenericAffine.mat anat/${PREFIX}_from-VFA${vfa}_to-DCEref.mat
 }
 
@@ -87,8 +87,8 @@ T1map_reg() {
 	antsRegistration --verbose 0 --dimensionality 3 --float 0 \
 		--collapse-output-transforms 1 --output [ anat/${PREFIX}_${REF_SPACE}_T1map,anat/${PREFIX}_${REF_SPACE}_T1map.nii.gz ] \
 		--interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ] \
-		--transform Rigid[ 0.1 ] --metric MI[ $DCE_REF_VOL,$source_dir/anat/${PREFIX}_T1map.nii.gz,1,32,Regular,0.25 ] \
-		--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
+		--transform Rigid[ 0.1 ] --metric MI[ $DCE_REF_VOL,$source_dir/anat/${PREFIX}_T1map.nii.gz,1,32,None ] \
+		--convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1mm
 	mv anat/${PREFIX}_${REF_SPACE}_T1map0GenericAffine.mat anat/${PREFIX}_from-T1map_to-DCEref.mat
 }
 
@@ -236,24 +236,42 @@ fi
 		fi
 	done
 
-	# Only the first VFA is checked; if a slice is empty, the cleanup below slices every
-	# registered image itself
-	fslslice anat/${PREFIX}_${VFA_DYN_LIST[0]}_${REF_SPACE}_VFA.nii.gz anat/${PREFIX}_${VFA_DYN_LIST[0]}_${REF_SPACE}_VFA
-
+	# Only the first VFA is checked. Empty slices are trimmed only from the slab edges, with
+	# fslroi so the headers stay right; an empty slice inside the slab means the VFA
+	# registration failed, and cutting it out would shift every slice above it
 	set_worker_step "vfa_t1" "VFA empty slice check"
-	EMPTY_SLICES=0
-	problem_slice=0
-	for slice in anat/${PREFIX}_${VFA_DYN_LIST[0]}_${REF_SPACE}_VFA*.nii*; do
+	vfa_check=anat/${PREFIX}_${VFA_DYN_LIST[0]}_${REF_SPACE}_VFA
+	fslslice ${vfa_check}.nii.gz ${vfa_check}
+	slice_empty=()
+	for slice in ${vfa_check}_slice_*.nii*; do
 		if [ "$(fslstats "$slice" -V | awk '{print $1}')" -lt 100 ]; then
-			rm "$slice"
-			slice=$(echo "$slice" | grep -o -E '_[0-9]+.nii' | grep -o -E '[0-9]+')
-			problem_slice=$slice
-			EMPTY_SLICES=1
-			log_worker "Removing empty slice $slice from all images"
+			slice_empty+=(1)
+		else
+			slice_empty+=(0)
+		fi
+	done
+	rm ${vfa_check}_slice_*.nii*
+	n_slices=${#slice_empty[@]}
+	trim_bottom=0
+	while [ $trim_bottom -lt $n_slices ] && [ ${slice_empty[$trim_bottom]} -eq 1 ]; do
+		trim_bottom=$((trim_bottom + 1))
+	done
+	trim_top=0
+	while [ $((trim_bottom + trim_top)) -lt $n_slices ] && [ ${slice_empty[$((n_slices - 1 - trim_top))]} -eq 1 ]; do
+		trim_top=$((trim_top + 1))
+	done
+	keep_slices=$((n_slices - trim_bottom - trim_top))
+	if [ $keep_slices -eq 0 ]; then
+		mark_worker_failed "vfa_t1" "$source_dir Registered VFA is empty in every slice. Skipping timepoint..."
+	fi
+	for ((k = trim_bottom; k < trim_bottom + keep_slices; k++)); do
+		if [ ${slice_empty[$k]} -eq 1 ]; then
+			mark_worker_failed "vfa_t1" "$source_dir Registered VFA has an empty slice ($k) inside the slab, so the VFA-to-DCE registration probably failed. Skipping timepoint..."
 		fi
 	done
 
-	if [ $EMPTY_SLICES -eq 1 ]; then
+	if [ $keep_slices -lt $n_slices ]; then
+		log_worker "Trimming empty edge slices from all DCE-space images: $trim_bottom at the bottom, $trim_top at the top ($keep_slices of $n_slices kept)"
 		# The reference no longer waits for motion correction, so the motion-corrected
 		# series may not be in dce/ yet; it must be, to be trimmed with the rest
 		if [ $EN_MOTION_CORR -eq 1 ] && [ $T1_ONLY -eq 0 ]; then
@@ -266,32 +284,12 @@ fi
 				mark_worker_failed "vfa_t1" "$source_dir DCE worker failed before the motion-corrected DCE series was ready. Skipping timepoint..."
 			fi
 		fi
-		for registered_img in anat/*${REF_SPACE}*.nii*; do
-			if [[ "$registered_img" == *slice* ]]; then
+		for img in anat/*${REF_SPACE}*.nii* dce/*.nii*; do
+			if [[ "$img" == *.par ]]; then
 				continue
 			fi
-			reg_img_no_ext=${registered_img%.nii*}
-			reg_img_no_ext=${reg_img_no_ext%_slice_*}
-			fslslice "$registered_img" "$reg_img_no_ext"
-			rm ${reg_img_no_ext}_slice_$problem_slice.nii*
-			fslmerge -z "$registered_img" ${reg_img_no_ext}_slice_*.nii*
+			fslroi "$img" "$img" 0 -1 0 -1 $trim_bottom $keep_slices 0 -1
 		done
-		for img in dce/*.nii*; do
-			if [[ "$img" == *slice* ]] || [[ "$img" == *.par ]]; then
-				continue
-			fi
-			img_no_ext=${img%.nii*}
-			img_no_ext=${img_no_ext%_slice_*}
-			fslslice "$img" "$img_no_ext"
-			rm ${img_no_ext}_slice_$problem_slice.nii*
-			fslmerge -z "$img" ${img_no_ext}_slice_*.nii*
-		done
-		for vfa in "${VFA_DYN_LIST[@]}"; do
-			fslmerge -z anat/${PREFIX}_${vfa}_${REF_SPACE}_VFA.nii.gz anat/${PREFIX}_${vfa}_${REF_SPACE}_VFA_slice_*.nii*
-		done
-		rm anat/*slice_*.nii* dce/*slice_*.nii*
-	else
-		rm anat/*slice_*.nii*
 	fi
 	# The cleanup above rewrites the DCE-space brain mask and every dce/*.nii*,
 	# including the AIF mask; the DCE worker waits for this before reading them

@@ -141,6 +141,18 @@ With `-m`, the DCE reference volume (volume 1) is taken from the raw series so T
 
 With `-p`, `DCE_all.sh` runs ROCKETSHIP with `--no-checkpoints`: its stage checkpoints are debugging files that nothing reads back, about 0.75 GB per session. Set `ROCKETSHIP_CHECKPOINTS=1` to keep writing them to `reports/checkpoints`. Extra arguments for ROCKETSHIP's `run_dce_python_case.py` go in `ROCKETSHIP_DCE_ARGS`, e.g. `ROCKETSHIP_DCE_ARGS="--aif-mode raw"` to fit with the raw AIF curve instead of the fitted one.
 
+The T1w, VFA and scanner T1 map registrations to the DCE smooth in millimetres (`4x3x2x1mm`), so thick-slice images are smoothed the same physical amount in every direction, and they sample every voxel (`None`) rather than a random subset. Until October 2026 they used `4x3x2x1vox` and `Regular,0.25`: on 5 mm RIDER Neuro slices that blurred z by up to 20 mm, and about 40% of VFA registrations slid several slices along z, differently on each run of the same input.
+
+After VFA registration, slices of the registered VFA with fewer than 100 voxels are trimmed from every DCE-space image, but only from the top and bottom of the slab (`fslroi`, which keeps the headers right). An empty slice inside the slab means the VFA registration failed, and the session stops with a message saying so.
+
+**Repeatable runs.** With every voxel sampled the registrations have no random component, but ANTs still splits the metric across threads, and the order the partial results are added in changes from run to run. Usually that moves the transform by a fraction of a millimetre; on thick-slice pairs it can be more (a 0.43×0.43×6 mm T1w to DCE: rotation 2.4–5.2° over 10 repeats). To get identical outputs from identical inputs, run with one ITK thread:
+
+```bash
+ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=1 ./preprocess_all.sh -d /path/to/bids_data ...
+```
+
+Each registration then takes a few seconds instead of under one (1–4 s on the images above), and the other ANTs/ITK steps in the run also use one thread.
+
 #### Example
 
 ```bash
@@ -162,8 +174,8 @@ The preprocessing workers overlap independent stages. The list below describes d
     antsRegistration --verbose 0 --dimensionality 3 --float 0
         --collapse-output-transforms 1 --output [ anat/${PREFIX}_${REF_SPACE}_T1w,anat/${PREFIX}_${REF_SPACE}_T1w.nii.gz ]
         --interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ]
-        --transform Rigid[ 0.1 ] --metric MI[ $DCE_REF_VOL,${source_dir}/anat/${PREFIX}_T1w.nii.gz,1,32,Regular,0.25 ]
-        --convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
+        --transform Rigid[ 0.1 ] --metric MI[ $DCE_REF_VOL,${source_dir}/anat/${PREFIX}_T1w.nii.gz,1,32,None ]
+        --convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1mm
     </code>
    </details>
 4. <details>
@@ -172,8 +184,8 @@ The preprocessing workers overlap independent stages. The list below describes d
     antsRegistration --verbose 0 --dimensionality 3 --float 0
         --collapse-output-transforms 1 --output [ anat/${PREFIX}_flip-${VFA}_${REF_SPACE},anat/${PREFIX}_flip-${VFA}_${REF_SPACE}_VFA.nii.gz ]
         --interpolation Linear --use-histogram-matching 0 --winsorize-image-intensities [ 0.005,0.995 ]
-        --transform Rigid[ 0.1 ] --metric MI[ $DCE_REF_VOL,$source_dir/anat/${PREFIX}_flip-${VFA}_VFA.nii.gz,1,32,Regular,0.25 ]
-        --convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1vox
+        --transform Rigid[ 0.1 ] --metric MI[ $DCE_REF_VOL,$source_dir/anat/${PREFIX}_flip-${VFA}_VFA.nii.gz,1,32,None ]
+        --convergence [ 1000x500x250x100,1e-6,10 ] --shrink-factors 12x8x4x2 --smoothing-sigmas 4x3x2x1mm
     </code>
    </details>
 5. <details>

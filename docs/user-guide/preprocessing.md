@@ -77,10 +77,10 @@ antsRegistration --verbose 0 --dimensionality 3 --float 0 \
   --use-histogram-matching 0 \
   --winsorize-image-intensities [ 0.005,0.995 ] \
   --transform Rigid[ 0.1 ] \
-  --metric MI[ $DCE_REF_VOL, anat/${PREFIX}_T1w.nii.gz, 1,32,Regular,0.25 ] \
+  --metric MI[ $DCE_REF_VOL, anat/${PREFIX}_T1w.nii.gz, 1,32,None ] \
   --convergence [ 1000x500x250x100,1e-6,10 ] \
   --shrink-factors 12x8x4x2 \
-  --smoothing-sigmas 4x3x2x1vox
+  --smoothing-sigmas 4x3x2x1mm
 ```
 
 ---
@@ -89,6 +89,19 @@ antsRegistration --verbose 0 --dimensionality 3 --float 0 \
 **Tool:** ANTs `antsRegistration`
 
 Rigidly registers each VFA image to the DCE reference volume, using the same parameters as Step 3. Applied to every flip angle independently.
+
+Smoothing is given in millimetres and every voxel is sampled. Earlier versions used `4x3x2x1vox` and `Regular,0.25`; on thick-slice data (5 mm RIDER Neuro slices) the voxel-unit smoothing blurred z by up to 20 mm, and about 40% of VFA registrations slid several slices along z, differently on each run.
+
+After registration, slices of the first registered VFA with fewer than 100 voxels are trimmed from every DCE-space image, only at the top and bottom of the slab, with `fslroi` so the headers stay right. An empty slice inside the slab means the registration failed; the session stops with a message instead.
+
+!!! note "Repeatable runs"
+    With every voxel sampled the registrations have no random component, but ANTs splits the metric across threads and the order the partial results are added in changes from run to run. Usually that moves the transform by a fraction of a millimetre; on thick-slice pairs it can be more (a 0.43×0.43×6 mm T1w to DCE: rotation 2.4–5.2° over 10 repeats). For identical outputs from identical inputs, run with one ITK thread:
+
+    ```bash
+    ITK_GLOBAL_DEFAULT_NUMBER_OF_THREADS=1 ./preprocess_all.sh -d /path/to/bids_data ...
+    ```
+
+    Each registration then takes a few seconds instead of under one, and the other ANTs/ITK steps also use one thread.
 
 ---
 
