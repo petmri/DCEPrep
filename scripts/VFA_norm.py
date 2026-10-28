@@ -18,7 +18,7 @@ matplotlib.use('Agg')
 GAUSSFIT = True
 POLYFIT = True
 
-def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE NORMALIZATION
+def normalize(mri_file1, wm_masked, file_dir, prefix):   # THE FUNCTION PERFORMING THE NORMALIZATION
     dim = {0, 1, 2}
     mri = nib.load(mri_file1)
     white_matter = nib.load(wm_masked)
@@ -273,4 +273,6 @@ if __name__ == "__main__":
     num_processes = len(file_list)
 
     with multiprocessing.Pool(processes=num_processes) as pool:
-        pool.starmap(normalize, [(str(file), str(file).split('_label-brain', 1)[0] + '_label-WM_VFA.nii.gz', str(dir)) for file in file_list])
+        # prefix is passed explicitly: workers do not inherit __main__ globals under the
+        # forkserver/spawn start methods (the Linux default from Python 3.14)
+        pool.starmap(normalize, [(str(file), str(file).split('_label-brain', 1)[0] + '_label-WM_VFA.nii.gz', str(dir), prefix) for file in file_list])
