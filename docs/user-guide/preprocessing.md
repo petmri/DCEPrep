@@ -127,7 +127,7 @@ fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve \
 ### Step 8 — VFA Z-axis Normalization *(optional, `-Z`)*
 **Script:** `VFA_norm.py`
 
-Corrects slice-dependent intensity variations along the z-axis in VFA images. Fits a double Gaussian model (or polynomial fallback) to the slice-wise intensity profile and normalizes each slice to remove scanner-related z-axis gradients. Handles empty slices gracefully.
+Corrects slice-dependent intensity variations along the z-axis in VFA images. Fits a double Gaussian model (or polynomial fallback) to the slice-wise intensity profile and normalizes each slice to remove scanner-related z-axis gradients. Handles empty slices gracefully. With `-b`, it normalizes the bias-corrected VFAs from Step 7; without it, the brain-extracted VFAs.
 
 This step is particularly important for multi-site studies where receiver coil profiles vary across scanners.
 

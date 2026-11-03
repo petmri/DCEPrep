@@ -189,7 +189,7 @@ The preprocessing workers overlap independent stages. The list below describes d
     fast -t 1 -n 3 -H 0.1 -I 4 -l 20.0 -B --nopve -o anat/${PREFIX}_${VFA}_${REF_SPACE}_label-brain_VFA.nii.gz
     </code>
    </details>
-8. **VFA Z-axis Normalization** — double Gaussian fitting (`VFA_norm.py`)
+8. **VFA Z-axis Normalization** — double Gaussian fitting (`VFA_norm.py`), on the bias-corrected VFAs when `-b` is set
 9. **Second VFA Bias Field Correction** — FSL `fast`
 10. **T1 Map Generation** — ROCKETSHIP
 11. **AIF Drawing via Neural Network** — runs in parallel where enabled; its mask is combined with the DCE-space brain mask.

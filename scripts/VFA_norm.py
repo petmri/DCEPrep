@@ -18,7 +18,7 @@ matplotlib.use('Agg')
 GAUSSFIT = True
 POLYFIT = True
 
-def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE NORMALIZATION
+def normalize(mri_file1, wm_masked, file_dir, prefix):   # THE FUNCTION PERFORMING THE NORMALIZATION
     dim = {0, 1, 2}
     mri = nib.load(mri_file1)
     white_matter = nib.load(wm_masked)
@@ -266,11 +266,17 @@ def normalize(mri_file1, wm_masked, file_dir):   # THE FUNCTION PERFORMING THE N
 if __name__ == "__main__":
     dir = Path(sys.argv[1])     # takes timepoint directory as argument
     prefix = sys.argv[2]
-    BFC = sys.argv[3]
-    file_pattern = r'.*flip-\d+_space-DCEref_desc-bfc_VFA.nii.*' if BFC else r'.*flip-\d+_space-DCEref_label-brain_VFA.nii.*'
+    # preprocess_all.sh passes EN_BIAS1 as "1" or "0" (both non-empty, so both truthy as strings)
+    BFC = sys.argv[3] == "1"
+    # Normalize the bias-corrected VFAs when the first bias correction ran. The label-WM_VFA
+    # files the slice peaks are measured on are made from the same images in both cases.
+    input_suffix = '_desc-bfc_VFA' if BFC else '_label-brain_VFA'
+    file_pattern = r'.*flip-\d+_space-DCEref' + input_suffix + r'.nii.*'
     files_in_dir = dir.iterdir()
-    file_list = [file for file in files_in_dir if re.search(r'.*flip-\d+_space-DCEref_label-brain_VFA.nii.*', str(file))]
+    file_list = [file for file in files_in_dir if re.search(file_pattern, str(file))]
     num_processes = len(file_list)
 
     with multiprocessing.Pool(processes=num_processes) as pool:
-        pool.starmap(normalize, [(str(file), str(file).split('_label-brain', 1)[0] + '_label-WM_VFA.nii.gz', str(dir)) for file in file_list])
+        # prefix is passed explicitly: workers do not inherit __main__ globals under the
+        # forkserver/spawn start methods (the Linux default from Python 3.14)
+        pool.starmap(normalize, [(str(file), str(file).split(input_suffix, 1)[0] + '_label-WM_VFA.nii.gz', str(dir), prefix) for file in file_list])
