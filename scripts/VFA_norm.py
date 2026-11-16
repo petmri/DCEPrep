@@ -17,6 +17,26 @@ matplotlib.use('Agg')
 # add as arg? add mask arg?
 GAUSSFIT = True
 POLYFIT = True
+# A slice needs this many white-matter voxels for its intensity histogram to be fitted
+MIN_WM_VOXELS_PER_SLICE = 1000
+
+
+class VFANormError(RuntimeError):
+    """The VFA cannot be normalized; the message says what is wrong with the inputs."""
+
+
+def normalize_or_report(mri_file1, wm_masked, file_dir, prefix):
+    """Pool entry point: return None on success, or the reason the VFA could not be normalized.
+
+    The reason is returned rather than raised because an exception class defined in a script
+    does not unpickle in the parent under the spawn/forkserver start methods.
+    """
+    try:
+        normalize(mri_file1, wm_masked, file_dir, prefix)
+    except VFANormError as error:
+        return str(error)
+    return None
+
 
 def normalize(mri_file1, wm_masked, file_dir, prefix):   # THE FUNCTION PERFORMING THE NORMALIZATION
     dim = {0, 1, 2}
@@ -42,6 +62,12 @@ def normalize(mri_file1, wm_masked, file_dir, prefix):   # THE FUNCTION PERFORMI
     orig_img = []
 
     total_wm_voxels = wm_data[wm_data > 0].size
+    if total_wm_voxels == 0:
+        raise VFANormError(
+            f"{Path(wm_masked).name} has no voxels above zero: the white-matter mask and the "
+            "registered VFA do not overlap, so the VFA-to-DCE registration or the tissue "
+            "segmentation failed. Check the registered VFA against the DCE reference."
+        )
     polyfit_slice_weights = []
 
     # get mean of each wm slice and each orig slice
@@ -89,7 +115,7 @@ def normalize(mri_file1, wm_masked, file_dir, prefix):   # THE FUNCTION PERFORMI
             amp_guess = 0
             params = 0
             # check if slice is empty
-            if area < 1000 or pstdev(wm_data[:,:,i][a]) == 0:
+            if area < MIN_WM_VOXELS_PER_SLICE or pstdev(wm_data[:,:,i][a]) == 0:
                 # just get from next slice
                 # if i == slice_num - 1:
                 #     a = np.where(wm_data[:,:,i-1] > 0)
@@ -167,7 +193,16 @@ def normalize(mri_file1, wm_masked, file_dir, prefix):   # THE FUNCTION PERFORMI
             # print("A: " + str(gaussian_params[i]['A1']) + " " + str(gaussian_params[i]['A2']))
             # print("sigma: " + str(gaussian_params[i]['sigma1']) + " " + str(gaussian_params[i]['sigma2']))
 
-        median_mu = median([m for m in mu if m != 0])
+        fitted_mu = [m for m in mu if m != 0]
+        if not fitted_mu:
+            largest_slice = max(np.count_nonzero(wm_data[:, :, i] > 0) for i in range(slice_num))
+            raise VFANormError(
+                f"{Path(wm_masked).name}: no slice has the {MIN_WM_VOXELS_PER_SLICE} white-matter "
+                f"voxels needed to fit its intensity (largest slice: {largest_slice} of "
+                f"{total_wm_voxels} in the volume). The white-matter mask barely overlaps the "
+                "registered VFA, so the VFA-to-DCE registration probably failed."
+            )
+        median_mu = median(fitted_mu)
         # print("median_mu: " + str(median_mu))
         for i in range(slice_num):
             if mu[i] == 0:
@@ -275,4 +310,9 @@ if __name__ == "__main__":
     with multiprocessing.Pool(processes=num_processes) as pool:
         # prefix is passed explicitly: workers do not inherit __main__ globals under the
         # forkserver/spawn start methods (the Linux default from Python 3.14)
-        pool.starmap(normalize, [(str(file), str(file).split('_label-brain', 1)[0] + '_label-WM_VFA.nii.gz', str(dir), prefix) for file in file_list])
+        failures = pool.starmap(normalize_or_report, [(str(file), str(file).split('_label-brain', 1)[0] + '_label-WM_VFA.nii.gz', str(dir), prefix) for file in file_list])
+    failures = [reason for reason in failures if reason]
+    for reason in failures:
+        print(f"ERROR: {reason}", file=sys.stderr)
+    if failures:
+        sys.exit(1)
