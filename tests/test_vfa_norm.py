@@ -20,8 +20,12 @@ WM_INTENSITY = 500.0
 PREFIX = "sub-01_ses-01"
 
 
-def write_session(tmp_path, slice_gains, wm_slices=range(1, 7), wm_half_width=20, flip="01"):
+def write_session(tmp_path, slice_gains, wm_slices=range(1, 7), wm_half_width=20, flip="01",
+                  input_desc="label-brain"):
     """Write a brain VFA and its white-matter-masked copy; return (anat dir, both paths).
+
+    `input_desc` names the VFA VFA_norm.py reads: `label-brain`, or `desc-bfc` when the
+    first bias correction ran (script argument "1").
 
     White matter is a centred square on `wm_slices`; every slice is scaled by its gain.
     """
@@ -36,7 +40,7 @@ def write_session(tmp_path, slice_gains, wm_slices=range(1, 7), wm_half_width=20
     volume[wm_mask] = rng.normal(WM_INTENSITY, 15.0, int(wm_mask.sum()))
     volume *= np.asarray(slice_gains, dtype=float)[None, None, :]
     stem = f"{PREFIX}_flip-{flip}_space-DCEref"
-    brain = anat / f"{stem}_label-brain_VFA.nii.gz"
+    brain = anat / f"{stem}_{input_desc}_VFA.nii.gz"
     wm = anat / f"{stem}_label-WM_VFA.nii.gz"
     nib.save(nib.Nifti1Image(volume.astype(np.float32), np.eye(4)), brain)
     nib.save(nib.Nifti1Image((volume * wm_mask).astype(np.float32), np.eye(4)), wm)
@@ -78,9 +82,24 @@ def test_no_fittable_slice_names_the_registration(tmp_path, monkeypatch):
         VFA_norm.normalize(str(brain), str(wm), str(anat), PREFIX)
 
 
-def test_script_reports_the_reason_and_fails(tmp_path):
+@pytest.mark.parametrize("bfc, input_desc", [("0", "label-brain"), ("1", "desc-bfc")])
+def test_script_reports_the_reason_and_fails(tmp_path, bfc, input_desc):
     """Run as preprocess_vfa_t1.sh runs it: one clear line on stderr, non-zero exit."""
-    anat, _, _, _ = write_session(tmp_path, np.ones(8), wm_slices=[])
+    anat, _, _, _ = write_session(tmp_path, np.ones(8), wm_slices=[], input_desc=input_desc)
+
+    result = subprocess.run(
+        [sys.executable, str(SCRIPTS / "VFA_norm.py"), str(anat), PREFIX, bfc],
+        cwd=tmp_path, capture_output=True, text=True,
+    )
+
+    assert result.returncode == 1
+    assert "ERROR:" in result.stderr and "registration" in result.stderr
+    assert "Traceback" not in result.stderr
+
+
+def test_script_reports_missing_inputs(tmp_path):
+    """With bias correction on, only desc-bfc VFAs are read; none there is an error, not a crash."""
+    anat, _, _, _ = write_session(tmp_path, np.ones(8), input_desc="label-brain")
 
     result = subprocess.run(
         [sys.executable, str(SCRIPTS / "VFA_norm.py"), str(anat), PREFIX, "1"],
@@ -88,5 +107,5 @@ def test_script_reports_the_reason_and_fails(tmp_path):
     )
 
     assert result.returncode == 1
-    assert "ERROR:" in result.stderr and "registration" in result.stderr
+    assert "ERROR:" in result.stderr and "desc-bfc_VFA" in result.stderr
     assert "Traceback" not in result.stderr
